@@ -1,17 +1,17 @@
+from django import forms
 from django.contrib import admin, messages
+from django.db import models as dj_models
 from django.utils import timezone
 
 from .models import (
+    DailyEngagement,
     MissionCompletion,
     PointLedger,
     QuizAttempt,
     Sermon,
-    SermonMission,
-    SermonQuiz,
     SermonStatus,
     SermonSummary,
     UserProfile,
-    WeeklyChallenge,
 )
 from .services.ai_generation import AIContentGenerationError, generate_sermon_content
 
@@ -19,16 +19,46 @@ from .services.ai_generation import AIContentGenerationError, generate_sermon_co
 class SermonSummaryInline(admin.StackedInline):
     model = SermonSummary
     extra = 0
+    formfield_overrides = {
+        dj_models.TextField: {
+            "widget": forms.Textarea(
+                attrs={
+                    "rows": 6,
+                    "cols": 140,
+                    "style": "min-height: 140px; width: 100%; max-width: none;",
+                }
+            )
+        },
+    }
 
 
-class SermonQuizInline(admin.TabularInline):
-    model = SermonQuiz
+class DailyEngagementInline(admin.StackedInline):
+    model = DailyEngagement
     extra = 0
-
-
-class SermonMissionInline(admin.TabularInline):
-    model = SermonMission
-    extra = 0
+    fk_name = "sermon"
+    fields = (
+        ("day_number", "approved", "ai_generated"),
+        "title",
+        "intro",
+        ("quiz_question", "quiz_answer"),
+        ("quiz_choice1", "quiz_choice2"),
+        ("quiz_choice3", "quiz_choice4"),
+        "quiz_explanation",
+        "reflection_question",
+        "mission_title",
+        "mission_description",
+    )
+    formfield_overrides = {
+        dj_models.TextField: {
+            "widget": forms.Textarea(
+                attrs={
+                    "rows": 4,
+                    "cols": 140,
+                    "style": "min-height: 96px; width: 100%; max-width: none;",
+                }
+            )
+        },
+    }
 
 
 @admin.action(description="Mark selected sermons as AI generated")
@@ -64,38 +94,37 @@ def generate_ai_content(modeladmin, request, queryset):
 
 @admin.action(description="Approve selected sermons")
 def approve_sermons(modeladmin, request, queryset):
-    updated = queryset.update(status=SermonStatus.APPROVED)
+    updated = 0
+    for sermon in queryset:
+        sermon.approve_generated_content()
+        updated += 1
     modeladmin.message_user(
         request,
-        f"{updated} sermon(s) approved.",
+        f"{updated} sermon(s) and related content approved.",
         level=messages.SUCCESS,
     )
 
 
 @admin.action(description="Publish selected sermons")
 def publish_sermons(modeladmin, request, queryset):
-    updated = queryset.update(
-        status=SermonStatus.PUBLISHED,
-        is_published=True,
-        published_at=timezone.now(),
-    )
+    updated = 0
+    latest_published = None
+    for sermon in queryset.order_by("sermon_date", "id"):
+        sermon.publish()
+        updated += 1
+        latest_published = sermon
+
     modeladmin.message_user(
         request,
         f"{updated} sermon(s) published.",
         level=messages.SUCCESS,
     )
-
-
-@admin.action(description="Activate selected weekly challenge")
-def activate_weekly_challenges(modeladmin, request, queryset):
-    selected_ids = list(queryset.values_list("id", flat=True))
-    WeeklyChallenge.objects.exclude(id__in=selected_ids).update(is_active=False)
-    updated = queryset.update(is_active=True)
-    modeladmin.message_user(
-        request,
-        f"{updated} weekly challenge(s) activated.",
-        level=messages.SUCCESS,
-    )
+    if latest_published and latest_published.weekly_challenges.exists():
+        modeladmin.message_user(
+            request,
+            f"Activated weekly challenge for '{latest_published.title}'.",
+            level=messages.INFO,
+        )
 
 
 @admin.register(Sermon)
@@ -110,35 +139,30 @@ class SermonAdmin(admin.ModelAdmin):
         "last_imported_at",
         "last_ai_generated_at",
     )
-    list_filter = ("status", "ai_generated", "is_published", "sermon_date")
     search_fields = ("title", "preacher", "bible_passage", "transcript")
     date_hierarchy = "sermon_date"
-    inlines = [SermonSummaryInline, SermonQuizInline, SermonMissionInline]
+    inlines = [SermonSummaryInline, DailyEngagementInline]
     actions = [generate_ai_content, mark_ai_generated, approve_sermons, publish_sermons]
     readonly_fields = ("last_imported_at", "last_ai_generated_at", "import_error", "ai_error")
 
+    class Media:
+        css = {"all": ("core/admin-compact.css",)}
+        js = ("core/admin-inline-toggle.js",)
 
-@admin.register(WeeklyChallenge)
-class WeeklyChallengeAdmin(admin.ModelAdmin):
-    list_display = ("title", "sermon", "week_start", "week_end", "is_active")
-    list_filter = ("is_active", "week_start")
-    search_fields = ("title", "sermon__title")
-    actions = [activate_weekly_challenges]
+    def save_model(self, request, obj, form, change):
+        publish_requested = obj.is_published or obj.status == SermonStatus.PUBLISHED
+        approve_requested = obj.status == SermonStatus.APPROVED
 
-
-@admin.register(SermonQuiz)
-class SermonQuizAdmin(admin.ModelAdmin):
-    list_display = ("question", "sermon", "order", "approved", "ai_generated")
-    list_filter = ("approved", "ai_generated")
-    search_fields = ("question", "sermon__title")
-
-
-@admin.register(SermonMission)
-class SermonMissionAdmin(admin.ModelAdmin):
-    list_display = ("title", "sermon", "order", "approved", "ai_generated")
-    list_filter = ("approved", "ai_generated")
-    search_fields = ("title", "description", "sermon__title")
-
+        if publish_requested:
+            obj.is_published = True
+            obj.status = SermonStatus.PUBLISHED
+            if obj.published_at is None:
+                obj.published_at = timezone.now()
+        super().save_model(request, obj, form, change)
+        if publish_requested:
+            obj.publish()
+        elif approve_requested:
+            obj.approve_generated_content()
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
@@ -149,19 +173,16 @@ class UserProfileAdmin(admin.ModelAdmin):
 @admin.register(QuizAttempt)
 class QuizAttemptAdmin(admin.ModelAdmin):
     list_display = ("user", "sermon", "quiz", "is_correct", "created_at")
-    list_filter = ("is_correct", "created_at")
     search_fields = ("user__username", "sermon__title", "quiz__question")
 
 
 @admin.register(MissionCompletion)
 class MissionCompletionAdmin(admin.ModelAdmin):
     list_display = ("user", "sermon", "mission", "completed", "completed_at")
-    list_filter = ("completed", "completed_at")
     search_fields = ("user__username", "sermon__title", "mission__title")
 
 
 @admin.register(PointLedger)
 class PointLedgerAdmin(admin.ModelAdmin):
     list_display = ("user", "challenge", "source", "points", "created_at")
-    list_filter = ("source", "created_at")
     search_fields = ("user__username", "challenge__title", "sermon__title", "note")

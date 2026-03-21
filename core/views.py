@@ -1,6 +1,7 @@
 from django.shortcuts import render
 
 from django.db.models import Sum
+from django.utils import timezone
 
 from .models import PointLedger, SermonStatus, SermonSummary, WeeklyChallenge
 
@@ -13,7 +14,7 @@ def home_view(request):
             sermon__is_published=True,
         )
         .select_related("sermon", "sermon__summary")
-        .prefetch_related("sermon__quizzes", "sermon__missions")
+        .prefetch_related("sermon__quizzes", "sermon__missions", "daily_engagements")
         .first()
     )
     sermon = challenge.sermon if challenge else None
@@ -35,10 +36,25 @@ def home_view(request):
             or 0
         )
 
+    daily_engagements = []
+    current_daily = None
+    current_day_number = None
+    if challenge:
+        current_day_number = challenge.current_day_number(timezone.localdate())
+        daily_engagements = list(
+            challenge.daily_engagements.filter(approved=True).order_by("day_number")
+        )
+        current_daily = next(
+            (item for item in daily_engagements if item.day_number == current_day_number),
+            None,
+        )
+
     context = {
         "challenge": challenge,
         "sermon": sermon,
         "weekly_points": weekly_points,
+        "overview": getattr(summary, "overview", "") if summary else "",
+        "outline_points": getattr(summary, "outline_points", []) if summary else [],
         "summary_lines": [
             line
             for line in [
@@ -57,7 +73,8 @@ def home_view(request):
             ]
             if point
         ],
-        "quizzes": sermon.quizzes.filter(approved=True)[:3] if sermon else [],
-        "missions": sermon.missions.filter(approved=True)[:2] if sermon else [],
+        "daily_engagements": daily_engagements,
+        "current_daily": current_daily,
+        "current_day_number": current_day_number,
     }
     return render(request, "core/home.html", context)

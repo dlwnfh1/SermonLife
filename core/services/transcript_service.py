@@ -1,6 +1,8 @@
 import json
 import os
 import re
+import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -13,6 +15,11 @@ from yt_dlp import YoutubeDL
 
 OPENAI_AUDIO_TRANSCRIPTIONS_URL = "https://api.openai.com/v1/audio/transcriptions"
 DEFAULT_TRANSCRIPTION_MODEL = os.environ.get("OPENAI_TRANSCRIPTION_MODEL", "gpt-4o-mini-transcribe")
+FFMPEG_PATH = os.environ.get(
+    "FFMPEG_PATH",
+    r"C:\Users\Jimmy-Gram\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.1-full_build\bin\ffmpeg.exe",
+)
+TRANSCRIPTION_CHUNK_SECONDS = int(os.environ.get("TRANSCRIPTION_CHUNK_SECONDS", "600"))
 VTT_TIMESTAMP_PATTERN = re.compile(r"^\d{2}:\d{2}:\d{2}\.\d{3}\s+-->\s+\d{2}:\d{2}:\d{2}\.\d{3}$")
 
 
@@ -142,6 +149,71 @@ def _transcribe_audio_with_openai(audio_path):
     if not transcript_text:
         raise TranscriptFetchError("OpenAI transcription returned an empty transcript.")
     return transcript_text
+
+
+def _resolve_ffmpeg_path() -> str:
+    if Path(FFMPEG_PATH).exists():
+        return FFMPEG_PATH
+
+    discovered = shutil.which("ffmpeg")
+    if discovered:
+        return discovered
+
+    raise TranscriptFetchError("ffmpeg executable was not found.")
+
+
+def _split_audio_file(audio_path: Path):
+    ffmpeg_path = _resolve_ffmpeg_path()
+    tmpdir = tempfile.mkdtemp()
+    segment_pattern = str(Path(tmpdir) / "chunk_%03d.mp3")
+    command = [
+        ffmpeg_path,
+        "-i",
+        str(audio_path),
+        "-f",
+        "segment",
+        "-segment_time",
+        str(TRANSCRIPTION_CHUNK_SECONDS),
+        "-c",
+        "copy",
+        segment_pattern,
+        "-y",
+    ]
+    completed = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="ignore",
+    )
+    if completed.returncode != 0:
+        raise TranscriptFetchError(f"ffmpeg split failed: {completed.stderr.strip()}")
+
+    chunks = sorted(Path(tmpdir).glob("chunk_*.mp3"))
+    if not chunks:
+        raise TranscriptFetchError("ffmpeg did not create any audio chunks.")
+    return chunks
+
+
+def transcribe_audio_file(audio_path: str) -> str:
+    path = Path(audio_path)
+    if not path.exists():
+        raise TranscriptFetchError(f"Audio file not found: {audio_path}")
+
+    try:
+        return _transcribe_audio_with_openai(path)
+    except TranscriptFetchError as exc:
+        if "input_too_large" not in str(exc):
+            raise
+
+    transcripts = []
+    for chunk in _split_audio_file(path):
+        transcripts.append(_transcribe_audio_with_openai(chunk))
+
+    merged = "\n".join(part.strip() for part in transcripts if part.strip()).strip()
+    if not merged:
+        raise TranscriptFetchError("Chunked transcription produced an empty transcript.")
+    return merged
 
 
 def fetch_youtube_transcript(youtube_url: str, languages=None) -> str:

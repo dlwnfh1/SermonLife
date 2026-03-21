@@ -1,5 +1,7 @@
+from datetime import timedelta
+
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 
 
@@ -47,20 +49,35 @@ class Sermon(models.Model):
         return f"{self.sermon_date} - {self.title}"
 
     def publish(self):
+        self.approve_generated_content()
         self.is_published = True
         self.status = SermonStatus.PUBLISHED
         self.published_at = timezone.now()
         self.save(update_fields=["is_published", "status", "published_at", "updated_at"])
+        latest_challenge = self.weekly_challenges.order_by("-week_start", "-id").first()
+        if latest_challenge:
+            latest_challenge.activate()
+
+    def approve_generated_content(self):
+        self.status = SermonStatus.APPROVED
+        self.save(update_fields=["status", "updated_at"])
+
+        SermonSummary.objects.filter(sermon=self).update(approved=True)
+        self.quizzes.all().delete()
+        self.missions.all().delete()
+        DailyEngagement.objects.filter(sermon=self).update(approved=True)
 
 
 class SermonSummary(models.Model):
     sermon = models.OneToOneField(Sermon, on_delete=models.CASCADE, related_name="summary")
+    overview = models.TextField(blank=True)
+    outline_points = models.JSONField(default=list, blank=True)
     summary_line1 = models.CharField(max_length=255, blank=True)
     summary_line2 = models.CharField(max_length=255, blank=True)
     summary_line3 = models.CharField(max_length=255, blank=True)
-    key_point1 = models.CharField(max_length=255, blank=True)
-    key_point2 = models.CharField(max_length=255, blank=True)
-    key_point3 = models.CharField(max_length=255, blank=True)
+    key_point1 = models.TextField(blank=True)
+    key_point2 = models.TextField(blank=True)
+    key_point3 = models.TextField(blank=True)
     ai_generated = models.BooleanField(default=True)
     approved = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
@@ -151,6 +168,83 @@ class WeeklyChallenge(models.Model):
 
     def __str__(self):
         return f"{self.week_start} - {self.title}"
+
+    def activate(self):
+        with transaction.atomic():
+            WeeklyChallenge.objects.exclude(pk=self.pk).update(is_active=False)
+            if not self.is_active:
+                self.is_active = True
+                self.save(update_fields=["is_active"])
+
+    def release_date_for_day(self, day_number):
+        return self.week_start + timedelta(days=day_number)
+
+    def current_day_number(self, today=None):
+        today = today or timezone.localdate()
+        for day_number in range(1, 6):
+            if today == self.release_date_for_day(day_number):
+                return day_number
+        if today > self.release_date_for_day(5):
+            return 5
+        return 1
+
+
+class DailyEngagement(models.Model):
+    sermon = models.ForeignKey(
+        Sermon,
+        on_delete=models.CASCADE,
+        related_name="daily_engagements",
+        null=True,
+        blank=True,
+    )
+    challenge = models.ForeignKey(
+        WeeklyChallenge,
+        on_delete=models.CASCADE,
+        related_name="daily_engagements",
+    )
+    day_number = models.PositiveSmallIntegerField()
+    title = models.CharField(max_length=255)
+    intro = models.TextField(blank=True)
+    quiz_question = models.CharField(max_length=255)
+    quiz_choice1 = models.CharField(max_length=255)
+    quiz_choice2 = models.CharField(max_length=255)
+    quiz_choice3 = models.CharField(max_length=255)
+    quiz_choice4 = models.CharField(max_length=255)
+    quiz_answer = models.CharField(max_length=255)
+    quiz_explanation = models.TextField(blank=True)
+    reflection_question = models.TextField()
+    mission_title = models.CharField(max_length=255)
+    mission_description = models.TextField(blank=True)
+    ai_generated = models.BooleanField(default=True)
+    approved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["day_number", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["challenge", "day_number"],
+                name="unique_daily_engagement_per_challenge_day",
+            )
+        ]
+
+    def __str__(self):
+        return f"Day {self.day_number} - {self.title}"
+
+    def save(self, *args, **kwargs):
+        if self.challenge_id and self.sermon_id is None:
+            self.sermon = self.challenge.sermon
+        super().save(*args, **kwargs)
+
+    @property
+    def choices(self):
+        return [
+            self.quiz_choice1,
+            self.quiz_choice2,
+            self.quiz_choice3,
+            self.quiz_choice4,
+        ]
 
 
 class PointLedger(models.Model):

@@ -8,7 +8,7 @@ from urllib.request import Request, urlopen
 from django.db import transaction
 from django.utils import timezone
 
-from core.models import Sermon, SermonMission, SermonQuiz, SermonStatus, SermonSummary
+from core.models import DailyEngagement, Sermon, SermonStatus, SermonSummary
 
 
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
@@ -20,6 +20,13 @@ SERMON_CONTENT_SCHEMA = {
     "properties": {
         "title": {"type": "string"},
         "bible_passage": {"type": "string"},
+        "overview": {"type": "string"},
+        "outline_points": {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 8,
+            "maxItems": 10,
+        },
         "summary_3lines": {
             "type": "array",
             "items": {"type": "string"},
@@ -32,49 +39,63 @@ SERMON_CONTENT_SCHEMA = {
             "minItems": 3,
             "maxItems": 3,
         },
-        "quizzes": {
+        "daily_engagements": {
             "type": "array",
             "items": {
                 "type": "object",
                 "properties": {
-                    "question": {"type": "string"},
-                    "choices": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "minItems": 4,
-                        "maxItems": 4,
-                    },
-                    "answer": {"type": "string"},
-                    "explanation": {"type": "string"},
-                },
-                "required": ["question", "choices", "answer", "explanation"],
-                "additionalProperties": False,
-            },
-            "minItems": 3,
-            "maxItems": 3,
-        },
-        "missions": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
+                    "day_number": {"type": "integer", "minimum": 1, "maximum": 5},
                     "title": {"type": "string"},
-                    "description": {"type": "string"},
+                    "intro": {"type": "string"},
+                    "quiz": {
+                        "type": "object",
+                        "properties": {
+                            "question": {"type": "string"},
+                            "choices": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "minItems": 4,
+                                "maxItems": 4,
+                            },
+                            "answer": {"type": "string"},
+                            "explanation": {"type": "string"},
+                        },
+                        "required": ["question", "choices", "answer", "explanation"],
+                        "additionalProperties": False,
+                    },
+                    "reflection_question": {"type": "string"},
+                    "mission": {
+                        "type": "object",
+                        "properties": {
+                            "title": {"type": "string"},
+                            "description": {"type": "string"},
+                        },
+                        "required": ["title", "description"],
+                        "additionalProperties": False,
+                    },
                 },
-                "required": ["title", "description"],
+                "required": [
+                    "day_number",
+                    "title",
+                    "intro",
+                    "quiz",
+                    "reflection_question",
+                    "mission",
+                ],
                 "additionalProperties": False,
             },
-            "minItems": 2,
-            "maxItems": 2,
+            "minItems": 5,
+            "maxItems": 5,
         },
     },
     "required": [
         "title",
         "bible_passage",
+        "overview",
+        "outline_points",
         "summary_3lines",
         "key_points",
-        "quizzes",
-        "missions",
+        "daily_engagements",
     ],
     "additionalProperties": False,
 }
@@ -88,10 +109,11 @@ class AIContentGenerationError(Exception):
 class GeneratedSermonContent:
     title: str
     bible_passage: str
+    overview: str
+    outline_points: List[str]
     summary_3lines: List[str]
     key_points: List[str]
-    quizzes: List[Dict]
-    missions: List[Dict]
+    daily_engagements: List[Dict]
 
 
 def build_user_prompt(sermon: Sermon) -> str:
@@ -106,9 +128,13 @@ def build_user_prompt(sermon: Sermon) -> str:
         "1. \ud55c\uad6d\uc5b4\ub85c \uc791\uc131\n"
         "2. \ucd08\uc2e0\uc790\ub3c4 \uc774\ud574\ud560 \uc218 \uc788\uac8c \uc9e7\uace0 \uc27d\uac8c \uc791\uc131\n"
         "3. \uc124\uad50 \ub0b4\uc6a9\uc744 \uc65c\uace1\ud558\uac70\ub098 \ucd94\uce21\ud558\uc9c0 \ub9d0 \uac83\n"
-        "4. \ud034\uc988\ub294 \uac1d\uad00\uc2dd 3\ubb38\uc81c, \ubcf4\uae30 4\uac1c, \uc815\ub2f5 1\uac1c\n"
-        "5. \ubbf8\uc158\uc740 \ubd80\ub2f4\uc2a4\ub7fd\uc9c0 \uc54a\uace0 \uc2e4\ucc9c \uac00\ub2a5\ud55c 2\uac1c\n"
-        "6. \ucd9c\ub825\uc740 JSON\ub9cc \ubc18\ud658\n\n"
+        "4. \uc804\uccb4 \uc124\uad50 \uc694\uc57d\uc740 1~2\ubb38\ub2e8 \uc815\ub3c4\ub85c \uc791\uc131\n"
+        "5. \uc124\uad50 \ud750\ub984 \uc815\ub9ac\ub294 8~10\uac1c \ubb38\uc7a5\uc73c\ub85c \uc21c\uc11c\ub300\ub85c \uc815\ub9ac\n"
+        "6. \ud575\uc2ec \uba54\uc2dc\uc9c0 3\uac1c\ub294 \uac01\uac01 1~2\ubb38\uc7a5, \uac00\uae09\uc801 \uac04\uacb0\ud558\uac8c \uc791\uc131\n"
+        "7. \ud654\uc694\uc77c\ubd80\ud130 \ud1a0\uc694\uc77c\uae4c\uc9c0 5\uc77c\uc740 \uac01\uac01 'quiz 1\uac1c + reflection question 1\uac1c + mission 1\uac1c' \uc138\ud2b8\ub97c \ub9cc\ub4e4 \uac83\n"
+        "8. daily_engagements\uc758 day_number\ub294 1~5\ub97c \uc21c\uc11c\ub300\ub85c \uc0ac\uc6a9\ud560 \uac83\n"
+        "9. \ubcc4\ub3c4\uc758 \uc8fc\uac04 \ud034\uc988 \ubb36\uc74c\uacfc \uc8fc\uac04 \ubbf8\uc158 \ubb36\uc74c\uc740 \ub9cc\ub4e4\uc9c0 \ub9d0 \uac83\n"
+        "10. \ucd9c\ub825\uc740 JSON\ub9cc \ubc18\ud658\n\n"
         f"\uc124\uad50 \uc815\ubcf4:\n{source_text}"
     )
 
@@ -135,10 +161,11 @@ def parse_generated_content(payload: str) -> GeneratedSermonContent:
     return GeneratedSermonContent(
         title=data["title"].strip(),
         bible_passage=data["bible_passage"].strip(),
+        overview=data["overview"].strip(),
+        outline_points=[item.strip() for item in data["outline_points"][:10]],
         summary_3lines=[item.strip() for item in data["summary_3lines"][:3]],
         key_points=[item.strip() for item in data["key_points"][:3]],
-        quizzes=data["quizzes"][:3],
-        missions=data["missions"][:2],
+        daily_engagements=data["daily_engagements"][:5],
     )
 
 
@@ -169,7 +196,7 @@ def request_ai_generated_content(sermon: Sermon) -> GeneratedSermonContent:
         method="POST",
     )
     try:
-        with urlopen(request, timeout=90) as response:
+        with urlopen(request, timeout=300) as response:
             response_data = json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="ignore")
@@ -203,6 +230,8 @@ def apply_generated_content(sermon: Sermon, generated: GeneratedSermonContent) -
     SermonSummary.objects.update_or_create(
         sermon=sermon,
         defaults={
+            "overview": generated.overview,
+            "outline_points": generated.outline_points,
             "summary_line1": generated.summary_3lines[0],
             "summary_line2": generated.summary_3lines[1],
             "summary_line3": generated.summary_3lines[2],
@@ -215,32 +244,34 @@ def apply_generated_content(sermon: Sermon, generated: GeneratedSermonContent) -
     )
 
     sermon.quizzes.all().delete()
-    for index, quiz in enumerate(generated.quizzes, start=1):
-        choices = quiz["choices"][:4]
-        SermonQuiz.objects.create(
-            sermon=sermon,
-            question=quiz["question"].strip(),
-            choice1=choices[0].strip(),
-            choice2=choices[1].strip(),
-            choice3=choices[2].strip(),
-            choice4=choices[3].strip(),
-            correct_answer=quiz["answer"].strip(),
-            explanation=quiz["explanation"].strip(),
-            order=index,
-            ai_generated=True,
-            approved=False,
-        )
-
     sermon.missions.all().delete()
-    for index, mission in enumerate(generated.missions, start=1):
-        SermonMission.objects.create(
-            sermon=sermon,
-            title=mission["title"].strip(),
-            description=mission["description"].strip(),
-            order=index,
-            ai_generated=True,
-            approved=False,
-        )
+
+    latest_challenge = sermon.weekly_challenges.order_by("-week_start", "-id").first()
+    if latest_challenge:
+        latest_challenge.daily_engagements.all().delete()
+        for item in generated.daily_engagements:
+            quiz = item["quiz"]
+            mission = item["mission"]
+            choices = quiz["choices"][:4]
+            DailyEngagement.objects.create(
+                sermon=sermon,
+                challenge=latest_challenge,
+                day_number=item["day_number"],
+                title=item["title"].strip(),
+                intro=item["intro"].strip(),
+                quiz_question=quiz["question"].strip(),
+                quiz_choice1=choices[0].strip(),
+                quiz_choice2=choices[1].strip(),
+                quiz_choice3=choices[2].strip(),
+                quiz_choice4=choices[3].strip(),
+                quiz_answer=quiz["answer"].strip(),
+                quiz_explanation=quiz["explanation"].strip(),
+                reflection_question=item["reflection_question"].strip(),
+                mission_title=mission["title"].strip(),
+                mission_description=mission["description"].strip(),
+                ai_generated=True,
+                approved=False,
+            )
 
     return sermon
 

@@ -1,0 +1,146 @@
+.change-form .aligned .form-row > div,
+.change-form .aligned .form-row .readonly,
+.change-form .aligned p.help,
+.change-form .aligned input[type="text"],
+.change-form .aligned textarea,
+.change-form .aligned select {
+    max-width: none !important;
+}
+
+.change-form #content-main,
+.change-form .submit-row,
+.change-form .inline-group,
+.change-form fieldset.module.aligned {
+    max-width: none !important;
+}
+
+.change-form .aligned textarea {
+    width: min(100%, 980px) !important;
+    box-sizing: border-box;
+    min-height: 96px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    resize: vertical;
+}
+
+.change-form .aligned input[type="text"] {
+    width: min(100%, 980px) !important;
+    box-sizing: border-box;
+}
+
+.inline-group .inline-related {
+    margin-bottom: 10px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.inline-group .stacked h3 {
+    margin: 0;
+    padding: 8px 12px;
+    font-size: 13px;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.inline-group .stacked .module {
+    margin-bottom: 8px;
+}
+
+.inline-group .stacked .module.aligned .form-row {
+    padding: 6px 12px;
+}
+
+.inline-group .stacked .module .form-row p,
+.inline-group .stacked .module .help {
+    margin-top: 6px;
+}
+
+.inline-group .stacked .module textarea {
+    min-height: 96px;
+}
+
+.inline-group .stacked .module input[type="text"] {
+    max-width: 100%;
+}
+
+.inline-group .stacked .module .aligned label {
+    width: 110px;
+}
+
+.inline-group .stacked .module .aligned .form-row > div {
+    margin-left: 120px;
+    width: calc(100% - 120px);
+    max-width: none;
+}
+
+.inline-group .stacked .module .aligned .vTextField,
+.inline-group .stacked .module .aligned textarea,
+.inline-group .stacked .module .aligned input[type="text"] {
+    width: 100%;
+    max-width: none;
+}
+
+.inline-group .stacked .module .form-row fieldset .form-row {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.inline-group .stacked .module .form-row,
+.inline-group .stacked .module .aligned p,
+.inline-group .stacked .module fieldset {
+    max-width: 1280px;
+}
+
+.inline-related.daily-collapsible .inline-body {
+    display: block;
+}
+
+.inline-related.daily-collapsible.is-collapsed .inline-body {
+    display: none;
+}
+
+.inline-related.daily-collapsible h3 {
+    position: relative;
+    border-left: 4px solid #417690;
+    background: #f5f8fa;
+    cursor: pointer !important;
+    user-select: none;
+}
+
+.inline-related.daily-collapsible h3::before {
+    content: "▾";
+    display: inline-block;
+    margin-right: 8px;
+    color: #417690;
+    font-size: 12px;
+    transform: translateY(-1px);
+}
+
+.inline-related.daily-collapsible.is-collapsed h3::before {
+    content: "▸";
+}
+
+.inline-related.daily-collapsible h3:hover {
+    background: #e9f1f5;
+}
+
+.change-form textarea[name$="-overview"],
+.change-form textarea[name$="-outline_points"],
+.change-form textarea[name$="-summary_line1"],
+.change-form textarea[name$="-summary_line2"],
+.change-form textarea[name$="-summary_line3"] {
+    min-height: 140px !important;
+}
+
+.change-form textarea[name$="-key_point1"],
+.change-form textarea[name$="-key_point2"],
+.change-form textarea[name$="-key_point3"] {
+    min-height: 72px !important;
+}
+
+.change-form textarea[name$="-intro"],
+.change-form textarea[name$="-quiz_explanation"],
+.change-form textarea[name$="-reflection_question"],
+.change-form textarea[name$="-mission_description"] {
+    min-height: 100px !important;
+}
