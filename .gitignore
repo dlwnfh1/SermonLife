@@ -1,0 +1,11 @@
+.idea/
+tmp/
+__pycache__/
+*.py[cod]
+*.sqlite3
+cookies.txt
+.env
+.env.*
+venv/
+venvs/
+
