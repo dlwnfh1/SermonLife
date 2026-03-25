@@ -1,0 +1,43 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create user | SermonLife</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body>
+    <main class="page-shell auth-shell">
+        <section class="auth-card">
+            <p class="eyebrow">SERMONLIFE</p>
+            <h1>Create user</h1>
+
+            {% if messages %}
+                <div class="auth-messages">
+                    {% for message in messages %}
+                        <p class="message-row {{ message.tags }}">{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form method="post" class="auth-form">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+                {% for field in form %}
+                    <label class="auth-label">
+                        <span>{{ field.label }}</span>
+                        {{ field }}
+                        {% if field.errors %}
+                            <small class="field-error">{{ field.errors|striptags }}</small>
+                        {% endif %}
+                    </label>
+                {% endfor %}
+                <button type="submit" class="action-button wide-button">계정 만들기</button>
+            </form>
+
+            <p class="auth-helper">이미 계정이 있으면 <a href="{% url 'core:login' %}">로그인</a></p>
+        </section>
+    </main>
+</body>
+</html>

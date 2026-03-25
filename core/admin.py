@@ -5,9 +5,7 @@ from django.utils import timezone
 
 from .models import (
     DailyEngagement,
-    MissionCompletion,
     PointLedger,
-    QuizAttempt,
     Sermon,
     SermonStatus,
     SermonSummary,
@@ -107,10 +105,23 @@ def approve_sermons(modeladmin, request, queryset):
 
 @admin.action(description="Publish selected sermons")
 def publish_sermons(modeladmin, request, queryset):
+    from reports.services import (
+        sync_content_quality_report,
+        sync_daily_action_report,
+        sync_sermon_participation_report,
+        sync_weekly_participation_report,
+    )
+
     updated = 0
     latest_published = None
     for sermon in queryset.order_by("sermon_date", "id"):
         sermon.publish()
+        challenge = sermon.weekly_challenges.order_by("-week_start", "-id").first()
+        if challenge:
+            sync_content_quality_report(challenge)
+            sync_weekly_participation_report(challenge)
+            sync_daily_action_report(challenge)
+        sync_sermon_participation_report(sermon)
         updated += 1
         latest_published = sermon
 
@@ -150,6 +161,13 @@ class SermonAdmin(admin.ModelAdmin):
         js = ("core/admin-inline-toggle.js",)
 
     def save_model(self, request, obj, form, change):
+        from reports.services import (
+            sync_content_quality_report,
+            sync_daily_action_report,
+            sync_sermon_participation_report,
+            sync_weekly_participation_report,
+        )
+
         publish_requested = obj.is_published or obj.status == SermonStatus.PUBLISHED
         approve_requested = obj.status == SermonStatus.APPROVED
 
@@ -161,25 +179,19 @@ class SermonAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
         if publish_requested:
             obj.publish()
+            challenge = obj.weekly_challenges.order_by("-week_start", "-id").first()
+            if challenge:
+                sync_content_quality_report(challenge)
+                sync_weekly_participation_report(challenge)
+                sync_daily_action_report(challenge)
+            sync_sermon_participation_report(obj)
         elif approve_requested:
             obj.approve_generated_content()
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "church_group", "points", "streak_days")
-    search_fields = ("user__username", "church_group")
-
-
-@admin.register(QuizAttempt)
-class QuizAttemptAdmin(admin.ModelAdmin):
-    list_display = ("user", "sermon", "quiz", "is_correct", "created_at")
-    search_fields = ("user__username", "sermon__title", "quiz__question")
-
-
-@admin.register(MissionCompletion)
-class MissionCompletionAdmin(admin.ModelAdmin):
-    list_display = ("user", "sermon", "mission", "completed", "completed_at")
-    search_fields = ("user__username", "sermon__title", "mission__title")
+    list_display = ("user", "member_role", "points", "streak_days")
+    search_fields = ("user__username", "member_role")
 
 
 @admin.register(PointLedger)

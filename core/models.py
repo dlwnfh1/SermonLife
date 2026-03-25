@@ -15,9 +15,19 @@ class SermonStatus(models.TextChoices):
 class PointSource(models.TextChoices):
     SUMMARY = "summary", "Summary Read"
     QUIZ = "quiz", "Quiz Correct"
-    QUIZ_BONUS = "quiz_bonus", "Quiz Completion Bonus"
+    REFLECTION = "reflection", "Reflection Response"
     MISSION = "mission", "Mission Completion"
-    STREAK = "streak", "Streak Bonus"
+    DAILY_BONUS = "daily_bonus", "Daily Completion Bonus"
+    WEEKLY_BONUS = "weekly_bonus", "Weekly Completion Bonus"
+
+
+class MemberRole(models.TextChoices):
+    PASTOR = "pastor", "목회자"
+    MEMBER = "member", "교인"
+    DEACON = "deacon", "집사"
+    KWONSA = "kwonsa", "권사"
+    ELDER = "elder", "장로"
+    OTHER = "other", "기타"
 
 
 class Sermon(models.Model):
@@ -123,7 +133,11 @@ class SermonMission(models.Model):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    church_group = models.CharField(max_length=100, blank=True)
+    member_role = models.CharField(
+        max_length=20,
+        choices=MemberRole.choices,
+        default=MemberRole.MEMBER,
+    )
     points = models.IntegerField(default=0)
     streak_days = models.IntegerField(default=0)
 
@@ -244,6 +258,69 @@ class DailyEngagement(models.Model):
             self.quiz_choice2,
             self.quiz_choice3,
             self.quiz_choice4,
+        ]
+
+
+class DailyQuizAttempt(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    challenge = models.ForeignKey(WeeklyChallenge, on_delete=models.CASCADE)
+    daily_engagement = models.ForeignKey(
+        DailyEngagement,
+        on_delete=models.CASCADE,
+        related_name="quiz_attempts",
+    )
+    selected_answer = models.CharField(max_length=255)
+    is_correct = models.BooleanField(default=False)
+    submitted_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "daily_engagement"],
+                name="unique_daily_quiz_attempt_per_user",
+            )
+        ]
+
+
+class DailyReflectionResponse(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    challenge = models.ForeignKey(WeeklyChallenge, on_delete=models.CASCADE)
+    daily_engagement = models.ForeignKey(
+        DailyEngagement,
+        on_delete=models.CASCADE,
+        related_name="reflection_responses",
+    )
+    response_text = models.TextField()
+    submitted_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "daily_engagement"],
+                name="unique_daily_reflection_per_user",
+            )
+        ]
+
+
+class DailyMissionCompletion(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    challenge = models.ForeignKey(WeeklyChallenge, on_delete=models.CASCADE)
+    daily_engagement = models.ForeignKey(
+        DailyEngagement,
+        on_delete=models.CASCADE,
+        related_name="mission_completions",
+    )
+    completed = models.BooleanField(default=False)
+    note = models.CharField(max_length=255, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "daily_engagement"],
+                name="unique_daily_mission_completion_per_user",
+            )
         ]
 
 

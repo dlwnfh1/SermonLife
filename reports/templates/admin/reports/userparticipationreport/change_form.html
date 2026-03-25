@@ -1,0 +1,83 @@
+{% extends "admin/change_form.html" %}
+
+{% block field_sets %}{% endblock %}
+
+{% block after_field_sets %}
+    {{ block.super }}
+    {% if report %}
+        <div class="module">
+            <h2>리포트 설명</h2>
+            <p>이 리포트는 사용자별 총점, 현재 활동 상태, 최근 주차별 참여 흐름을 보여줍니다.</p>
+        </div>
+
+        <div class="module">
+            <h2>핵심 지표</h2>
+            <table class="admin-report-table">
+                <tr>
+                    <th>아이디</th>
+                    <td>{{ report.username }}</td>
+                </tr>
+                <tr>
+                    <th>이름</th>
+                    <td>{{ report.display_name|default:"-" }}</td>
+                </tr>
+                <tr>
+                    <th>직분</th>
+                    <td>{{ report.member_role|default:"-" }}</td>
+                </tr>
+                <tr>
+                    <th>총 포인트</th>
+                    <td>{{ report.total_points }}점</td>
+                </tr>
+                <tr>
+                    <th>5일 완주 횟수</th>
+                    <td>{{ report.weekly_completer_count }}회</td>
+                </tr>
+                <tr>
+                    <th>현재 주차 참여</th>
+                    <td>{% if report.active_this_week %}참여 중{% else %}미참여{% endif %}</td>
+                </tr>
+                <tr>
+                    <th>최근 2주 연속 참여</th>
+                    <td>{% if report.recent_two_week_streak %}예{% else %}아니오{% endif %}</td>
+                </tr>
+                <tr>
+                    <th>2주 이상 비활동</th>
+                    <td>{% if report.inactive_for_two_weeks %}예{% else %}아니오{% endif %}</td>
+                </tr>
+                <tr>
+                    <th>마지막 활동</th>
+                    <td>{{ report.last_activity_at|default:"-" }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="module">
+            <h2>최근 주차별 참여</h2>
+            <table class="admin-report-table">
+                <thead>
+                    <tr>
+                        <th>주차 시작</th>
+                        <th>제목</th>
+                        <th>획득 포인트</th>
+                        <th>5일 완주</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in report.recent_week_rows %}
+                        <tr>
+                            <td>{{ row.week_start }}</td>
+                            <td>{{ row.title }}</td>
+                            <td>{{ row.points }}점</td>
+                            <td>{% if row.completed %}완주{% else %}-{% endif %}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4">표시할 데이터가 없습니다.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+{% endblock %}

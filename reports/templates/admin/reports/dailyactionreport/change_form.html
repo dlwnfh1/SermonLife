@@ -1,0 +1,73 @@
+{% extends "admin/change_form.html" %}
+
+{% block field_sets %}{% endblock %}
+
+{% block after_field_sets %}
+    {{ block.super }}
+    {% if report %}
+        <div class="module">
+            <h2>리포트 설명</h2>
+            <p>이 리포트는 주차 안에서 각 Day의 퀴즈, 묵상, 미션, 보너스 획득 흐름을 보여줍니다.</p>
+        </div>
+
+        <div class="module">
+            <h2>핵심 지표</h2>
+            <table class="admin-report-table">
+                <tr>
+                    <th>기준 설교</th>
+                    <td>{{ report.sermon.title }}</td>
+                </tr>
+                <tr>
+                    <th>기간</th>
+                    <td>{{ report.week_start }} ~ {{ report.week_end }}</td>
+                </tr>
+                <tr>
+                    <th>총 참여 인원</th>
+                    <td>{{ report.participant_count }}명</td>
+                </tr>
+                <tr>
+                    <th>가장 강한 Day</th>
+                    <td>{{ report.strongest_day_label|default:"데이터 없음" }}</td>
+                </tr>
+                <tr>
+                    <th>가장 약한 Day</th>
+                    <td>{{ report.weakest_day_label|default:"데이터 없음" }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="module">
+            <h2>Day별 행동량</h2>
+            <table class="admin-report-table">
+                <thead>
+                    <tr>
+                        <th>Day</th>
+                        <th>제목</th>
+                        <th>퀴즈 제출</th>
+                        <th>묵상 저장</th>
+                        <th>미션 완료</th>
+                        <th>일일 보너스</th>
+                        <th>5일 완주 누적</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in report.day_rows %}
+                        <tr>
+                            <td>Day {{ row.day_number }}</td>
+                            <td>{{ row.title }}</td>
+                            <td>{{ row.quiz_count }}명 ({{ row.quiz_rate }}%)</td>
+                            <td>{{ row.reflection_count }}명 ({{ row.reflection_rate }}%)</td>
+                            <td>{{ row.mission_count }}명 ({{ row.mission_rate }}%)</td>
+                            <td>{{ row.daily_bonus_count }}명</td>
+                            <td>{{ row.weekly_bonus_cumulative }}명</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7">표시할 데이터가 없습니다.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+{% endblock %}

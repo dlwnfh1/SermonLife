@@ -85,6 +85,19 @@
     padding-right: 0;
 }
 
+.admin-report-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-report-table th,
+.admin-report-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e5e5e5;
+    text-align: left;
+    vertical-align: top;
+}
+
 .inline-group .stacked .module .form-row,
 .inline-group .stacked .module .aligned p,
 .inline-group .stacked .module fieldset {

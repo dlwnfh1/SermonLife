@@ -1,0 +1,85 @@
+{% extends "admin/change_form.html" %}
+
+{% block field_sets %}{% endblock %}
+
+{% block after_field_sets %}
+    {{ block.super }}
+    {% if report %}
+        <div class="module">
+            <h2>리포트 설명</h2>
+            <p>이 리포트는 Day별 퀴즈 정답률, 묵상 반응, 미션 반응을 비교해서 수정이 필요한 콘텐츠를 보여줍니다.</p>
+        </div>
+
+        <div class="module">
+            <h2>핵심 지표</h2>
+            <table class="admin-report-table">
+                <tr>
+                    <th>기준 설교</th>
+                    <td>{{ report.sermon.title }}</td>
+                </tr>
+                <tr>
+                    <th>기간</th>
+                    <td>{{ report.week_start }} ~ {{ report.week_end }}</td>
+                </tr>
+                <tr>
+                    <th>총 참여 인원</th>
+                    <td>{{ report.participant_count }}명</td>
+                </tr>
+                <tr>
+                    <th>가장 낮은 퀴즈 정답률</th>
+                    <td>{{ report.lowest_quiz_accuracy_label|default:"데이터 없음" }}{% if report.lowest_quiz_accuracy_label %} ({{ report.lowest_quiz_accuracy_rate }}%){% endif %}</td>
+                </tr>
+                <tr>
+                    <th>가장 낮은 묵상 반응</th>
+                    <td>{{ report.lowest_reflection_label|default:"데이터 없음" }}{% if report.lowest_reflection_label %} ({{ report.lowest_reflection_rate }}%){% endif %}</td>
+                </tr>
+                <tr>
+                    <th>가장 낮은 미션 반응</th>
+                    <td>{{ report.lowest_mission_label|default:"데이터 없음" }}{% if report.lowest_mission_label %} ({{ report.lowest_mission_rate }}%){% endif %}</td>
+                </tr>
+                <tr>
+                    <th>점검 필요 항목 수</th>
+                    <td>{{ report.issue_count }}개</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="module">
+            <h2>Day별 품질 점검</h2>
+            <table class="admin-report-table">
+                <thead>
+                    <tr>
+                        <th>Day</th>
+                        <th>제목</th>
+                        <th>퀴즈 정답률</th>
+                        <th>묵상 반응</th>
+                        <th>미션 반응</th>
+                        <th>주의 항목</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in report.quality_rows %}
+                        <tr>
+                            <td>Day {{ row.day_number }}</td>
+                            <td>{{ row.title }}</td>
+                            <td>{{ row.quiz_correct_count }}/{{ row.quiz_attempt_count }} ({{ row.quiz_accuracy_rate }}%)</td>
+                            <td>{{ row.reflection_count }}명 ({{ row.reflection_rate }}%)</td>
+                            <td>{{ row.mission_count }}명 ({{ row.mission_rate }}%)</td>
+                            <td>
+                                {% if row.flags %}
+                                    {{ row.flags|join:", " }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6">표시할 데이터가 없습니다.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+{% endblock %}

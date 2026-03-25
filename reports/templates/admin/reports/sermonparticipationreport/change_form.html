@@ -1,0 +1,83 @@
+{% extends "admin/change_form.html" %}
+
+{% block field_sets %}{% endblock %}
+
+{% block after_field_sets %}
+    {{ block.super }}
+    {% if report %}
+        <div class="module">
+            <h2>리포트 설명</h2>
+            <p>이 리포트는 설교 단위로 전체 참여 규모와 평균 점수, 행동별 참여율, 5일 완주율을 보여줍니다.</p>
+        </div>
+
+        <div class="module">
+            <h2>핵심 지표</h2>
+            <table class="admin-report-table">
+                <tr>
+                    <th>기준 설교</th>
+                    <td>{{ report.sermon.title }}</td>
+                </tr>
+                <tr>
+                    <th>설교일</th>
+                    <td>{{ report.sermon_date }}</td>
+                </tr>
+                <tr>
+                    <th>연결된 주간 챌린지</th>
+                    <td>
+                        {% if report.primary_challenge %}
+                            {{ report.primary_challenge.title }}
+                        {% else %}
+                            없음
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>총 참여 인원</th>
+                    <td>{{ report.participant_count }}명</td>
+                </tr>
+                <tr>
+                    <th>총 적립 포인트</th>
+                    <td>{{ report.total_points }}점</td>
+                </tr>
+                <tr>
+                    <th>참여자 평균 점수</th>
+                    <td>{{ report.average_points_per_participant }}점</td>
+                </tr>
+                <tr>
+                    <th>5일 완주 인원</th>
+                    <td>{{ report.weekly_completer_count }}명</td>
+                </tr>
+                <tr>
+                    <th>5일 완주율</th>
+                    <td>{{ report.weekly_completion_rate }}%</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="module">
+            <h2>행동별 참여율</h2>
+            <table class="admin-report-table">
+                <thead>
+                    <tr>
+                        <th>항목</th>
+                        <th>참여 인원</th>
+                        <th>참여율</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in report.action_rows %}
+                        <tr>
+                            <td>{{ row.label }}</td>
+                            <td>{{ row.count }}명</td>
+                            <td>{{ row.rate }}%</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="3">표시할 데이터가 없습니다.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+{% endblock %}
