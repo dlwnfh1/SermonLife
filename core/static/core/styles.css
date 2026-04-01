@@ -183,7 +183,10 @@ a {
 }
 
 .hero-card {
-    padding: 40px;
+    padding: 34px;
+    background:
+        radial-gradient(circle at top right, rgba(139, 92, 59, 0.14), transparent 28%),
+        linear-gradient(135deg, #f7efe4 0%, #fffaf2 52%, #f2e6d8 100%);
 }
 
 .eyebrow,
@@ -203,6 +206,130 @@ a {
     font-size: clamp(2.6rem, 5vw, 4.8rem);
     line-height: 1.12;
     letter-spacing: -0.03em;
+}
+
+.hero-card h1 span {
+    display: block;
+}
+
+.hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.88fr);
+    gap: 22px;
+    align-items: stretch;
+}
+
+.hero-copy {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+}
+
+.hero-copy .lede {
+    max-width: 36rem;
+    margin: 0;
+    font-size: 1.04rem;
+}
+
+.hero-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(255, 250, 242, 0.82);
+    border: 1px solid rgba(32, 25, 19, 0.08);
+    color: var(--ink);
+    font-size: 0.93rem;
+    font-weight: 700;
+}
+
+.hero-focus-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 24px;
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(255, 250, 242, 0.94) 0%, rgba(236, 225, 209, 0.88) 100%);
+    border: 1px solid rgba(32, 25, 19, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.hero-week,
+.hero-period,
+.hero-meta {
+    margin: 0;
+}
+
+.hero-week {
+    margin-top: 10px;
+    color: var(--accent);
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
+.hero-period,
+.hero-meta {
+    color: var(--muted);
+    line-height: 1.7;
+}
+
+.hero-period {
+    margin-top: 4px;
+    font-size: 0.92rem;
+}
+
+.hero-focus-card h2 {
+    margin: 14px 0 12px;
+    font-family: var(--font-display);
+    font-size: 1.9rem;
+    line-height: 1.3;
+}
+
+.hero-today-card {
+    margin-top: 18px;
+    padding: 18px;
+    border-radius: 20px;
+    background: rgba(255, 250, 242, 0.72);
+    border: 1px solid rgba(139, 92, 59, 0.18);
+}
+
+.hero-today-card strong,
+.hero-today-card p {
+    display: block;
+    margin: 0;
+}
+
+.hero-today-label {
+    display: inline-flex;
+    margin-bottom: 10px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.hero-today-card strong {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    line-height: 1.45;
+}
+
+.hero-today-card p {
+    margin-top: 8px;
+    color: var(--muted);
+    line-height: 1.7;
 }
 
 .lede,
@@ -319,6 +446,59 @@ a {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
     margin-top: 16px;
+}
+
+.media-grid {
+    display: grid;
+    grid-template-columns: 1.3fr 0.9fr;
+    gap: 18px;
+    margin-top: 18px;
+}
+
+.media-card {
+    background: var(--paper-soft);
+    border-radius: 24px;
+    padding: 18px;
+}
+
+.video-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    margin-top: 12px;
+    overflow: hidden;
+    border-radius: 20px;
+    background: #1a1511;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.video-frame iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.audio-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 100%;
+}
+
+.audio-card strong {
+    font-family: var(--font-display);
+    font-size: 1.18rem;
+    line-height: 1.5;
+}
+
+.audio-card p {
+    margin: 10px 0 16px;
+    color: var(--muted);
+    line-height: 1.7;
+}
+
+.audio-player {
+    width: 100%;
 }
 
 .daily-stack {
@@ -517,10 +697,19 @@ a {
         border-radius: 22px;
     }
 
+    .hero-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-copy .lede {
+        max-width: none;
+    }
+
     .card-grid,
     .two-column,
     .three-column,
-    .stat-panel {
+    .stat-panel,
+    .media-grid {
         grid-template-columns: 1fr;
     }
 }

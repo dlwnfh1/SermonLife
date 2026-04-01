@@ -1,4 +1,5 @@
 from datetime import timedelta
+from urllib.parse import parse_qs, urlparse
 
 from django.conf import settings
 from django.db import models, transaction
@@ -35,6 +36,7 @@ class Sermon(models.Model):
     preacher = models.CharField(max_length=100, blank=True)
     sermon_date = models.DateField()
     youtube_url = models.URLField(blank=True)
+    audio_file = models.FileField(upload_to="sermons/audio/", blank=True, null=True)
     transcript = models.TextField(blank=True)
     bible_passage = models.CharField(max_length=255, blank=True)
     ai_generated = models.BooleanField(default=False)
@@ -57,6 +59,30 @@ class Sermon(models.Model):
 
     def __str__(self):
         return f"{self.sermon_date} - {self.title}"
+
+    @property
+    def youtube_embed_url(self):
+        if not self.youtube_url:
+            return ""
+
+        parsed = urlparse(self.youtube_url)
+        host = parsed.netloc.lower()
+        video_id = ""
+
+        if "youtu.be" in host:
+            video_id = parsed.path.lstrip("/")
+        elif "youtube.com" in host:
+            if parsed.path == "/watch":
+                video_id = parse_qs(parsed.query).get("v", [""])[0]
+            elif parsed.path.startswith("/embed/"):
+                return self.youtube_url
+            elif parsed.path.startswith("/shorts/"):
+                video_id = parsed.path.split("/shorts/", 1)[1].split("/", 1)[0]
+
+        if not video_id:
+            return ""
+
+        return f"https://www.youtube.com/embed/{video_id}"
 
     def publish(self):
         self.approve_generated_content()
