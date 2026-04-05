@@ -21,12 +21,27 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-)#1%bk##dmhz-zt&s*#nkz-nnccxu+9%e&8g6p@+p@t$0grsan'
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-)#1%bk##dmhz-zt&s*#nkz-nnccxu+9%e&8g6p@+p@t$0grsan",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in {"1", "true", "yes", "on"}
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "*"]
+default_hosts = "localhost,127.0.0.1,0.0.0.0"
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", default_hosts).split(",")
+    if host.strip()
+]
+
+csrf_origins = os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "")
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in csrf_origins.split(",")
+    if origin.strip()
+]
 
 
 # Application definition
@@ -106,6 +121,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = Path(os.environ.get('SERMONLIFE_STATIC_ROOT', BASE_DIR / 'staticfiles'))
 MEDIA_URL = '/media/'
 MEDIA_ROOT = Path(os.environ.get('SERMONLIFE_MEDIA_ROOT', BASE_DIR / 'uploads'))
 SOURCE_MEDIA_UPLOAD_SUBDIR = 'sermons'
