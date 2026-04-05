@@ -17,13 +17,13 @@
         <section class="panel history-hero">
             <p class="eyebrow">MY HISTORY</p>
             <h1 class="history-title">내 기록</h1>
-            <p class="lede">이번 주 진행 상황과 누적 포인트, 최근 참여 기록을 한눈에 확인할 수 있습니다.</p>
+            <p class="lede">이번 주 진행 상황과 누적 달란트, 최근 참여 기록을 한눈에 확인할 수 있습니다.</p>
         </section>
 
         <section class="panel stat-panel">
             <div class="stat-card">
-                <strong>이번 주 포인트</strong>
-                <span>{{ weekly_points }}점</span>
+                <strong>이번 주 달란트</strong>
+                <span>{{ weekly_points }}달란트</span>
                 {% if current_challenge %}
                     <small>{{ current_challenge.title }}</small>
                 {% else %}
@@ -31,8 +31,8 @@
                 {% endif %}
             </div>
             <div class="stat-card">
-                <strong>누적 포인트</strong>
-                <span>{{ profile.points }}점</span>
+                <strong>누적 달란트</strong>
+                <span>{{ profile.points }}달란트</span>
                 <small>연속 참여 {{ profile.streak_days }}일</small>
             </div>
         </section>
@@ -49,7 +49,7 @@
                             <h3>{{ item.challenge.title }}</h3>
                             <p class="history-sermon-title">{{ item.challenge.sermon.title }}</p>
                             <div class="history-meta-row">
-                                <span>획득 {{ item.earned_points }}점</span>
+                                <span>획득 {{ item.earned_points }}달란트</span>
                                 <span>완료 Day {{ item.completed_days }} / 5</span>
                             </div>
                             {% if item.weekly_bonus_awarded %}
@@ -65,7 +65,7 @@
 
         <section class="panel">
             <div class="panel-header">
-                <h2>최근 포인트 적립</h2>
+                <h2>최근 달란트 적립 내역</h2>
             </div>
             {% if recent_entries %}
                 <div class="history-ledger-list">
@@ -76,12 +76,12 @@
                                 <p>{{ entry.challenge.title }}</p>
                                 <small>{{ entry.created_at|date:"Y-m-d H:i" }}</small>
                             </div>
-                            <span class="history-points">+{{ entry.points }}점</span>
+                            <span class="history-points">+{{ entry.points }}달란트</span>
                         </article>
                     {% endfor %}
                 </div>
             {% else %}
-                <p class="empty">아직 포인트 적립 내역이 없습니다.</p>
+                <p class="empty">아직 달란트 적립 내역이 없습니다.</p>
             {% endif %}
         </section>
     </main>

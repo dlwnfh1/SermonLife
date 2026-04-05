@@ -31,6 +31,8 @@ from .services.transcript_service import (
 admin.site.site_header = "SERMON LIFE 관리하기"
 admin.site.site_title = "SERMON LIFE 관리하기"
 admin.site.index_title = "SERMON LIFE 관리하기"
+PointLedger._meta.verbose_name = "달란트 내역"
+PointLedger._meta.verbose_name_plural = "달란트 내역"
 
 class SermonSummaryInline(admin.StackedInline):
     model = SermonSummary

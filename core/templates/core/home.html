@@ -85,40 +85,40 @@
 
             <section class="panel stat-panel">
                 <div class="stat-card">
-                    <strong>이번 주 포인트</strong>
-                    <span>{{ weekly_points }}점 / {{ weekly_base_max_points }}점</span>
-                    <small>5일 완주 보너스 {{ weekly_bonus_points_value }}점 별도</small>
+                    <strong>이번 주 달란트</strong>
+                    <span>{{ weekly_points }}달란트 / {{ weekly_base_max_points }}달란트</span>
+                    <small>5일 완주 보너스 {{ weekly_bonus_points_value }}달란트 별도</small>
                 </div>
                 <div class="stat-card">
                     <strong>완료 Day</strong>
                     <span>{{ completed_days_count }} / 5{% if weekly_bonus_awarded %} | 완주 보너스 획득{% endif %}</span>
-                    <small>누적 포인트 {{ total_points }}점 · <a href="{% url 'core:my_history' %}">자세히 보기</a></small>
+                    <small>누적 달란트 {{ total_points }}달란트 · <a href="{% url 'core:my_history' %}">자세히 보기</a></small>
                 </div>
             </section>
 
             <section class="panel points-guide-panel">
                 <details class="points-guide-details">
                     <summary class="points-guide-summary">
-                        <span>포인트 안내</span>
-                        <small>점수 구조 보기</small>
+                        <span>달란트 안내</span>
+                        <small>달란트 구조 보기</small>
                     </summary>
                     <div class="points-guide-grid">
                         <article class="points-guide-card">
                             <strong>하루 1일 루틴</strong>
                             <ul class="points-guide-list">
-                                <li>퀴즈 정답 {{ quiz_points_value }}점</li>
-                                <li>묵상 답변 저장 {{ reflection_points_value }}점</li>
-                                <li>미션 완료 {{ mission_points_value }}점</li>
-                                <li>하루 완료 보너스 {{ daily_bonus_points_value }}점</li>
+                                <li>퀴즈 정답 {{ quiz_points_value }}달란트</li>
+                                <li>묵상 답변 저장 {{ reflection_points_value }}달란트</li>
+                                <li>미션 완료 {{ mission_points_value }}달란트</li>
+                                <li>하루 완료 보너스 {{ daily_bonus_points_value }}달란트</li>
                             </ul>
                         </article>
                         <article class="points-guide-card">
-                            <strong>이번 주 최대 포인트</strong>
+                            <strong>이번 주 최대 달란트</strong>
                             <ul class="points-guide-list">
-                                <li>5일치 기본 점수 {{ weekly_base_max_points }}점</li>
-                                <li>5일 완주 보너스 {{ weekly_bonus_points_value }}점</li>
+                                <li>5일치 기본 달란트 {{ weekly_base_max_points }}달란트</li>
+                                <li>5일 완주 보너스 {{ weekly_bonus_points_value }}달란트</li>
                             </ul>
-                            <p class="points-guide-total">총 최대 {{ weekly_total_max_points }}점</p>
+                            <p class="points-guide-total">총 최대 {{ weekly_total_max_points }}달란트</p>
                         </article>
                     </div>
                 </details>
@@ -239,13 +239,13 @@
 
                         {% if request.user.is_authenticated %}
                             <div class="today-points">
-                                <span>퀴즈 {{ current_daily_state.quiz_points|default:0 }}점</span>
-                                <span>묵상 {{ current_daily_state.reflection_points|default:0 }}점</span>
-                                <span>미션 {{ current_daily_state.mission_points|default:0 }}점</span>
-                                <span>일일 보너스 {{ current_daily_state.daily_bonus_points|default:0 }}점</span>
+                                <span>퀴즈 {{ current_daily_state.quiz_points|default:0 }}달란트</span>
+                                <span>묵상 {{ current_daily_state.reflection_points|default:0 }}달란트</span>
+                                <span>미션 {{ current_daily_state.mission_points|default:0 }}달란트</span>
+                                <span>일일 보너스 {{ current_daily_state.daily_bonus_points|default:0 }}달란트</span>
                             </div>
                         {% else %}
-                            <p class="empty">포인트 적립과 기록 저장은 로그인 후 이용할 수 있습니다. <a href="{% url 'core:login' %}">로그인하기</a></p>
+                            <p class="empty">달란트 적립과 기록 저장은 로그인 후 이용할 수 있습니다. <a href="{% url 'core:login' %}">로그인하기</a></p>
                         {% endif %}
 
                         <div class="three-column">

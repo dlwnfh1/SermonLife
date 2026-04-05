@@ -26,8 +26,8 @@
                     <td>{{ report.member_role|default:"-" }}</td>
                 </tr>
                 <tr>
-                    <th>총 포인트</th>
-                    <td>{{ report.total_points }}점</td>
+                    <th>총 달란트</th>
+                    <td>{{ report.total_points }}달란트</td>
                 </tr>
                 <tr>
                     <th>5일 완주 횟수</th>
@@ -59,7 +59,7 @@
                     <tr>
                         <th>주차 시작</th>
                         <th>제목</th>
-                        <th>획득 포인트</th>
+                        <th>획득 달란트</th>
                         <th>5일 완주</th>
                     </tr>
                 </thead>
@@ -68,7 +68,7 @@
                         <tr>
                             <td>{{ row.week_start }}</td>
                             <td>{{ row.title }}</td>
-                            <td>{{ row.points }}점</td>
+                            <td>{{ row.points }}달란트</td>
                             <td>{% if row.completed %}완주{% else %}-{% endif %}</td>
                         </tr>
                     {% empty %}
