@@ -28,6 +28,10 @@ from .services.transcript_service import (
     transcribe_audio_file,
 )
 
+admin.site.site_header = "SERMON LIFE 관리하기"
+admin.site.site_title = "SERMON LIFE 관리하기"
+admin.site.index_title = "SERMON LIFE 관리하기"
+
 class SermonSummaryInline(admin.StackedInline):
     model = SermonSummary
     extra = 0
@@ -381,6 +385,11 @@ class SermonAdmin(admin.ModelAdmin):
                 name="core_sermon_publish",
             ),
             path(
+                "<path:object_id>/unpublish/",
+                self.admin_site.admin_view(self.unpublish_single_view),
+                name="core_sermon_unpublish",
+            ),
+            path(
                 "<path:object_id>/delete-source-media/",
                 self.admin_site.admin_view(self.delete_source_media_view),
                 name="core_sermon_delete_source_media",
@@ -393,6 +402,7 @@ class SermonAdmin(admin.ModelAdmin):
         extra_context["show_prepare_button"] = True
         if object_id:
             extra_context["publish_url"] = reverse("admin:core_sermon_publish", args=[object_id])
+            extra_context["unpublish_url"] = reverse("admin:core_sermon_unpublish", args=[object_id])
             extra_context["regenerate_ai_url"] = reverse("admin:core_sermon_regenerate_ai", args=[object_id])
             extra_context["transcribe_ai_url"] = reverse(
                 "admin:core_sermon_transcribe_and_regenerate_ai",
@@ -522,6 +532,20 @@ class SermonAdmin(admin.ModelAdmin):
 
         sermon.publish()
         self.message_user(request, f"'{sermon.title}' 설교를 바로 공개했습니다.", level=messages.SUCCESS)
+        return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
+
+    def unpublish_single_view(self, request, object_id):
+        sermon = self.get_object(request, object_id)
+        if sermon is None:
+            self.message_user(request, "설교를 찾을 수 없습니다.", level=messages.ERROR)
+            return HttpResponseRedirect(reverse("admin:core_sermon_changelist"))
+
+        sermon.unpublish()
+        self.message_user(
+            request,
+            f"'{sermon.title}' 설교 공개를 해제했습니다. 사용자 화면에는 공개 전 안내 화면이 다시 표시됩니다.",
+            level=messages.SUCCESS,
+        )
         return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
 
     def delete_source_media_view(self, request, object_id):

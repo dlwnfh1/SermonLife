@@ -140,6 +140,15 @@
                     data-progress-text="설교를 공개하고 사용자 화면에 반영하고 있습니다."
                 >검토 완료 및 공개</a>
             {% endif %}
+            {% if change and original and unpublish_url and original.is_published %}
+                <a
+                    class="sermon-secondary-button button js-admin-progress"
+                    href="{{ unpublish_url }}"
+                    data-confirm-message="이 설교 공개를 잠시 해제하시겠습니까? 사용자 화면에는 공개 전 안내 화면이 다시 표시됩니다."
+                    data-progress-title="공개 해제 중..."
+                    data-progress-text="설교 공개를 잠시 해제하고 사용자 화면 상태를 되돌리고 있습니다."
+                >공개 해제</a>
+            {% endif %}
             {% if change and original and delete_url %}
                 <a class="sermon-delete-button button" href="{{ delete_url }}">삭제</a>
             {% endif %}

@@ -30,11 +30,16 @@ SECRET_KEY = os.environ.get(
 DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in {"1", "true", "yes", "on"}
 
 default_hosts = "localhost,127.0.0.1,0.0.0.0"
-ALLOWED_HOSTS = [
+configured_hosts = [
     host.strip()
     for host in os.environ.get("DJANGO_ALLOWED_HOSTS", default_hosts).split(",")
     if host.strip()
 ]
+
+if DEBUG:
+    ALLOWED_HOSTS = ["*"]
+else:
+    ALLOWED_HOSTS = configured_hosts
 
 csrf_origins = os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "")
 CSRF_TRUSTED_ORIGINS = [

@@ -574,7 +574,7 @@ a {
 
 .media-grid {
     display: grid;
-    grid-template-columns: 1.3fr 0.9fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 18px;
     margin-top: 18px;
 }
@@ -1213,11 +1213,17 @@ a {
         font-size: 0.9rem;
         font-weight: 700;
         background: rgba(236, 225, 209, 0.78);
+        border: 1px solid rgba(32, 25, 19, 0.08);
+        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
     }
 
-    .mobile-dock-link-primary {
+    .mobile-dock-link:hover,
+    .mobile-dock-link:focus-visible,
+    .mobile-dock-link-active {
         background: var(--accent);
+        border-color: var(--accent);
         color: #fffaf2;
+        transform: translateY(-1px);
     }
 
     .card-grid,

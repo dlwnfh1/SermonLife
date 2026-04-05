@@ -66,21 +66,21 @@
 
         {% if sermon %}
             <section class="quick-nav" aria-label="빠른 이동">
-                <a class="quick-nav-chip quick-nav-chip-primary" href="#today-set">오늘의 세트</a>
                 {% if sermon.hosted_video_url or sermon.youtube_embed_url or sermon.transcript %}
                     <a class="quick-nav-chip" href="#media-panel">설교 보기</a>
                 {% endif %}
                 <a class="quick-nav-chip" href="#overview-panel">한눈에 보기</a>
                 <a class="quick-nav-chip" href="#daily-routine-panel">5일 루틴</a>
+                <a class="quick-nav-chip quick-nav-chip-primary" href="#today-set">오늘 참여</a>
             </section>
 
             <nav class="mobile-dock-nav" aria-label="모바일 빠른 이동">
-                <a class="mobile-dock-link mobile-dock-link-primary" href="#today-set">오늘</a>
                 {% if sermon.hosted_video_url or sermon.youtube_embed_url or sermon.transcript %}
-                    <a class="mobile-dock-link" href="#media-panel">듣기</a>
+                    <a class="mobile-dock-link" href="#media-panel">보기</a>
                 {% endif %}
                 <a class="mobile-dock-link" href="#overview-panel">요약</a>
                 <a class="mobile-dock-link" href="#daily-routine-panel">루틴</a>
+                <a class="mobile-dock-link" href="#today-set">오늘</a>
             </nav>
 
             <section class="panel stat-panel">
@@ -198,7 +198,7 @@
 
             <section class="panel" id="today-set">
                 <div class="panel-header">
-                    <h2>오늘의 세트{% if current_day_number %} | Day {{ current_day_number }}{% endif %}</h2>
+                    <h2>오늘 참여{% if current_day_number %} | Day {{ current_day_number }}{% endif %}</h2>
                 </div>
                 {% if messages %}
                     <div class="inline-messages">
@@ -321,5 +321,44 @@
             </section>
         {% endif %}
     </main>
+    <script>
+        (function () {
+            var dockLinks = Array.prototype.slice.call(document.querySelectorAll(".mobile-dock-link"));
+            if (!dockLinks.length) {
+                return;
+            }
+
+            function setActive(link) {
+                dockLinks.forEach(function (item) {
+                    item.classList.remove("mobile-dock-link-active");
+                });
+                if (link) {
+                    link.classList.add("mobile-dock-link-active");
+                }
+            }
+
+            dockLinks.forEach(function (link) {
+                link.addEventListener("click", function () {
+                    setActive(link);
+                });
+            });
+
+            function syncFromHash() {
+                if (!window.location.hash) {
+                    setActive(dockLinks[0]);
+                    return;
+                }
+                var matched = dockLinks.find(function (link) {
+                    return link.getAttribute("href") === window.location.hash;
+                });
+                if (matched) {
+                    setActive(matched);
+                }
+            }
+
+            window.addEventListener("hashchange", syncFromHash);
+            syncFromHash();
+        })();
+    </script>
 </body>
 </html>

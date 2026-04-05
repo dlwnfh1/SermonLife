@@ -202,6 +202,12 @@ class Sermon(models.Model):
         if latest_challenge:
             latest_challenge.activate()
 
+    def unpublish(self):
+        self.is_published = False
+        self.status = SermonStatus.APPROVED
+        self.save(update_fields=["is_published", "status", "updated_at"])
+        self.weekly_challenges.update(is_active=False)
+
     def approve_generated_content(self):
         self.status = SermonStatus.APPROVED
         self.save(update_fields=["status", "updated_at"])
