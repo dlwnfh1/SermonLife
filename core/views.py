@@ -1,3 +1,5 @@
+import re
+
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
@@ -22,7 +24,73 @@ from .models import (
     UserProfile,
     WeeklyChallenge,
 )
-from .services.engagement import complete_mission, submit_daily_quiz, submit_reflection
+from .services.engagement import (
+    DAILY_COMPLETION_POINTS,
+    MISSION_POINTS,
+    QUIZ_POINTS,
+    REFLECTION_POINTS,
+    WEEKLY_COMPLETION_POINTS,
+    complete_mission,
+    submit_daily_quiz,
+    submit_reflection,
+)
+
+
+def _get_or_create_profile(user):
+    if not user.is_authenticated:
+        return None
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    return profile
+
+
+def _chunk_outline_points(outline_points, chunk_count=5):
+    points = [point for point in outline_points if point]
+    if not points:
+        return [[] for _ in range(chunk_count)]
+
+    chunks = [[] for _ in range(chunk_count)]
+    for index, point in enumerate(points):
+        chunks[index % chunk_count].append(point)
+    return chunks
+
+
+def _format_transcript_paragraphs(transcript, sentences_per_paragraph=3):
+    if not transcript:
+        return []
+
+    normalized = transcript.replace("\r\n", "\n").replace("\r", "\n")
+    normalized = re.sub(r"\n{3,}", "\n\n", normalized).strip()
+    if not normalized:
+        return []
+
+    explicit_blocks = [block.strip() for block in normalized.split("\n\n") if block.strip()]
+    paragraphs = []
+
+    for block in explicit_blocks:
+        compact = re.sub(r"\s+", " ", block).strip()
+        if not compact:
+            continue
+
+        sentences = [
+            sentence.strip()
+            for sentence in re.split(r"(?<=[.!?。！？])\s+", compact)
+            if sentence.strip()
+        ]
+
+        if len(sentences) <= sentences_per_paragraph:
+            paragraphs.append(compact)
+            continue
+
+        current = []
+        for sentence in sentences:
+            current.append(sentence)
+            if len(current) >= sentences_per_paragraph:
+                paragraphs.append(" ".join(current).strip())
+                current = []
+        if current:
+            paragraphs.append(" ".join(current).strip())
+
+    return paragraphs
 
 
 def _get_active_challenge():
@@ -78,6 +146,7 @@ def _build_home_context(request):
     challenge = _get_active_challenge()
     sermon = challenge.sermon if challenge else None
     summary = _get_summary(sermon)
+    profile = _get_or_create_profile(request.user)
 
     weekly_points = 0
     weekly_bonus_awarded = False
@@ -99,11 +168,31 @@ def _build_home_context(request):
     current_daily = None
     current_day_number = None
     completed_days_count = 0
+    daily_focus_map = {}
     if challenge:
         current_day_number = challenge.current_day_number(timezone.localdate())
         daily_engagements = list(
             challenge.daily_engagements.filter(approved=True).order_by("day_number")
         )
+        outline_chunks = _chunk_outline_points(getattr(summary, "outline_points", []) if summary else [])
+        key_points = [
+            point
+            for point in [
+                getattr(summary, "key_point1", "") if summary else "",
+                getattr(summary, "key_point2", "") if summary else "",
+                getattr(summary, "key_point3", "") if summary else "",
+            ]
+            if point
+        ]
+        for index, item in enumerate(daily_engagements, start=1):
+            outline_for_day = outline_chunks[index - 1] if index - 1 < len(outline_chunks) else []
+            key_for_day = key_points[(index - 1) % len(key_points)] if key_points else ""
+            item.focus_outline_points = outline_for_day
+            item.focus_key_point = key_for_day
+            daily_focus_map[item.day_number] = {
+                "outline_points": outline_for_day,
+                "key_point": key_for_day,
+            }
         current_daily = next(
             (item for item in daily_engagements if item.day_number == current_day_number),
             None,
@@ -122,28 +211,31 @@ def _build_home_context(request):
             )
 
     current_daily_state = _get_daily_state(request.user, current_daily)
+    weekly_base_max_points = (QUIZ_POINTS + REFLECTION_POINTS + MISSION_POINTS + DAILY_COMPLETION_POINTS) * 5
+    weekly_total_max_points = weekly_base_max_points + WEEKLY_COMPLETION_POINTS
 
     return {
+        "profile": profile,
         "challenge": challenge,
         "sermon": sermon,
         "weekly_points": weekly_points,
+        "total_points": profile.points if profile else 0,
+        "streak_days": profile.streak_days if profile else 0,
         "weekly_bonus_awarded": weekly_bonus_awarded,
+        "weekly_base_max_points": weekly_base_max_points,
+        "weekly_total_max_points": weekly_total_max_points,
+        "quiz_points_value": QUIZ_POINTS,
+        "reflection_points_value": REFLECTION_POINTS,
+        "mission_points_value": MISSION_POINTS,
+        "daily_bonus_points_value": DAILY_COMPLETION_POINTS,
+        "weekly_bonus_points_value": WEEKLY_COMPLETION_POINTS,
         "completed_days_count": completed_days_count,
         "overview": getattr(summary, "overview", "") if summary else "",
-        "outline_points": getattr(summary, "outline_points", []) if summary else [],
-        "key_points": [
-            point
-            for point in [
-                getattr(summary, "key_point1", ""),
-                getattr(summary, "key_point2", ""),
-                getattr(summary, "key_point3", ""),
-            ]
-            if point
-        ],
         "daily_engagements": daily_engagements,
         "current_daily": current_daily,
         "current_day_number": current_day_number,
         "current_daily_state": current_daily_state,
+        "daily_focus_map": daily_focus_map,
     }
 
 
@@ -164,6 +256,127 @@ def _get_released_daily_or_404(pk):
 
 def _redirect_to_today_set():
     return redirect(f"{reverse('core:home')}#today-set")
+
+
+@login_required
+def watch_sermon_view(request):
+    challenge = _get_active_challenge()
+    sermon = challenge.sermon if challenge else None
+    if not sermon:
+        raise Http404
+    return render(
+        request,
+        "core/watch_sermon.html",
+        {
+            "challenge": challenge,
+            "sermon": sermon,
+        },
+    )
+
+
+@login_required
+def read_sermon_view(request):
+    challenge = _get_active_challenge()
+    sermon = challenge.sermon if challenge else None
+    if not sermon:
+        raise Http404
+    transcript_paragraphs = _format_transcript_paragraphs(sermon.transcript)
+    current_day_number = challenge.current_day_number(timezone.localdate()) if challenge else None
+    current_daily = None
+    if challenge and current_day_number:
+        current_daily = (
+            challenge.daily_engagements.filter(
+                approved=True,
+                day_number=current_day_number,
+            ).first()
+        )
+    return render(
+        request,
+        "core/read_sermon.html",
+        {
+            "challenge": challenge,
+            "sermon": sermon,
+            "transcript_paragraphs": transcript_paragraphs,
+            "current_daily": current_daily,
+            "current_day_number": current_day_number,
+        },
+    )
+
+
+@login_required
+def my_history_view(request):
+    profile = _get_or_create_profile(request.user)
+    challenge = _get_active_challenge()
+    weekly_points = 0
+    if challenge:
+        weekly_points = (
+            PointLedger.objects.filter(user=request.user, challenge=challenge)
+            .aggregate(total=Sum("points"))
+            .get("total")
+            or 0
+        )
+
+    challenge_ids = list(
+        PointLedger.objects.filter(user=request.user)
+        .order_by("-created_at")
+        .values_list("challenge_id", flat=True)
+        .distinct()[:8]
+    )
+    challenges = (
+        WeeklyChallenge.objects.filter(id__in=challenge_ids)
+        .select_related("sermon")
+        .prefetch_related("daily_engagements")
+    )
+    challenge_map = {challenge.id: challenge for challenge in challenges}
+    weekly_history = []
+    for challenge_id in challenge_ids:
+        item = challenge_map.get(challenge_id)
+        if not item:
+            continue
+        earned_points = (
+            PointLedger.objects.filter(user=request.user, challenge=item)
+            .aggregate(total=Sum("points"))
+            .get("total")
+            or 0
+        )
+        completed_days = sum(
+            1
+            for daily in item.daily_engagements.filter(approved=True).order_by("day_number")
+            if DailyQuizAttempt.objects.filter(user=request.user, daily_engagement=daily).exists()
+            and DailyReflectionResponse.objects.filter(user=request.user, daily_engagement=daily).exists()
+            and DailyMissionCompletion.objects.filter(
+                user=request.user,
+                daily_engagement=daily,
+                completed=True,
+            ).exists()
+        )
+        weekly_history.append(
+            {
+                "challenge": item,
+                "earned_points": earned_points,
+                "completed_days": completed_days,
+                "weekly_bonus_awarded": PointLedger.objects.filter(
+                    user=request.user,
+                    challenge=item,
+                    source=PointSource.WEEKLY_BONUS,
+                    note="week_complete",
+                ).exists(),
+            }
+        )
+
+    recent_entries = PointLedger.objects.filter(user=request.user).select_related("challenge", "sermon")[:20]
+
+    return render(
+        request,
+        "core/my_history.html",
+        {
+            "profile": profile,
+            "current_challenge": challenge,
+            "weekly_points": weekly_points,
+            "weekly_history": weekly_history,
+            "recent_entries": recent_entries,
+        },
+    )
 
 
 def home_view(request):

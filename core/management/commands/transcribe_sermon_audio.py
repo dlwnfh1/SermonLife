@@ -6,7 +6,7 @@ from core.services.transcript_service import TranscriptFetchError, transcribe_au
 
 
 class Command(BaseCommand):
-    help = "Transcribe a local sermon audio file, save the transcript to a sermon, and generate AI content."
+    help = "Transcribe a local sermon media file, save the transcript to a sermon, and generate AI content."
 
     def add_arguments(self, parser):
         parser.add_argument("sermon_id", type=int)

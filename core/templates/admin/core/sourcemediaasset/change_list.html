@@ -1,0 +1,10 @@
+{% extends "admin/change_list.html" %}
+
+{% block content %}
+  <div class="sermon-source-media-panel" style="margin-bottom: 18px;">
+    <h2>원본 파일 폴더</h2>
+    <p>{{ source_media_root }}</p>
+    <p>여기에 있는 파일들만 새 설교 작성 시 선택할 수 있습니다.</p>
+  </div>
+  {{ block.super }}
+{% endblock %}

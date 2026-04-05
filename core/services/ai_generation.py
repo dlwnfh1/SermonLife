@@ -9,10 +9,11 @@ from django.db import transaction
 from django.utils import timezone
 
 from core.models import DailyEngagement, Sermon, SermonStatus, SermonSummary
+from core.services.sermon_importer import create_or_update_weekly_challenge
 
 
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
-DEFAULT_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5")
+DEFAULT_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5.4")
 
 
 SERMON_CONTENT_SCHEMA = {
@@ -209,7 +210,8 @@ def request_ai_generated_content(sermon: Sermon) -> GeneratedSermonContent:
 
 @transaction.atomic
 def apply_generated_content(sermon: Sermon, generated: GeneratedSermonContent) -> Sermon:
-    sermon.title = generated.title or sermon.title
+    if not sermon.title:
+        sermon.title = generated.title
     sermon.bible_passage = generated.bible_passage or sermon.bible_passage
     sermon.ai_generated = True
     sermon.ai_error = ""
@@ -247,6 +249,9 @@ def apply_generated_content(sermon: Sermon, generated: GeneratedSermonContent) -
     sermon.missions.all().delete()
 
     latest_challenge = sermon.weekly_challenges.order_by("-week_start", "-id").first()
+    if latest_challenge is None:
+        latest_challenge = create_or_update_weekly_challenge(sermon)
+
     if latest_challenge:
         latest_challenge.daily_engagements.all().delete()
         for item in generated.daily_engagements:

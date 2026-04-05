@@ -1,0 +1,191 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ sermon.title }} 읽기 | SermonLife</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body>
+    <main class="page-shell">
+        <section class="top-actions">
+            <a class="text-link" href="{% url 'core:home' %}">홈으로 돌아가기</a>
+            <a class="text-link" href="{% url 'core:watch_sermon' %}">설교 영상 보기</a>
+        </section>
+
+        <section class="panel read-panel" id="read-top">
+            <p class="section-label">이번 주 설교 읽기</p>
+            <h1 class="watch-title">{{ sermon.title }}</h1>
+            <p class="hero-meta">
+                {% if sermon.preacher %}{{ sermon.preacher }} · {% endif %}{{ sermon.sermon_date }}
+                {% if sermon.bible_passage %}<br>{{ sermon.bible_passage }}{% endif %}
+            </p>
+
+            {% if current_daily %}
+                <section class="read-focus-card" id="today-focus">
+                    <p class="section-label">오늘의 핵심 메시지{% if current_day_number %} · Day {{ current_day_number }}{% endif %}</p>
+                    <strong>{{ current_daily.title }}</strong>
+                    <p>
+                        {% if current_daily.focus_key_point %}
+                            {{ current_daily.focus_key_point }}
+                        {% else %}
+                            {{ current_daily.intro }}
+                        {% endif %}
+                    </p>
+                </section>
+            {% endif %}
+
+            {% if transcript_paragraphs %}
+                <div class="read-tools-sticky">
+                    <div class="read-toolbar" aria-label="읽기 도구">
+                        <span class="read-toolbar-label">글자 크기</span>
+                        <button type="button" class="read-toolbar-button" data-font-scale="-1">A-</button>
+                        <button type="button" class="read-toolbar-button" data-font-scale="1">A+</button>
+                        <span class="read-toolbar-divider" aria-hidden="true"></span>
+                        <span class="read-toolbar-label">읽기 모드</span>
+                        <button type="button" class="read-toolbar-button" data-read-theme="paper">밝게</button>
+                        <button type="button" class="read-toolbar-button" data-read-theme="calm">차분하게</button>
+                        {% if current_daily %}
+                            <button type="button" class="read-jump-button" data-jump-target="today-focus">오늘의 핵심</button>
+                        {% endif %}
+                        <button type="button" class="read-jump-button" data-jump-prev>이전 단락</button>
+                        <button type="button" class="read-jump-button" data-jump-next>다음 단락</button>
+                        <button type="button" class="read-jump-button" data-jump-target="read-top">맨 위로</button>
+                    </div>
+
+                    <div class="read-progress" aria-label="읽기 진행">
+                        <div class="read-progress-track">
+                            <div class="read-progress-fill" id="read-progress-fill"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="read-prose" id="read-prose">
+                    {% for paragraph in transcript_paragraphs %}
+                        <p id="paragraph-{{ forloop.counter }}">{{ paragraph }}</p>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="content-card">
+                    <p>아직 읽을 수 있는 설교 원문이 준비되지 않았습니다.</p>
+                </div>
+            {% endif %}
+        </section>
+    </main>
+    <script>
+        (function () {
+            const prose = document.getElementById("read-prose");
+            if (!prose) return;
+
+            const STORAGE_KEY = "sermonlife-read-font-scale";
+            const THEME_KEY = "sermonlife-read-theme";
+            const MIN_SCALE = -2;
+            const MAX_SCALE = 4;
+            const STEP = 0.08;
+            const paragraphs = Array.from(prose.querySelectorAll("p"));
+            let currentParagraphIndex = -1;
+            const JUMP_SIZE = 3;
+            const progressFill = document.getElementById("read-progress-fill");
+
+            function applyScale(scale) {
+                prose.style.fontSize = `${1.08 + (scale * STEP)}rem`;
+                prose.style.lineHeight = `${2 - (scale * 0.04)}`;
+            }
+
+            function applyTheme(theme) {
+                prose.dataset.theme = theme;
+            }
+
+            function scrollToTarget(element) {
+                if (!element) return;
+                element.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+
+            function updateProgress(index) {
+                if (!progressFill || !paragraphs.length) return;
+                const safeIndex = Math.min(paragraphs.length - 1, Math.max(0, index));
+                const percent = ((safeIndex + 1) / paragraphs.length) * 100;
+                progressFill.style.width = `${percent}%`;
+            }
+
+            function getCurrentParagraphIndex() {
+                if (!paragraphs.length) return 0;
+                const threshold = 180;
+                const foundIndex = paragraphs.findIndex((paragraph) => {
+                    const rect = paragraph.getBoundingClientRect();
+                    return rect.top >= threshold;
+                });
+                if (foundIndex !== -1) {
+                    return foundIndex;
+                }
+                return paragraphs.length - 1;
+            }
+
+            let currentScale = Number(window.localStorage.getItem(STORAGE_KEY) || 0);
+            if (Number.isNaN(currentScale)) currentScale = 0;
+            currentScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, currentScale));
+            applyScale(currentScale);
+
+            const savedTheme = window.localStorage.getItem(THEME_KEY) || "paper";
+            applyTheme(savedTheme);
+            updateProgress(0);
+
+            document.querySelectorAll("[data-font-scale]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    const direction = Number(button.getAttribute("data-font-scale"));
+                    currentScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, currentScale + direction));
+                    applyScale(currentScale);
+                    window.localStorage.setItem(STORAGE_KEY, String(currentScale));
+                });
+            });
+
+            document.querySelectorAll("[data-read-theme]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    const theme = button.getAttribute("data-read-theme") || "paper";
+                    applyTheme(theme);
+                    window.localStorage.setItem(THEME_KEY, theme);
+                });
+            });
+
+            document.querySelectorAll("[data-jump-target]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    const targetId = button.getAttribute("data-jump-target");
+                    scrollToTarget(document.getElementById(targetId));
+                });
+            });
+
+            const nextButton = document.querySelector("[data-jump-next]");
+            if (nextButton) {
+                nextButton.addEventListener("click", () => {
+                    if (!paragraphs.length) return;
+                    if (currentParagraphIndex < 0) {
+                        currentParagraphIndex = getCurrentParagraphIndex();
+                    }
+                    currentParagraphIndex = Math.min(paragraphs.length - 1, currentParagraphIndex + JUMP_SIZE);
+                    updateProgress(currentParagraphIndex);
+                    scrollToTarget(paragraphs[currentParagraphIndex]);
+                });
+            }
+
+            const prevButton = document.querySelector("[data-jump-prev]");
+            if (prevButton) {
+                prevButton.addEventListener("click", () => {
+                    if (!paragraphs.length) return;
+                    if (currentParagraphIndex < 0) {
+                        currentParagraphIndex = getCurrentParagraphIndex();
+                    }
+                    currentParagraphIndex = Math.max(0, currentParagraphIndex - JUMP_SIZE);
+                    updateProgress(currentParagraphIndex);
+                    scrollToTarget(paragraphs[currentParagraphIndex]);
+                });
+            }
+
+            window.addEventListener("scroll", () => {
+                currentParagraphIndex = getCurrentParagraphIndex();
+                updateProgress(currentParagraphIndex);
+            }, { passive: true });
+        })();
+    </script>
+</body>
+</html>

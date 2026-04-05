@@ -6,15 +6,21 @@ from .views import (
     home_view,
     login_view,
     logout_view,
+    my_history_view,
+    read_sermon_view,
     signup_view,
     submit_daily_quiz_view,
     submit_reflection_view,
+    watch_sermon_view,
 )
 
 app_name = "core"
 
 urlpatterns = [
     path("", home_view, name="home"),
+    path("history/", my_history_view, name="my_history"),
+    path("watch/", watch_sermon_view, name="watch_sermon"),
+    path("read/", read_sermon_view, name="read_sermon"),
     path("login/", login_view, name="login"),
     path("signup/", signup_view, name="signup"),
     path("logout/", logout_view, name="logout"),

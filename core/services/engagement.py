@@ -88,14 +88,22 @@ def submit_daily_quiz(*, user, daily_engagement, selected_answer):
         user=user,
         daily_engagement=daily_engagement,
     ).first()
-    attempt, _ = DailyQuizAttempt.objects.update_or_create(
+
+    if existing_attempt is not None:
+        return {
+            "attempt": existing_attempt,
+            "is_update": True,
+            "points_awarded": False,
+            "daily_bonus_awarded": False,
+            "weekly_bonus_awarded": False,
+        }
+
+    attempt = DailyQuizAttempt.objects.create(
         user=user,
         daily_engagement=daily_engagement,
-        defaults={
-            "challenge": daily_engagement.challenge,
-            "selected_answer": selected_answer,
-            "is_correct": selected_answer == daily_engagement.quiz_answer,
-        },
+        challenge=daily_engagement.challenge,
+        selected_answer=selected_answer,
+        is_correct=selected_answer == daily_engagement.quiz_answer,
     )
     points_awarded = False
     if attempt.is_correct:

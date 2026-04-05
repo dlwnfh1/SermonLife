@@ -15,8 +15,17 @@ from .services import (
 )
 
 
+class BaseReportAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        # Allow related report rows to be deleted when a sermon is deleted.
+        return request.user.is_active and request.user.is_staff
+
+
 @admin.register(WeeklyParticipationReport)
-class WeeklyParticipationReportAdmin(admin.ModelAdmin):
+class WeeklyParticipationReportAdmin(BaseReportAdmin):
     list_display = ("title", "week_start", "week_end", "participant_count", "total_points", "generated_at")
     search_fields = ("title", "sermon__title", "challenge__title")
     readonly_fields = (
@@ -27,12 +36,6 @@ class WeeklyParticipationReportAdmin(admin.ModelAdmin):
     )
     change_list_template = "admin/reports/weeklyparticipationreport/change_list.html"
     change_form_template = "admin/reports/weeklyparticipationreport/change_form.html"
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
 
     def changelist_view(self, request, extra_context=None):
         sync_all_weekly_participation_reports()
@@ -51,7 +54,7 @@ class WeeklyParticipationReportAdmin(admin.ModelAdmin):
 
 
 @admin.register(SermonParticipationReport)
-class SermonParticipationReportAdmin(admin.ModelAdmin):
+class SermonParticipationReportAdmin(BaseReportAdmin):
     list_display = ("title", "sermon_date", "participant_count", "average_points_per_participant", "weekly_completer_count", "generated_at")
     search_fields = ("title", "sermon__title")
     readonly_fields = (
@@ -62,12 +65,6 @@ class SermonParticipationReportAdmin(admin.ModelAdmin):
     )
     change_list_template = "admin/reports/sermonparticipationreport/change_list.html"
     change_form_template = "admin/reports/sermonparticipationreport/change_form.html"
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
 
     def changelist_view(self, request, extra_context=None):
         sync_all_sermon_participation_reports()
@@ -86,7 +83,7 @@ class SermonParticipationReportAdmin(admin.ModelAdmin):
 
 
 @admin.register(DailyActionReport)
-class DailyActionReportAdmin(admin.ModelAdmin):
+class DailyActionReportAdmin(BaseReportAdmin):
     list_display = ("title", "week_start", "week_end", "participant_count", "generated_at")
     search_fields = ("title", "sermon__title", "challenge__title")
     readonly_fields = (
@@ -95,12 +92,6 @@ class DailyActionReportAdmin(admin.ModelAdmin):
     )
     change_list_template = "admin/reports/dailyactionreport/change_list.html"
     change_form_template = "admin/reports/dailyactionreport/change_form.html"
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
 
     def changelist_view(self, request, extra_context=None):
         sync_all_daily_action_reports()
@@ -119,7 +110,7 @@ class DailyActionReportAdmin(admin.ModelAdmin):
 
 
 @admin.register(UserParticipationReport)
-class UserParticipationReportAdmin(admin.ModelAdmin):
+class UserParticipationReportAdmin(BaseReportAdmin):
     list_display = ("username", "display_name", "member_role", "total_points", "weekly_completer_count", "active_this_week", "last_activity_at")
     list_filter = ("member_role", "active_this_week", "recent_two_week_streak", "inactive_for_two_weeks")
     search_fields = ("username", "display_name")
@@ -130,12 +121,6 @@ class UserParticipationReportAdmin(admin.ModelAdmin):
     )
     change_list_template = "admin/reports/userparticipationreport/change_list.html"
     change_form_template = "admin/reports/userparticipationreport/change_form.html"
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
 
     def changelist_view(self, request, extra_context=None):
         sync_all_user_participation_reports()
@@ -154,7 +139,7 @@ class UserParticipationReportAdmin(admin.ModelAdmin):
 
 
 @admin.register(ContentQualityReport)
-class ContentQualityReportAdmin(admin.ModelAdmin):
+class ContentQualityReportAdmin(BaseReportAdmin):
     list_display = ("title", "week_start", "week_end", "participant_count", "issue_count", "generated_at")
     search_fields = ("title", "sermon__title", "challenge__title")
     readonly_fields = (
@@ -166,12 +151,6 @@ class ContentQualityReportAdmin(admin.ModelAdmin):
     )
     change_list_template = "admin/reports/contentqualityreport/change_list.html"
     change_form_template = "admin/reports/contentqualityreport/change_form.html"
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
 
     def changelist_view(self, request, extra_context=None):
         sync_all_content_quality_reports()

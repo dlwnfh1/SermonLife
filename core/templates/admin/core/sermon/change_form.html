@@ -1,0 +1,303 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .codex-toast-stack {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-width: 360px;
+    }
+
+    .codex-toast {
+        background: #111827;
+        color: #fff;
+        border-radius: 10px;
+        padding: 12px 14px;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
+        font-size: 13px;
+        line-height: 1.4;
+        opacity: 0;
+        transform: translateY(-8px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .codex-toast.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .codex-toast.success { background: #14532d; }
+    .codex-toast.error { background: #7f1d1d; }
+    .codex-toast.warning { background: #78350f; }
+
+    .codex-processing-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(17, 24, 39, 0.42);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 24px;
+    }
+
+    .codex-processing-overlay.show {
+        display: flex;
+    }
+
+    .codex-processing-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 18px 20px;
+        min-width: 280px;
+        max-width: 420px;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .codex-spinner {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: 3px solid #dbeafe;
+        border-top-color: #2563eb;
+        animation: codex-spin 0.8s linear infinite;
+        flex: 0 0 auto;
+    }
+
+    .codex-processing-title {
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 2px;
+    }
+
+    .codex-processing-text {
+        font-size: 13px;
+        color: #4b5563;
+        line-height: 1.4;
+    }
+
+    @keyframes codex-spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content_title %}
+    <div class="sermon-admin-header">
+        <div>
+            {% if change %}
+                <h1>설교 검토 및 수정</h1>
+            {% else %}
+                <h1>설교 등록</h1>
+            {% endif %}
+        </div>
+        <div class="sermon-admin-actions">
+            {% if change and original and transcribe_ai_url %}
+                <a
+                    class="sermon-secondary-button sermon-primary-step-button button js-admin-smart-transcribe"
+                    href="{{ transcribe_ai_url }}"
+                    data-original-source-id="{{ original.source_media_asset_id|default_if_none:'' }}"
+                    data-confirm-message="선택한 설교 파일을 다시 읽어 자막을 만들고 설교 내용을 정리합니다. 현재 수정 중인 요약과 Day 내용이 덮어써질 수 있습니다. 계속할까요?"
+                    data-progress-title="설교 내용 정리 중..."
+                    data-progress-text="설교 파일을 읽고 자막을 만든 뒤 설교 요약과 5일 루틴을 정리하고 있습니다."
+                >AI 자동 정리</a>
+            {% endif %}
+            {% if change %}
+                <button
+                    type="submit"
+                    name="_save_and_regenerate"
+                    value="1"
+                    class="sermon-secondary-button button js-admin-submit-progress"
+                    data-confirm-message="저장된 자막을 기준으로 설교 내용을 다시 정리합니다. 현재 수정 중인 요약과 Day 내용이 덮어써질 수 있습니다. 계속할까요?"
+                    data-progress-title="내용 다시 정리 중..."
+                    data-progress-text="저장된 자막을 기준으로 설교 요약과 5일 루틴을 다시 만들고 있습니다."
+                >AI 내용 다시 정리</button>
+            {% endif %}
+            {% if change %}
+                <input
+                    type="submit"
+                    value="직접 수정"
+                    name="_save"
+                    class="sermon-secondary-button button sermon-linklike-button"
+                    form="sermon_form"
+                >
+            {% endif %}
+            {% if change and original and publish_url %}
+                <a
+                    class="sermon-publish-button button default js-admin-progress"
+                    href="{{ publish_url }}"
+                    data-confirm-message="이 설교를 바로 공개하시겠습니까? 검토한 내용이 사용자 화면에 반영됩니다."
+                    data-progress-title="공개 처리 중..."
+                    data-progress-text="설교를 공개하고 사용자 화면에 반영하고 있습니다."
+                >검토 완료 및 공개</a>
+            {% endif %}
+            {% if change and original and delete_url %}
+                <a class="sermon-delete-button button" href="{{ delete_url }}">삭제</a>
+            {% endif %}
+            {% if show_prepare_button and not change %}
+                <input
+                    type="submit"
+                    value="저장"
+                    name="_save"
+                    class="sermon-secondary-button button sermon-linklike-button"
+                    form="sermon_form"
+                >
+                <a href="{% url 'admin:core_sermon_changelist' %}" class="sermon-secondary-button button">취소</a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block after_related_objects %}
+    {{ block.super }}
+    <div id="codex-processing-overlay" class="codex-processing-overlay" aria-live="polite" aria-hidden="true">
+        <div class="codex-processing-card">
+            <div class="codex-spinner"></div>
+            <div>
+                <div id="codex-processing-title" class="codex-processing-title">작업 중...</div>
+                <div id="codex-processing-text" class="codex-processing-text">잠시만 기다려 주세요.</div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block submit_buttons_bottom %}
+{% endblock %}
+
+{% block admin_change_form_document_ready %}
+{{ block.super }}
+<script>
+    (function () {
+        var popupMessages = [
+            {% if messages %}
+                {% for message in messages %}
+                    { text: "{{ message|escapejs }}", level: "{{ message.tags|default:'info'|escapejs }}" },
+                {% endfor %}
+            {% endif %}
+        ];
+
+        function showToast(message, level, offset) {
+            var stack = document.querySelector(".codex-toast-stack");
+            if (!stack) {
+                stack = document.createElement("div");
+                stack.className = "codex-toast-stack";
+                document.body.appendChild(stack);
+            }
+            var toast = document.createElement("div");
+            toast.className = "codex-toast" + (level ? " " + level : "");
+            toast.textContent = message;
+            stack.appendChild(toast);
+            var delay = offset || 0;
+            window.setTimeout(function () {
+                toast.classList.add("show");
+            }, 50 + delay);
+            window.setTimeout(function () {
+                toast.classList.remove("show");
+            }, 3400 + delay);
+            window.setTimeout(function () {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+                if (!stack.children.length && stack.parentNode) {
+                    stack.parentNode.removeChild(stack);
+                }
+            }, 3800 + delay);
+        }
+
+        if (popupMessages.length) {
+            popupMessages.forEach(function (message, index) {
+                showToast(message.text, message.level, index * 120);
+            });
+        }
+
+        var overlay = document.getElementById("codex-processing-overlay");
+        var overlayTitle = document.getElementById("codex-processing-title");
+        var overlayText = document.getElementById("codex-processing-text");
+
+        function showProcessing(title, text) {
+            if (!overlay) {
+                return;
+            }
+            overlayTitle.textContent = title || "작업 중...";
+            overlayText.textContent = text || "잠시만 기다려 주세요.";
+            overlay.classList.add("show");
+            overlay.setAttribute("aria-hidden", "false");
+        }
+
+        document.querySelectorAll(".js-admin-smart-transcribe").forEach(function (link) {
+            link.addEventListener("click", function (event) {
+                var message = link.dataset.confirmMessage || "";
+                if (message && !window.confirm(message)) {
+                    event.preventDefault();
+                    return;
+                }
+
+                var sourceSelect = document.getElementById("id_source_media_asset");
+                var originalSourceId = link.dataset.originalSourceId || "";
+                var currentSourceId = sourceSelect ? (sourceSelect.value || "") : "";
+
+                event.preventDefault();
+                showProcessing(link.dataset.progressTitle, link.dataset.progressText);
+
+                if (sourceSelect && currentSourceId !== originalSourceId) {
+                    var form = document.querySelector("#sermon_form") || document.querySelector("form");
+                    if (!form) {
+                        window.location.href = link.href;
+                        return;
+                    }
+                    var hiddenInput = document.createElement("input");
+                    hiddenInput.type = "hidden";
+                    hiddenInput.name = "_save_and_transcribe";
+                    hiddenInput.value = "1";
+                    form.appendChild(hiddenInput);
+                    window.setTimeout(function () {
+                        form.submit();
+                    }, 120);
+                    return;
+                }
+
+                window.setTimeout(function () {
+                    window.location.href = link.href;
+                }, 120);
+            });
+        });
+
+        document.querySelectorAll(".js-admin-progress").forEach(function (link) {
+            link.addEventListener("click", function (event) {
+                var message = link.dataset.confirmMessage || "";
+                if (message && !window.confirm(message)) {
+                    event.preventDefault();
+                    return;
+                }
+
+                event.preventDefault();
+                showProcessing(link.dataset.progressTitle, link.dataset.progressText);
+                window.setTimeout(function () {
+                    window.location.href = link.href;
+                }, 120);
+            });
+        });
+
+        document.querySelectorAll(".js-admin-submit-progress").forEach(function (button) {
+            button.addEventListener("click", function (event) {
+                var message = button.dataset.confirmMessage || "";
+                if (message && !window.confirm(message)) {
+                    event.preventDefault();
+                    return;
+                }
+
+                showProcessing(button.dataset.progressTitle, button.dataset.progressText);
+            });
+        });
+    }());
+</script>
+{% endblock %}

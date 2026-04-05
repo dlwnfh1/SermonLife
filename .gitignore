@@ -8,4 +8,10 @@ cookies.txt
 .env.*
 venv/
 venvs/
-
+uploads/
+media/
+*.mp4
+*.mov
+*.mp3
+*.m4a
+*.wav

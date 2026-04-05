@@ -14,6 +14,283 @@
     max-width: none !important;
 }
 
+.sermon-admin-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 18px;
+}
+
+.sermon-admin-header h1 {
+    margin: 0;
+}
+
+.sermon-admin-header p {
+    margin: 8px 0 0;
+    color: #666;
+    line-height: 1.6;
+}
+
+.change-form ul.messagelist {
+    display: none;
+}
+
+.codex-toast-stack {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 360px;
+}
+
+.codex-toast {
+    background: #111827;
+    color: #fff;
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
+    font-size: 13px;
+    line-height: 1.4;
+    transform: translateY(-8px);
+    opacity: 0;
+    transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.codex-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.codex-toast.success {
+    background: #14532d;
+}
+
+.codex-toast.error {
+    background: #7f1d1d;
+}
+
+.codex-toast.warning {
+    background: #78350f;
+}
+
+.codex-processing-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.42);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 24px;
+}
+
+.codex-processing-overlay.show {
+    display: flex;
+}
+
+body.codex-processing-active {
+    cursor: wait;
+}
+
+.codex-processing-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 18px 20px;
+    min-width: 280px;
+    max-width: 420px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.codex-spinner {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 3px solid #dbeafe;
+    border-top-color: #2563eb;
+    animation: codex-spin 0.8s linear infinite;
+    flex: 0 0 auto;
+}
+
+.codex-processing-title {
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 2px;
+}
+
+.codex-processing-text {
+    font-size: 13px;
+    color: #4b5563;
+    line-height: 1.4;
+}
+
+.sermon-admin-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sermon-publish-button,
+a.sermon-publish-button.button,
+a.sermon-publish-button.button.default,
+.sermon-secondary-button,
+a.sermon-secondary-button.button,
+.sermon-linklike-button,
+input.sermon-linklike-button.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 11px 18px;
+    border-radius: 999px;
+    background: #2f6b84;
+    color: #fff !important;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    border: 1px solid #2a6177;
+    box-shadow: 0 8px 18px rgba(47, 107, 132, 0.18);
+    appearance: none;
+    -webkit-appearance: none;
+    box-sizing: border-box;
+    line-height: 1.2;
+    vertical-align: middle;
+}
+
+.sermon-publish-button:hover,
+a.sermon-publish-button.button:hover,
+a.sermon-publish-button.button.default:hover,
+.sermon-secondary-button:hover,
+a.sermon-secondary-button.button:hover,
+.sermon-linklike-button:hover,
+input.sermon-linklike-button.button:hover {
+    background: #25586d;
+    color: #fff !important;
+    border-color: #214f62;
+}
+
+.sermon-primary-step-button,
+a.sermon-primary-step-button.button {
+    background: #0f766e;
+    border-color: #115e59;
+    color: #fff !important;
+    box-shadow: 0 10px 18px rgba(15, 118, 110, 0.18);
+}
+
+.sermon-primary-step-button:hover,
+a.sermon-primary-step-button.button:hover {
+    background: #115e59;
+    border-color: #134e4a;
+    color: #fff !important;
+}
+
+.sermon-delete-button,
+a.sermon-delete-button.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 11px 18px;
+    border-radius: 999px;
+    background: #b23a3a;
+    color: #fff !important;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    border: 1px solid #9a2f2f;
+    box-shadow: 0 8px 18px rgba(178, 58, 58, 0.18);
+    box-sizing: border-box;
+    line-height: 1.2;
+    vertical-align: middle;
+}
+
+.sermon-delete-button:hover,
+a.sermon-delete-button.button:hover {
+    background: #972d2d;
+    color: #fff !important;
+    border-color: #842626;
+}
+
+.sermon-source-media-panel {
+    margin: 18px 0 24px;
+    padding: 18px;
+    border: 1px solid #d7e1e7;
+    border-radius: 14px;
+    background: #f8fbfc;
+}
+
+.sermon-source-media-panel h2 {
+    margin: 0 0 8px;
+}
+
+.sermon-source-media-panel p {
+    margin: 0 0 12px;
+    color: #5b6870;
+}
+
+.sermon-source-upload {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.sermon-source-file-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+}
+
+.sermon-source-file {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #cdd9e0;
+    border-radius: 12px;
+    background: #fff;
+    cursor: pointer;
+    text-align: left;
+}
+
+.sermon-source-file:hover {
+    border-color: #7aa3b8;
+    background: #f5fafc;
+}
+
+.sermon-source-file strong {
+    color: #1f2d35;
+}
+
+.sermon-source-file span {
+    color: #60717b;
+    font-size: 12px;
+}
+
+.change-form fieldset.module h2 {
+    font-size: 15px;
+}
+
+.change-form .related-widget-wrapper-link {
+    display: none !important;
+}
+
+.inline-group .delete,
+.inline-group .delete input,
+.inline-group .delete label,
+.inline-group .inline-deletelink {
+    display: none !important;
+}
+
 .change-form .aligned textarea {
     width: min(100%, 980px) !important;
     box-sizing: border-box;
@@ -156,4 +433,21 @@
 .change-form textarea[name$="-reflection_question"],
 .change-form textarea[name$="-mission_description"] {
     min-height: 100px !important;
+}
+
+@media (max-width: 900px) {
+    .sermon-admin-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .sermon-admin-actions {
+        flex-wrap: wrap;
+    }
+}
+
+@keyframes codex-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }

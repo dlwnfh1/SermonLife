@@ -11,7 +11,8 @@
     <main class="page-shell">
         <section class="top-actions">
             {% if request.user.is_authenticated %}
-                <span class="auth-chip">{{ request.user.first_name|default:request.user.username }} 님</span>
+                <span class="auth-chip">{{ request.user.first_name|default:request.user.username }}</span>
+                <a class="text-link" href="{% url 'core:my_history' %}">내 기록</a>
                 <a class="text-link" href="{% url 'core:password_change' %}">비밀번호 변경</a>
                 <a class="text-link" href="{% url 'core:logout' %}">로그아웃</a>
             {% else %}
@@ -24,11 +25,15 @@
             <div class="hero-grid">
                 <div class="hero-copy">
                     <p class="eyebrow">SERMONLIFE</p>
-                    <h1><span>이번 주 말씀을</span><span>삶으로 이어가는</span><span>5일 여정</span></h1>
+                    <h1>
+                        <span>이번 주 말씀을</span>
+                        <span>삶으로 이어가는</span>
+                        <span>5일 여정</span>
+                    </h1>
                     <p class="lede">주일 설교를 듣고 끝내지 않고, 화요일부터 토요일까지 퀴즈와 묵상, 실천으로 다시 살아갑니다.</p>
                     {% if sermon %}
                         <div class="hero-badges">
-                            <span class="hero-badge">이번 주 포인트 {{ weekly_points }} / 120점</span>
+                            <span class="hero-badge">이번 주 루틴 진행 중</span>
                             <span class="hero-badge">완료 Day {{ completed_days_count }} / 5{% if weekly_bonus_awarded %} · 완주 보너스 획득{% endif %}</span>
                         </div>
                     {% endif %}
@@ -60,49 +65,89 @@
         </section>
 
         {% if sermon %}
+            <section class="quick-nav" aria-label="빠른 이동">
+                <a class="quick-nav-chip quick-nav-chip-primary" href="#today-set">오늘의 세트</a>
+                {% if sermon.hosted_video_url or sermon.youtube_embed_url or sermon.transcript %}
+                    <a class="quick-nav-chip" href="#media-panel">설교 보기</a>
+                {% endif %}
+                <a class="quick-nav-chip" href="#overview-panel">한눈에 보기</a>
+                <a class="quick-nav-chip" href="#daily-routine-panel">5일 루틴</a>
+            </section>
+
+            <nav class="mobile-dock-nav" aria-label="모바일 빠른 이동">
+                <a class="mobile-dock-link mobile-dock-link-primary" href="#today-set">오늘</a>
+                {% if sermon.hosted_video_url or sermon.youtube_embed_url or sermon.transcript %}
+                    <a class="mobile-dock-link" href="#media-panel">듣기</a>
+                {% endif %}
+                <a class="mobile-dock-link" href="#overview-panel">요약</a>
+                <a class="mobile-dock-link" href="#daily-routine-panel">루틴</a>
+            </nav>
 
             <section class="panel stat-panel">
                 <div class="stat-card">
                     <strong>이번 주 포인트</strong>
-                    <span>{{ weekly_points }}점 / 120점</span>
+                    <span>{{ weekly_points }}점 / {{ weekly_base_max_points }}점</span>
+                    <small>5일 완주 보너스 {{ weekly_bonus_points_value }}점 별도</small>
                 </div>
                 <div class="stat-card">
-                    <strong>완료한 Day</strong>
-                    <span>{{ completed_days_count }} / 5일{% if weekly_bonus_awarded %} | 완주 보너스 획득{% endif %}</span>
+                    <strong>완료 Day</strong>
+                    <span>{{ completed_days_count }} / 5{% if weekly_bonus_awarded %} | 완주 보너스 획득{% endif %}</span>
+                    <small>누적 포인트 {{ total_points }}점 · <a href="{% url 'core:my_history' %}">자세히 보기</a></small>
                 </div>
             </section>
 
-            {% if sermon.youtube_embed_url or sermon.audio_file %}
-                <section class="panel media-panel">
+            <section class="panel points-guide-panel">
+                <details class="points-guide-details">
+                    <summary class="points-guide-summary">
+                        <span>포인트 안내</span>
+                        <small>점수 구조 보기</small>
+                    </summary>
+                    <div class="points-guide-grid">
+                        <article class="points-guide-card">
+                            <strong>하루 1일 루틴</strong>
+                            <ul class="points-guide-list">
+                                <li>퀴즈 정답 {{ quiz_points_value }}점</li>
+                                <li>묵상 답변 저장 {{ reflection_points_value }}점</li>
+                                <li>미션 완료 {{ mission_points_value }}점</li>
+                                <li>하루 완료 보너스 {{ daily_bonus_points_value }}점</li>
+                            </ul>
+                        </article>
+                        <article class="points-guide-card">
+                            <strong>이번 주 최대 포인트</strong>
+                            <ul class="points-guide-list">
+                                <li>5일치 기본 점수 {{ weekly_base_max_points }}점</li>
+                                <li>5일 완주 보너스 {{ weekly_bonus_points_value }}점</li>
+                            </ul>
+                            <p class="points-guide-total">총 최대 {{ weekly_total_max_points }}점</p>
+                        </article>
+                    </div>
+                </details>
+            </section>
+
+            {% if sermon.hosted_video_url or sermon.youtube_embed_url or sermon.transcript %}
+                <section class="panel media-panel" id="media-panel">
                     <div class="panel-header">
-                        <h2>설교 다시 보기 · 듣기</h2>
+                        <h2>설교 다시 보기 · 읽기</h2>
                     </div>
                     <div class="media-grid">
-                        {% if sermon.youtube_embed_url %}
+                        {% if sermon.hosted_video_url or sermon.youtube_embed_url %}
                             <article class="media-card">
                                 <p class="section-label">영상으로 보기</p>
-                                <div class="video-frame">
-                                    <iframe
-                                        src="{{ sermon.youtube_embed_url }}"
-                                        title="{{ sermon.title }}"
-                                        loading="lazy"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                        referrerpolicy="strict-origin-when-cross-origin"
-                                        allowfullscreen></iframe>
+                                <div class="video-link-card">
+                                    <strong>{{ sermon.title }}</strong>
+                                    <p>설교 영상을 별도 화면으로 편하게 볼 수 있습니다.</p>
+                                    <a class="action-button" href="{% url 'core:watch_sermon' %}">설교 영상 보기</a>
                                 </div>
                             </article>
                         {% endif %}
 
-                        {% if sermon.audio_file %}
+                        {% if sermon.transcript %}
                             <article class="media-card">
-                                <p class="section-label">소리로 듣기</p>
+                                <p class="section-label">읽기로 보기</p>
                                 <div class="audio-card">
                                     <strong>{{ sermon.title }}</strong>
-                                    <p>화면을 떠나지 않고 바로 재생할 수 있습니다.</p>
-                                    <audio controls preload="none" class="audio-player">
-                                        <source src="{{ sermon.audio_file.url }}">
-                                        브라우저가 오디오 재생을 지원하지 않습니다.
-                                    </audio>
+                                    <p>설교 전체 자막과 원문을 읽기 좋은 화면에서 차분하게 볼 수 있습니다.</p>
+                                    <a class="action-button" href="{% url 'core:read_sermon' %}">설교 읽기</a>
                                 </div>
                             </article>
                         {% endif %}
@@ -110,65 +155,44 @@
                 </section>
             {% endif %}
 
-            <section class="panel">
+            <section class="panel" id="overview-panel">
                 <div class="panel-header">
-                    <h2>설교 개요</h2>
+                    <h2>이번 주 한눈에 보기</h2>
                 </div>
                 {% if overview %}
                     <p class="overview-text">{{ overview|linebreaksbr }}</p>
                 {% else %}
-                    <p class="empty">아직 승인된 설교 개요가 없습니다.</p>
+                    <p class="empty">아직 확인된 설교 개요가 없습니다.</p>
                 {% endif %}
             </section>
 
-            <section class="panel">
-                <div class="panel-header">
-                    <h2>설교 흐름</h2>
-                </div>
-                {% if outline_points %}
-                    <ol class="content-list outline-list">
-                        {% for point in outline_points %}
-                            <li>{{ point }}</li>
-                        {% endfor %}
-                    </ol>
-                {% else %}
-                    <p class="empty">아직 승인된 설교 흐름이 없습니다.</p>
-                {% endif %}
-            </section>
-
-            <section class="panel">
-                <div class="panel-header">
-                    <h2>핵심 메시지</h2>
-                </div>
-                {% if key_points %}
-                    <div class="card-grid">
-                        {% for point in key_points %}
-                            <article class="content-card">
-                                <p>{{ point|linebreaksbr }}</p>
-                            </article>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <p class="empty">아직 승인된 핵심 메시지가 없습니다.</p>
-                {% endif %}
-            </section>
-
-            <section class="panel">
+            <section class="panel" id="daily-routine-panel">
                 <div class="panel-header">
                     <h2>이번 주 5일 루틴</h2>
                 </div>
+                <p class="mobile-routine-hint">모바일에서는 좌우로 넘겨보세요.</p>
                 {% if daily_engagements %}
-                    <div class="card-grid">
+                    <div class="card-grid daily-routine-grid">
                         {% for item in daily_engagements %}
                             <article class="content-card {% if current_day_number == item.day_number %}highlight-card{% endif %}">
                                 <p class="section-label">Day {{ item.day_number }}</p>
                                 <h3>{{ item.title }}</h3>
                                 <p>{{ item.intro }}</p>
+                                {% if item.focus_outline_points %}
+                                    <ul class="mini-focus-list">
+                                        {% for point in item.focus_outline_points %}
+                                            <li>{{ point }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                                {% if item.focus_key_point %}
+                                    <p class="mini-key-point">{{ item.focus_key_point }}</p>
+                                {% endif %}
                             </article>
                         {% endfor %}
                     </div>
                 {% else %}
-                    <p class="empty">아직 승인된 일간 참여 세트가 없습니다.</p>
+                    <p class="empty">아직 확인된 주간 참여 세트가 없습니다.</p>
                 {% endif %}
             </section>
 
@@ -190,6 +214,29 @@
                             <p>{{ current_daily.intro }}</p>
                         </article>
 
+                        <div class="daily-focus-grid">
+                            <article class="content-card">
+                                <h3>오늘의 설교 흐름</h3>
+                                {% if current_daily.focus_outline_points %}
+                                    <ul class="mini-focus-list large">
+                                        {% for point in current_daily.focus_outline_points %}
+                                            <li>{{ point }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <p class="empty">오늘의 흐름 요약이 아직 없습니다.</p>
+                                {% endif %}
+                            </article>
+                            <article class="content-card">
+                                <h3>오늘의 핵심 메시지</h3>
+                                {% if current_daily.focus_key_point %}
+                                    <p class="focus-key-copy">{{ current_daily.focus_key_point|linebreaksbr }}</p>
+                                {% else %}
+                                    <p class="empty">오늘의 핵심 메시지가 아직 없습니다.</p>
+                                {% endif %}
+                            </article>
+                        </div>
+
                         {% if request.user.is_authenticated %}
                             <div class="today-points">
                                 <span>퀴즈 {{ current_daily_state.quiz_points|default:0 }}점</span>
@@ -198,7 +245,7 @@
                                 <span>일일 보너스 {{ current_daily_state.daily_bonus_points|default:0 }}점</span>
                             </div>
                         {% else %}
-                            <p class="empty">포인트 적립과 기록 저장은 로그인 후 사용할 수 있습니다. <a href="{% url 'core:login' %}">로그인하기</a></p>
+                            <p class="empty">포인트 적립과 기록 저장은 로그인 후 이용할 수 있습니다. <a href="{% url 'core:login' %}">로그인하기</a></p>
                         {% endif %}
 
                         <div class="three-column">
@@ -255,7 +302,7 @@
                                 {% if request.user.is_authenticated %}
                                     <form method="post" action="{% url 'core:complete_mission' current_daily.id %}" class="action-form">
                                         {% csrf_token %}
-                                        <textarea name="mission_note" rows="3" placeholder="실천 메모를 남겨도 됩니다.">{% if current_daily_state.mission %}{{ current_daily_state.mission.note }}{% endif %}</textarea>
+                                        <textarea name="mission_note" rows="3" placeholder="실천 메모를 남길 수 있습니다.">{% if current_daily_state.mission %}{{ current_daily_state.mission.note }}{% endif %}</textarea>
                                         <button type="submit" class="action-button">미션 완료</button>
                                     </form>
                                 {% endif %}
@@ -263,14 +310,14 @@
                         </div>
                     </div>
                 {% else %}
-                    <p class="empty">오늘 공개된 일간 세트가 없습니다.</p>
+                    <p class="empty">오늘 공개된 일일 세트가 없습니다.</p>
                 {% endif %}
             </section>
         {% else %}
             <section class="panel empty-state">
                 <p class="section-label">No Published Sermon</p>
                 <h2>이번 주 설교가 아직 공개되지 않았습니다.</h2>
-                <p class="empty">최신 설교를 불러오고 전사 및 AI 초안을 생성한 뒤, 관리자 승인 후 주간 루틴이 시작됩니다.</p>
+                <p class="empty">최신 설교를 불러오고 전사 및 AI 초안을 생성한 뒤 관리자 확인 후 주간 루틴이 시작됩니다.</p>
             </section>
         {% endif %}
     </main>

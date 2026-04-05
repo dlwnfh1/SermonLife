@@ -1,8 +1,12 @@
 from datetime import timedelta
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+from django.apps import apps as django_apps
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.db.utils import OperationalError, ProgrammingError
 from django.utils import timezone
 
 
@@ -31,12 +35,87 @@ class MemberRole(models.TextChoices):
     OTHER = "other", "기타"
 
 
+class MediaStorageSetting(models.Model):
+    source_media_subdir = models.CharField(
+        max_length=255,
+        default="sermons",
+        help_text="uploads 아래에서 사용할 폴더 경로입니다. 예: sermons 또는 sermons/2026/april",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "파일 저장 위치"
+        verbose_name_plural = "파일 저장 위치"
+
+    def __str__(self):
+        return self.source_media_subdir
+
+    def clean(self):
+        super().clean()
+        normalized = (self.source_media_subdir or "").replace("\\", "/").strip().strip("/")
+        if not normalized:
+            normalized = "sermons"
+        if ":" in normalized or normalized.startswith("/"):
+            raise ValidationError(
+                {"source_media_subdir": "드라이브 문자나 절대 경로 없이 uploads 아래 폴더 경로만 입력해 주세요."}
+            )
+        self.source_media_subdir = normalized
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+        type(self).objects.exclude(pk=self.pk).delete()
+
+
+def get_source_media_subdir():
+    default_subdir = getattr(settings, "SOURCE_MEDIA_UPLOAD_SUBDIR", "sermons")
+    try:
+        model = django_apps.get_model("core", "MediaStorageSetting")
+        setting = model.objects.order_by("-id").first()
+    except (LookupError, OperationalError, ProgrammingError):
+        setting = None
+
+    chosen = setting.source_media_subdir if setting and setting.source_media_subdir else default_subdir
+    return chosen.strip("/\\") or "sermons"
+
+
+def get_source_media_root():
+    return Path(settings.MEDIA_ROOT) / get_source_media_subdir()
+
+
+def source_media_upload_to(instance, filename):
+    subdir = get_source_media_subdir()
+    return f"{subdir}/{filename}"
+
+
+class SourceMediaAsset(models.Model):
+    file = models.FileField(upload_to=source_media_upload_to)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        verbose_name = "원본 파일"
+        verbose_name_plural = "원본 파일"
+
+    def __str__(self):
+        return Path(self.file.name).stem or self.file.name
+
+
 class Sermon(models.Model):
     title = models.CharField(max_length=255)
     preacher = models.CharField(max_length=100, blank=True)
     sermon_date = models.DateField()
     youtube_url = models.URLField(blank=True)
     audio_file = models.FileField(upload_to="sermons/audio/", blank=True, null=True)
+    playback_video_file = models.FileField(upload_to="sermons/playback/", blank=True, null=True)
+    source_media_asset = models.ForeignKey(
+        SourceMediaAsset,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sermons",
+    )
+    source_media_path = models.CharField(max_length=500, blank=True)
     transcript = models.TextField(blank=True)
     bible_passage = models.CharField(max_length=255, blank=True)
     ai_generated = models.BooleanField(default=False)
@@ -84,6 +163,35 @@ class Sermon(models.Model):
 
         return f"https://www.youtube.com/embed/{video_id}"
 
+    @property
+    def hosted_video_url(self):
+        if self.source_media_asset and self.source_media_asset.file:
+            source_suffix = Path(self.source_media_asset.file.name).suffix.lower()
+            if source_suffix in {".mp4", ".webm", ".ogv"}:
+                try:
+                    return self.source_media_asset.file.url
+                except Exception:
+                    return ""
+        return ""
+
+    @property
+    def hosted_video_inline_supported(self):
+        if self.source_media_asset and self.source_media_asset.file:
+            if Path(self.source_media_asset.file.name).suffix.lower() in {".mp4", ".webm", ".ogv"}:
+                return True
+        return False
+
+    @property
+    def hosted_video_mime_type(self):
+        suffix = Path(self.source_media_asset.file.name).suffix.lower() if self.source_media_asset and self.source_media_asset.file else ""
+        return {
+            ".mp4": "video/mp4",
+            ".mov": "video/quicktime",
+            ".m4v": "video/x-m4v",
+            ".webm": "video/webm",
+            ".ogv": "video/ogg",
+        }.get(suffix, "video/mp4")
+
     def publish(self):
         self.approve_generated_content()
         self.is_published = True
@@ -102,6 +210,15 @@ class Sermon(models.Model):
         self.quizzes.all().delete()
         self.missions.all().delete()
         DailyEngagement.objects.filter(sermon=self).update(approved=True)
+
+    @property
+    def resolved_source_media_path(self):
+        if self.source_media_asset and self.source_media_asset.file:
+            try:
+                return self.source_media_asset.file.path
+            except Exception:
+                return ""
+        return self.source_media_path
 
 
 class SermonSummary(models.Model):

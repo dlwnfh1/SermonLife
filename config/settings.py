@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,7 +26,7 @@ SECRET_KEY = 'django-insecure-)#1%bk##dmhz-zt&s*#nkz-nnccxu+9%e&8g6p@+p@t$0grsan
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "*"]
 
 
 # Application definition
@@ -106,7 +107,9 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'uploads'
+MEDIA_ROOT = Path(os.environ.get('SERMONLIFE_MEDIA_ROOT', BASE_DIR / 'uploads'))
+SOURCE_MEDIA_UPLOAD_SUBDIR = 'sermons'
+SOURCE_MEDIA_ROOT = MEDIA_ROOT / SOURCE_MEDIA_UPLOAD_SUBDIR
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

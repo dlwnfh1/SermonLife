@@ -21,6 +21,7 @@ FFMPEG_PATH = os.environ.get(
 )
 TRANSCRIPTION_CHUNK_SECONDS = int(os.environ.get("TRANSCRIPTION_CHUNK_SECONDS", "600"))
 VTT_TIMESTAMP_PATTERN = re.compile(r"^\d{2}:\d{2}:\d{2}\.\d{3}\s+-->\s+\d{2}:\d{2}:\d{2}\.\d{3}$")
+VIDEO_EXTENSIONS = {".mov", ".mp4", ".avi", ".mkv", ".wmv", ".m4v", ".webm", ".ogv"}
 
 
 class TranscriptFetchError(Exception):
@@ -174,8 +175,12 @@ def _split_audio_file(audio_path: Path):
         "segment",
         "-segment_time",
         str(TRANSCRIPTION_CHUNK_SECONDS),
-        "-c",
-        "copy",
+        "-acodec",
+        "libmp3lame",
+        "-ar",
+        "44100",
+        "-ac",
+        "2",
         segment_pattern,
         "-y",
     ]
@@ -195,25 +200,105 @@ def _split_audio_file(audio_path: Path):
     return chunks
 
 
-def transcribe_audio_file(audio_path: str) -> str:
-    path = Path(audio_path)
-    if not path.exists():
-        raise TranscriptFetchError(f"Audio file not found: {audio_path}")
-
-    try:
-        return _transcribe_audio_with_openai(path)
-    except TranscriptFetchError as exc:
-        if "input_too_large" not in str(exc):
-            raise
-
+def _transcribe_in_chunks(audio_path: Path) -> str:
     transcripts = []
-    for chunk in _split_audio_file(path):
+    for chunk in _split_audio_file(audio_path):
         transcripts.append(_transcribe_audio_with_openai(chunk))
 
     merged = "\n".join(part.strip() for part in transcripts if part.strip()).strip()
     if not merged:
         raise TranscriptFetchError("Chunked transcription produced an empty transcript.")
     return merged
+
+
+def _extract_audio_track(media_path: Path) -> Path:
+    ffmpeg_path = _resolve_ffmpeg_path()
+    tmpdir = tempfile.mkdtemp()
+    output_path = Path(tmpdir) / f"{media_path.stem}.mp3"
+    command = [
+        ffmpeg_path,
+        "-i",
+        str(media_path),
+        "-vn",
+        "-acodec",
+        "libmp3lame",
+        "-ar",
+        "44100",
+        "-ac",
+        "2",
+        str(output_path),
+        "-y",
+    ]
+    completed = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="ignore",
+    )
+    if completed.returncode != 0 or not output_path.exists():
+        raise TranscriptFetchError(f"ffmpeg audio extraction failed: {completed.stderr.strip()}")
+    return output_path
+
+
+def create_web_playback_video(media_path: str, output_root: Path) -> Path:
+    source_path = Path(media_path)
+    if not source_path.exists():
+        raise TranscriptFetchError(f"Media file not found: {media_path}")
+
+    output_root.mkdir(parents=True, exist_ok=True)
+    output_path = output_root / f"{source_path.stem}.mp4"
+    ffmpeg_path = _resolve_ffmpeg_path()
+    command = [
+        ffmpeg_path,
+        "-i",
+        str(source_path),
+        "-c:v",
+        "libx264",
+        "-preset",
+        "fast",
+        "-crf",
+        "23",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "128k",
+        "-movflags",
+        "+faststart",
+        str(output_path),
+        "-y",
+    ]
+    completed = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="ignore",
+    )
+    if completed.returncode != 0 or not output_path.exists():
+        raise TranscriptFetchError(f"ffmpeg web playback conversion failed: {completed.stderr.strip()}")
+    return output_path
+
+
+def transcribe_audio_file(audio_path: str) -> str:
+    path = Path(audio_path)
+    if not path.exists():
+        raise TranscriptFetchError(f"Audio file not found: {audio_path}")
+
+    transcribable_path = path
+    if path.suffix.lower() in VIDEO_EXTENSIONS:
+        transcribable_path = _extract_audio_track(path)
+
+    try:
+        return _transcribe_in_chunks(transcribable_path)
+    except TranscriptFetchError as exc:
+        if "input_too_large" not in str(exc):
+            try:
+                return _transcribe_audio_with_openai(transcribable_path)
+            except TranscriptFetchError:
+                raise exc
+
+    return _transcribe_in_chunks(transcribable_path)
 
 
 def fetch_youtube_transcript(youtube_url: str, languages=None) -> str:

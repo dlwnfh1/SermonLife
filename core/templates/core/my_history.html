@@ -1,0 +1,89 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>내 기록 | SermonLife</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body>
+    <main class="page-shell">
+        <section class="top-actions">
+            <a class="text-link" href="{% url 'core:home' %}">홈으로</a>
+            <a class="text-link" href="{% url 'core:logout' %}">로그아웃</a>
+        </section>
+
+        <section class="panel history-hero">
+            <p class="eyebrow">MY HISTORY</p>
+            <h1 class="history-title">내 기록</h1>
+            <p class="lede">이번 주 진행 상황과 누적 포인트, 최근 참여 기록을 한눈에 확인할 수 있습니다.</p>
+        </section>
+
+        <section class="panel stat-panel">
+            <div class="stat-card">
+                <strong>이번 주 포인트</strong>
+                <span>{{ weekly_points }}점</span>
+                {% if current_challenge %}
+                    <small>{{ current_challenge.title }}</small>
+                {% else %}
+                    <small>현재 진행 중인 주간 챌린지가 없습니다.</small>
+                {% endif %}
+            </div>
+            <div class="stat-card">
+                <strong>누적 포인트</strong>
+                <span>{{ profile.points }}점</span>
+                <small>연속 참여 {{ profile.streak_days }}일</small>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>최근 주간 기록</h2>
+            </div>
+            {% if weekly_history %}
+                <div class="history-grid">
+                    {% for item in weekly_history %}
+                        <article class="content-card history-card">
+                            <p class="section-label">{{ item.challenge.week_start }} ~ {{ item.challenge.week_end }}</p>
+                            <h3>{{ item.challenge.title }}</h3>
+                            <p class="history-sermon-title">{{ item.challenge.sermon.title }}</p>
+                            <div class="history-meta-row">
+                                <span>획득 {{ item.earned_points }}점</span>
+                                <span>완료 Day {{ item.completed_days }} / 5</span>
+                            </div>
+                            {% if item.weekly_bonus_awarded %}
+                                <p class="history-bonus-badge">5일 완주 보너스 획득</p>
+                            {% endif %}
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="empty">아직 최근 주간 참여 기록이 없습니다.</p>
+            {% endif %}
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>최근 포인트 적립</h2>
+            </div>
+            {% if recent_entries %}
+                <div class="history-ledger-list">
+                    {% for entry in recent_entries %}
+                        <article class="history-ledger-item">
+                            <div>
+                                <strong>{{ entry.get_source_display }}</strong>
+                                <p>{{ entry.challenge.title }}</p>
+                                <small>{{ entry.created_at|date:"Y-m-d H:i" }}</small>
+                            </div>
+                            <span class="history-points">+{{ entry.points }}점</span>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="empty">아직 포인트 적립 내역이 없습니다.</p>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

@@ -1,0 +1,55 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ sermon.title }} | SermonLife</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body>
+    <main class="page-shell">
+        <section class="top-actions">
+            <a class="text-link" href="{% url 'core:home' %}">홈으로 돌아가기</a>
+            <a class="text-link" href="{% url 'core:logout' %}">로그아웃</a>
+        </section>
+
+        <section class="panel watch-panel">
+            <p class="section-label">이번 주 설교 영상</p>
+            <h1 class="watch-title">{{ sermon.title }}</h1>
+            <p class="hero-meta">
+                {% if sermon.preacher %}{{ sermon.preacher }} · {% endif %}{{ sermon.sermon_date }}
+                {% if sermon.bible_passage %}<br>{{ sermon.bible_passage }}{% endif %}
+            </p>
+
+            {% if sermon.hosted_video_url and sermon.hosted_video_inline_supported %}
+                <div class="watch-frame">
+                    <video controls preload="metadata" class="watch-video" playsinline>
+                        <source src="{{ sermon.hosted_video_url }}" type="{{ sermon.hosted_video_mime_type }}">
+                        브라우저가 설교 영상을 재생하지 못합니다.
+                    </video>
+                </div>
+            {% elif sermon.youtube_embed_url %}
+                <div class="watch-frame">
+                    <iframe
+                        src="{{ sermon.youtube_embed_url }}"
+                        title="{{ sermon.title }}"
+                        loading="lazy"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerpolicy="strict-origin-when-cross-origin"
+                        allowfullscreen></iframe>
+                </div>
+            {% elif sermon.hosted_video_url %}
+                <div class="content-card">
+                    <p>이 영상은 브라우저 안에서 바로 재생되지 않는 형식입니다. 아래 버튼으로 새 창에서 열어볼 수 있습니다.</p>
+                    <a class="action-button" href="{{ sermon.hosted_video_url }}" target="_blank" rel="noopener">영상 열기</a>
+                </div>
+            {% else %}
+                <div class="content-card">
+                    <p>현재 재생 가능한 설교 영상이 없습니다.</p>
+                </div>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>
