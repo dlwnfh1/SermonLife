@@ -1,0 +1,23 @@
+{
+  "name": "SermonLife",
+  "short_name": "SermonLife",
+  "description": "주간 설교를 삶으로 이어가는 5일 루틴",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f1e7",
+  "theme_color": "#2f6b84",
+  "icons": [
+    {
+      "src": "/static/core/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/core/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
