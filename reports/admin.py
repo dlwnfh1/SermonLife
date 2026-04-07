@@ -45,7 +45,7 @@ class WeeklyParticipationReportAdmin(BaseReportAdmin):
 
     def change_view(self, request, object_id, form_url="", extra_context=None):
         obj = self.get_object(request, object_id)
-        if obj is not None:
+        if obj is not None and obj.challenge:
             obj = sync_weekly_participation_report(obj.challenge)
         extra_context = extra_context or {}
         extra_context["report"] = obj
@@ -74,7 +74,7 @@ class SermonParticipationReportAdmin(BaseReportAdmin):
 
     def change_view(self, request, object_id, form_url="", extra_context=None):
         obj = self.get_object(request, object_id)
-        if obj is not None:
+        if obj is not None and obj.sermon:
             obj = sync_sermon_participation_report(obj.sermon)
         extra_context = extra_context or {}
         extra_context["report"] = obj
@@ -101,7 +101,7 @@ class DailyActionReportAdmin(BaseReportAdmin):
 
     def change_view(self, request, object_id, form_url="", extra_context=None):
         obj = self.get_object(request, object_id)
-        if obj is not None:
+        if obj is not None and obj.challenge:
             obj = sync_daily_action_report(obj.challenge)
         extra_context = extra_context or {}
         extra_context["report"] = obj
@@ -130,7 +130,7 @@ class UserParticipationReportAdmin(BaseReportAdmin):
 
     def change_view(self, request, object_id, form_url="", extra_context=None):
         obj = self.get_object(request, object_id)
-        if obj is not None:
+        if obj is not None and obj.user:
             obj = sync_user_participation_report(obj.user)
         extra_context = extra_context or {}
         extra_context["report"] = obj
@@ -160,7 +160,7 @@ class ContentQualityReportAdmin(BaseReportAdmin):
 
     def change_view(self, request, object_id, form_url="", extra_context=None):
         obj = self.get_object(request, object_id)
-        if obj is not None:
+        if obj is not None and obj.challenge:
             obj = sync_content_quality_report(obj.challenge)
         extra_context = extra_context or {}
         extra_context["report"] = obj

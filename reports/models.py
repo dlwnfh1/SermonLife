@@ -2,8 +2,20 @@ from django.db import models
 
 
 class WeeklyParticipationReport(models.Model):
-    challenge = models.OneToOneField("core.WeeklyChallenge", on_delete=models.CASCADE, related_name="weekly_participation_report")
-    sermon = models.ForeignKey("core.Sermon", on_delete=models.CASCADE, related_name="weekly_participation_reports")
+    challenge = models.OneToOneField(
+        "core.WeeklyChallenge",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="weekly_participation_report",
+    )
+    sermon = models.ForeignKey(
+        "core.Sermon",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="weekly_participation_reports",
+    )
     title = models.CharField(max_length=255)
     week_start = models.DateField()
     week_end = models.DateField()
@@ -29,7 +41,13 @@ class WeeklyParticipationReport(models.Model):
 
 
 class SermonParticipationReport(models.Model):
-    sermon = models.OneToOneField("core.Sermon", on_delete=models.CASCADE, related_name="sermon_participation_report")
+    sermon = models.OneToOneField(
+        "core.Sermon",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sermon_participation_report",
+    )
     primary_challenge = models.ForeignKey(
         "core.WeeklyChallenge",
         on_delete=models.SET_NULL,
@@ -61,8 +79,20 @@ class SermonParticipationReport(models.Model):
 
 
 class DailyActionReport(models.Model):
-    challenge = models.OneToOneField("core.WeeklyChallenge", on_delete=models.CASCADE, related_name="daily_action_report")
-    sermon = models.ForeignKey("core.Sermon", on_delete=models.CASCADE, related_name="daily_action_reports")
+    challenge = models.OneToOneField(
+        "core.WeeklyChallenge",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="daily_action_report",
+    )
+    sermon = models.ForeignKey(
+        "core.Sermon",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="daily_action_reports",
+    )
     title = models.CharField(max_length=255)
     week_start = models.DateField()
     week_end = models.DateField()
@@ -108,8 +138,20 @@ class UserParticipationReport(models.Model):
 
 
 class ContentQualityReport(models.Model):
-    challenge = models.OneToOneField("core.WeeklyChallenge", on_delete=models.CASCADE, related_name="content_quality_report")
-    sermon = models.ForeignKey("core.Sermon", on_delete=models.CASCADE, related_name="content_quality_reports")
+    challenge = models.OneToOneField(
+        "core.WeeklyChallenge",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="content_quality_report",
+    )
+    sermon = models.ForeignKey(
+        "core.Sermon",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="content_quality_reports",
+    )
     title = models.CharField(max_length=255)
     week_start = models.DateField()
     week_end = models.DateField()

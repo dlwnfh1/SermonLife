@@ -15,7 +15,7 @@
             <table class="admin-report-table">
                 <tr>
                     <th>기준 설교</th>
-                    <td>{{ report.sermon.title }}</td>
+                    <td>{{ report.sermon.title|default:report.title }}</td>
                 </tr>
                 <tr>
                     <th>기간</th>
