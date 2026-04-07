@@ -34,6 +34,13 @@ admin.site.index_title = "SERMON LIFE 관리하기"
 PointLedger._meta.verbose_name = "달란트 내역"
 PointLedger._meta.verbose_name_plural = "달란트 내역"
 
+
+def _clean_sermon_title_from_filename(value):
+    if not value:
+        return ""
+    cleaned = Path(value).stem if "." in str(value) else str(value)
+    return " ".join(cleaned.replace("_", " ").split())
+
 class SermonSummaryInline(admin.StackedInline):
     model = SermonSummary
     extra = 0
@@ -226,7 +233,7 @@ class SourceMediaAssetAdmin(admin.ModelAdmin):
                 file_path.unlink()
 
     def display_name(self, obj):
-        return Path(obj.file.name).stem or obj.file.name
+        return _clean_sermon_title_from_filename(obj.file.name) or obj.file.name
     display_name.short_description = "파일 이름"
 
 
@@ -595,6 +602,9 @@ class SermonAdmin(admin.ModelAdmin):
         return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
 
     def save_model(self, request, obj, form, change):
+        if obj.source_media_asset_id and not form.cleaned_data.get("title"):
+            obj.title = _clean_sermon_title_from_filename(obj.source_media_asset.file.name)
+
         publish_requested = obj.is_published or obj.status == SermonStatus.PUBLISHED
         approve_requested = obj.status == SermonStatus.APPROVED
 
