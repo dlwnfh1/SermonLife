@@ -183,6 +183,23 @@ class MediaStorageSettingAdminForm(forms.ModelForm):
         )
 
 
+class SermonAdminForm(forms.ModelForm):
+    transcript = forms.CharField(
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "rows": 18,
+                "cols": 140,
+                "style": "min-height: 360px; width: 100%; max-width: none;",
+            }
+        ),
+    )
+
+    class Meta:
+        model = Sermon
+        fields = "__all__"
+
+
 def sync_source_media_assets():
     root = get_source_media_root()
     root.mkdir(parents=True, exist_ok=True)
@@ -293,6 +310,7 @@ class MediaStorageSettingAdmin(admin.ModelAdmin):
 
 @admin.register(Sermon)
 class SermonAdmin(admin.ModelAdmin):
+    form = SermonAdminForm
     list_display = (
         "title",
         "sermon_date",
