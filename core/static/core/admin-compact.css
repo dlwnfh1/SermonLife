@@ -217,6 +217,44 @@ a.sermon-delete-button.button:hover {
     border-color: #842626;
 }
 
+.sermon-admin-danger-zone {
+    margin-top: 14px;
+}
+
+.sermon-admin-danger-details {
+    border: 1px solid #e6c4c4;
+    border-radius: 16px;
+    background: #fff7f7;
+    padding: 0;
+    overflow: hidden;
+}
+
+.sermon-admin-danger-details summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 14px 18px;
+    font-weight: 700;
+    color: #8f2f2f;
+}
+
+.sermon-admin-danger-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.sermon-admin-danger-details[open] summary {
+    border-bottom: 1px solid #f0d7d7;
+}
+
+.sermon-admin-danger-body {
+    padding: 16px 18px 18px;
+}
+
+.sermon-admin-danger-body p {
+    margin: 0 0 14px;
+    color: #6b4b4b;
+    line-height: 1.5;
+}
+
 .sermon-source-media-panel {
     margin: 18px 0 24px;
     padding: 18px;

@@ -313,7 +313,6 @@ class SermonAdmin(admin.ModelAdmin):
         "last_ai_generated_at",
         "import_error",
         "ai_error",
-        "transcript",
     )
     change_form_template = "admin/core/sermon/change_form.html"
     fieldsets = (

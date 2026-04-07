@@ -149,9 +149,6 @@
                     data-progress-text="설교 공개를 잠시 해제하고 사용자 화면 상태를 되돌리고 있습니다."
                 >공개 해제</a>
             {% endif %}
-            {% if change and original and delete_url %}
-                <a class="sermon-delete-button button" href="{{ delete_url }}">삭제</a>
-            {% endif %}
             {% if show_prepare_button and not change %}
                 <input
                     type="submit"
@@ -164,6 +161,21 @@
             {% endif %}
         </div>
     </div>
+    {% if change and original and delete_url %}
+        <div class="sermon-admin-danger-zone">
+            <details class="sermon-admin-danger-details">
+                <summary>위험 작업</summary>
+                <div class="sermon-admin-danger-body">
+                    <p>설교 전체 삭제는 설교, 요약, 주간 루틴 등 운영 데이터를 함께 지우는 작업입니다.</p>
+                    <a
+                        class="sermon-delete-button button"
+                        href="{{ delete_url }}"
+                        onclick="return window.confirm('정말로 설교 전체를 삭제하시겠습니까? 이 작업은 되돌리기 어렵고, 저장공간 정리 목적이라면 원본 미디어 삭제를 먼저 사용하는 편이 안전합니다.');"
+                    >설교 전체 삭제</a>
+                </div>
+            </details>
+        </div>
+    {% endif %}
 {% endblock %}
 
 {% block after_related_objects %}
