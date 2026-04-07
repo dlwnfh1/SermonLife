@@ -218,13 +218,14 @@ a.sermon-delete-button.button:hover {
 }
 
 .sermon-admin-danger-zone {
-    margin-top: 14px;
+    margin-top: 10px;
 }
 
 .sermon-admin-danger-details {
-    border: 1px solid #e6c4c4;
-    border-radius: 16px;
-    background: #fff7f7;
+    display: inline-block;
+    border: 1px solid #efd0d0;
+    border-radius: 999px;
+    background: #fff9f9;
     padding: 0;
     overflow: hidden;
 }
@@ -232,9 +233,11 @@ a.sermon-delete-button.button:hover {
 .sermon-admin-danger-details summary {
     cursor: pointer;
     list-style: none;
-    padding: 14px 18px;
+    padding: 8px 14px;
     font-weight: 700;
     color: #8f2f2f;
+    font-size: 12px;
+    line-height: 1.2;
 }
 
 .sermon-admin-danger-details summary::-webkit-details-marker {
@@ -243,10 +246,13 @@ a.sermon-delete-button.button:hover {
 
 .sermon-admin-danger-details[open] summary {
     border-bottom: 1px solid #f0d7d7;
+    border-radius: 0;
+    display: block;
 }
 
 .sermon-admin-danger-body {
-    padding: 16px 18px 18px;
+    padding: 14px 16px 16px;
+    max-width: 460px;
 }
 
 .sermon-admin-danger-body p {
@@ -336,6 +342,14 @@ a.sermon-delete-button.button:hover {
     overflow-y: auto;
     overflow-x: hidden;
     resize: vertical;
+}
+
+.change-form textarea#id_transcript {
+    width: min(100%, 1240px) !important;
+    min-height: 620px !important;
+    padding: 16px 18px;
+    font-size: 14px;
+    line-height: 1.8;
 }
 
 .change-form .aligned input[type="text"] {

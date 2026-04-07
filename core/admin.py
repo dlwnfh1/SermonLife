@@ -1,5 +1,6 @@
 ﻿from datetime import timedelta
 from pathlib import Path
+import re
 from time import perf_counter
 
 from django import forms
@@ -40,6 +41,33 @@ def _clean_sermon_title_from_filename(value):
         return ""
     cleaned = Path(value).stem if "." in str(value) else str(value)
     return " ".join(cleaned.replace("_", " ").split())
+
+
+def _format_transcript_for_editing(value):
+    if not value:
+        return ""
+
+    normalized = value.replace("\r\n", "\n").strip()
+    if normalized.count("\n\n") >= 2:
+        return normalized
+
+    collapsed = re.sub(r"\n+", " ", normalized)
+    collapsed = re.sub(r"\s+", " ", collapsed).strip()
+    if not collapsed:
+        return normalized
+
+    sentence_chunks = re.split(r"(?<=[.!?。！？])\s+", collapsed)
+    sentence_chunks = [chunk.strip() for chunk in sentence_chunks if chunk.strip()]
+
+    if len(sentence_chunks) <= 2:
+        return normalized
+
+    step = 3 if len(sentence_chunks) > 12 else 2
+    paragraphs = [
+        " ".join(sentence_chunks[index:index + step])
+        for index in range(0, len(sentence_chunks), step)
+    ]
+    return "\n\n".join(paragraphs)
 
 class SermonSummaryInline(admin.StackedInline):
     model = SermonSummary
@@ -188,9 +216,9 @@ class SermonAdminForm(forms.ModelForm):
         required=False,
         widget=forms.Textarea(
             attrs={
-                "rows": 18,
+                "rows": 28,
                 "cols": 140,
-                "style": "min-height: 360px; width: 100%; max-width: none;",
+                "style": "min-height: 620px; width: 100%; max-width: none; line-height: 1.75; font-size: 14px;",
             }
         ),
     )
@@ -198,6 +226,11 @@ class SermonAdminForm(forms.ModelForm):
     class Meta:
         model = Sermon
         fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound and getattr(self.instance, "pk", None):
+            self.initial["transcript"] = _format_transcript_for_editing(self.instance.transcript)
 
 
 def sync_source_media_assets():
