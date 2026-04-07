@@ -5,7 +5,11 @@
     }
     var normalized = value.replace(/\\/g, "/");
     var fileName = normalized.split("/").pop() || "";
-    return fileName.replace(/\.[^.]+$/, "").trim();
+    return fileName
+      .replace(/\.[^.]+$/, "")
+      .replace(/[_]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   function setupSermonDefaults() {
