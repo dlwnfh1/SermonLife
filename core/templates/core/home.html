@@ -329,7 +329,48 @@
     <script>
         (function () {
             var dockLinks = Array.prototype.slice.call(document.querySelectorAll(".mobile-dock-link"));
+            var refreshStorageKey = "sermonlife-last-home-date";
+            var refreshFlagKey = "sermonlife-home-auto-refreshed";
+
+            function todayStamp() {
+                var now = new Date();
+                var month = String(now.getMonth() + 1).padStart(2, "0");
+                var day = String(now.getDate()).padStart(2, "0");
+                return now.getFullYear() + "-" + month + "-" + day;
+            }
+
+            function ensureFreshDayView() {
+                var today = todayStamp();
+                var stored = window.localStorage.getItem(refreshStorageKey);
+                var reloadedForToday = window.sessionStorage.getItem(refreshFlagKey);
+
+                if (!stored) {
+                    window.localStorage.setItem(refreshStorageKey, today);
+                    return;
+                }
+
+                if (stored !== today && reloadedForToday !== today) {
+                    window.localStorage.setItem(refreshStorageKey, today);
+                    window.sessionStorage.setItem(refreshFlagKey, today);
+                    window.location.reload();
+                    return;
+                }
+
+                if (stored !== today) {
+                    window.localStorage.setItem(refreshStorageKey, today);
+                }
+            }
+
+            window.addEventListener("pageshow", ensureFreshDayView);
+            window.addEventListener("focus", ensureFreshDayView);
+            document.addEventListener("visibilitychange", function () {
+                if (document.visibilityState === "visible") {
+                    ensureFreshDayView();
+                }
+            });
+
             if (!dockLinks.length) {
+                ensureFreshDayView();
                 return;
             }
 
@@ -363,6 +404,7 @@
 
             window.addEventListener("hashchange", syncFromHash);
             syncFromHash();
+            ensureFreshDayView();
         })();
     </script>
 </body>
