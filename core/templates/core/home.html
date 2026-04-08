@@ -29,6 +29,16 @@
         <section class="hero-card">
             <div class="hero-grid">
                 <div class="hero-copy">
+                    <div class="hero-mark" aria-hidden="true">
+                        <div class="hero-mark-badge">
+                            <span class="hero-mark-cross hero-mark-cross-vertical"></span>
+                            <span class="hero-mark-cross hero-mark-cross-horizontal"></span>
+                        </div>
+                        <div class="hero-mark-copy">
+                            <strong>SermonLife</strong>
+                            <span>말씀을 삶으로 이어가는 루틴</span>
+                        </div>
+                    </div>
                     <p class="eyebrow">SERMONLIFE</p>
                     <h1>
                         <span>이번 주 말씀을</span>
@@ -59,7 +69,7 @@
                         <p class="status-badge">공개 상태: {{ sermon.get_status_display }}</p>
                         {% if current_daily %}
                             <div class="hero-today-card">
-                                <span class="hero-today-label">오늘의 Day {{ current_day_number }}</span>
+                                <span class="hero-today-label">오늘 Day {{ current_day_number }}</span>
                                 <strong>{{ current_daily.title }}</strong>
                                 <p>{{ current_daily.intro }}</p>
                             </div>
@@ -140,7 +150,7 @@
                                 <p class="section-label">영상으로 보기</p>
                                 <div class="video-link-card">
                                     <strong>{{ sermon.title }}</strong>
-                                    <p>설교 영상을 별도 화면으로 편하게 볼 수 있습니다.</p>
+                                    <p>설교 영상은 별도 화면에서 편하게 보실 수 있습니다.</p>
                                     <a class="action-button" href="{% url 'core:watch_sermon' %}">설교 영상 보기</a>
                                 </div>
                             </article>
@@ -170,6 +180,78 @@
                     <p class="empty">아직 확인된 설교 개요가 없습니다.</p>
                 {% endif %}
             </section>
+
+            {% if highlight_choices %}
+                <section class="panel" id="highlight-panel">
+                    <div class="panel-header">
+                        <h2>이번 주 가장 마음에 남은 말씀</h2>
+                    </div>
+                    <div class="highlight-vote-grid">
+                        <article class="content-card">
+                            <h3>말씀 한 줄 고르기</h3>
+                            <p class="support-text">이번 설교 중 가장 마음에 남은 문장을 하나 골라 주세요.</p>
+                            {% if highlight_messages %}
+                                <div class="inline-messages">
+                                    {% for message in highlight_messages %}
+                                        <p class="message-row {{ message.tags }}">{{ message.text }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            {% if request.user.is_authenticated %}
+                                <form method="post" action="{% url 'core:submit_highlight_vote' %}" class="action-form">
+                                    {% csrf_token %}
+                                    <div class="choice-group highlight-choice-group">
+                                        {% for choice in highlight_choices %}
+                                            <label class="choice-option highlight-choice-option">
+                                                <input type="radio" name="choice_id" value="{{ choice.id }}" {% if highlight_vote and highlight_vote.choice_id == choice.id %}checked{% endif %}>
+                                                <span>{{ choice.text }}</span>
+                                            </label>
+                                        {% endfor %}
+                                    </div>
+                                    <button type="submit" class="action-button">말씀 선택하기</button>
+                                </form>
+                            {% else %}
+                                <ul class="mini-focus-list large">
+                                    {% for choice in highlight_choices %}
+                                        <li>{{ choice.text }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        </article>
+                        <article class="content-card highlight-card">
+                            <h3>가장 많이 공감한 말씀</h3>
+                            {% if top_highlight_choice %}
+                                <p class="focus-key-copy">“{{ top_highlight_choice.text }}”</p>
+                                <p class="support-text">
+                                    {% if top_highlight_choice.vote_count %}
+                                        현재 이 문장에 {{ top_highlight_choice.vote_count }}명이 공감했어요.
+                                        {% if total_highlight_voters %}
+                                            총 {{ total_highlight_voters }}명이 참여했어요.
+                                        {% endif %}
+                                    {% else %}
+                                        첫 번째 공감을 기다리고 있어요.
+                                    {% endif %}
+                                </p>
+                                {% if total_highlight_voters %}
+                                    <div class="highlight-chart">
+                                        {% for choice in highlight_choices %}
+                                            <div class="highlight-chart-row">
+                                                <div class="highlight-chart-label">{{ choice.text }}</div>
+                                                <div class="highlight-chart-bar">
+                                                    <span class="highlight-chart-fill" style="width:{% widthratio choice.vote_count total_highlight_voters 100 %}%"></span>
+                                                </div>
+                                                <strong class="highlight-chart-count">{{ choice.vote_count }}</strong>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <p class="empty">아직 준비된 문장이 없습니다.</p>
+                            {% endif %}
+                        </article>
+                    </div>
+                </section>
+            {% endif %}
 
             <section class="panel" id="daily-routine-panel">
                 <div class="panel-header">
@@ -205,10 +287,10 @@
                 <div class="panel-header">
                     <h2>오늘 참여{% if current_day_number %} | Day {{ current_day_number }}{% endif %}</h2>
                 </div>
-                {% if messages %}
+                {% if remaining_messages %}
                     <div class="inline-messages">
-                        {% for message in messages %}
-                            <p class="message-row {{ message.tags }}">{{ message }}</p>
+                        {% for message in remaining_messages %}
+                            <p class="message-row {{ message.tags }}">{{ message.text }}</p>
                         {% endfor %}
                     </div>
                 {% endif %}
@@ -247,7 +329,7 @@
                                 <span>퀴즈 {{ current_daily_state.quiz_points|default:0 }}달란트</span>
                                 <span>묵상 {{ current_daily_state.reflection_points|default:0 }}달란트</span>
                                 <span>미션 {{ current_daily_state.mission_points|default:0 }}달란트</span>
-                                <span>일일 보너스 {{ current_daily_state.daily_bonus_points|default:0 }}달란트</span>
+                                <span>하루 보너스 {{ current_daily_state.daily_bonus_points|default:0 }}달란트</span>
                             </div>
                         {% else %}
                             <p class="empty">달란트 적립과 기록 저장은 로그인 후 이용할 수 있습니다. <a href="{% url 'core:login' %}">로그인하기</a></p>

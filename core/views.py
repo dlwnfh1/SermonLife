@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
-from django.db.models import Sum
+from django.db.models import Count, Sum
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -19,6 +19,8 @@ from .models import (
     DailyReflectionResponse,
     PointLedger,
     PointSource,
+    SermonHighlightChoice,
+    SermonHighlightVote,
     SermonStatus,
     SermonSummary,
     UserProfile,
@@ -143,6 +145,16 @@ def _get_daily_state(user, current_daily):
 
 
 def _build_home_context(request):
+    highlight_messages = []
+    for message in list(messages.get_messages(request)):
+        text = str(message)
+        if "마음에 남은 말씀" in text or "공감" in text:
+            highlight_messages.append({"text": text, "tags": message.tags})
+        else:
+            if not hasattr(request, "_remaining_messages"):
+                request._remaining_messages = []
+            request._remaining_messages.append({"text": text, "tags": message.tags})
+
     challenge = _get_active_challenge()
     sermon = challenge.sermon if challenge else None
     summary = _get_summary(sermon)
@@ -211,6 +223,34 @@ def _build_home_context(request):
             )
 
     current_daily_state = _get_daily_state(request.user, current_daily)
+    highlight_choices = []
+    highlight_vote = None
+    top_highlight_choice = None
+    total_highlight_voters = 0
+    if sermon:
+        highlight_choices = list(sermon.highlight_choices.all())
+        if request.user.is_authenticated:
+            highlight_vote = (
+                SermonHighlightVote.objects.filter(user=request.user, sermon=sermon)
+                .select_related("choice")
+                .first()
+            )
+        if highlight_choices:
+            highlight_totals = {
+                row["choice_id"]: row["total"]
+                for row in (
+                    SermonHighlightVote.objects.filter(sermon=sermon)
+                    .values("choice_id")
+                    .annotate(total=Count("id"))
+                )
+            }
+            total_highlight_voters = sum(highlight_totals.values())
+            for choice in highlight_choices:
+                choice.vote_count = highlight_totals.get(choice.id, 0)
+            top_highlight_choice = max(
+                highlight_choices,
+                key=lambda choice: (getattr(choice, "vote_count", 0), -choice.order),
+            )
     weekly_base_max_points = (QUIZ_POINTS + REFLECTION_POINTS + MISSION_POINTS + DAILY_COMPLETION_POINTS) * 5
     weekly_total_max_points = weekly_base_max_points + WEEKLY_COMPLETION_POINTS
 
@@ -236,6 +276,12 @@ def _build_home_context(request):
         "current_day_number": current_day_number,
         "current_daily_state": current_daily_state,
         "daily_focus_map": daily_focus_map,
+        "highlight_choices": highlight_choices,
+        "highlight_vote": highlight_vote,
+        "top_highlight_choice": top_highlight_choice,
+        "total_highlight_voters": total_highlight_voters,
+        "highlight_messages": highlight_messages,
+        "remaining_messages": getattr(request, "_remaining_messages", []),
     }
 
 
@@ -518,3 +564,31 @@ def complete_mission_view(request, pk):
     else:
         messages.success(request, f"오늘의 미션이 완료되었습니다. 7점을 받았습니다.{bonus_suffix}")
     return _redirect_to_today_set()
+@login_required
+@require_POST
+def submit_highlight_vote_view(request):
+    challenge = _get_active_challenge()
+    sermon = challenge.sermon if challenge else None
+    if not sermon:
+        messages.error(request, "투표할 설교를 찾을 수 없습니다.")
+        return redirect("core:home")
+
+    choice = get_object_or_404(
+        SermonHighlightChoice,
+        pk=request.POST.get("choice_id"),
+        sermon=sermon,
+    )
+
+    existing_vote = SermonHighlightVote.objects.filter(user=request.user, sermon=sermon).first()
+    SermonHighlightVote.objects.update_or_create(
+        user=request.user,
+        sermon=sermon,
+        defaults={"choice": choice},
+    )
+
+    if existing_vote:
+        messages.success(request, "가장 마음에 남은 말씀 선택을 바꿨습니다.")
+    else:
+        messages.success(request, "가장 마음에 남은 말씀에 투표했습니다.")
+
+    return redirect(f"{reverse('core:home')}#highlight-panel")

@@ -8,7 +8,13 @@ from urllib.request import Request, urlopen
 from django.db import transaction
 from django.utils import timezone
 
-from core.models import DailyEngagement, Sermon, SermonStatus, SermonSummary
+from core.models import (
+    DailyEngagement,
+    Sermon,
+    SermonHighlightChoice,
+    SermonStatus,
+    SermonSummary,
+)
 from core.services.sermon_importer import create_or_update_weekly_challenge
 
 
@@ -35,6 +41,12 @@ SERMON_CONTENT_SCHEMA = {
             "maxItems": 3,
         },
         "key_points": {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 3,
+            "maxItems": 3,
+        },
+        "highlight_quotes": {
             "type": "array",
             "items": {"type": "string"},
             "minItems": 3,
@@ -96,6 +108,7 @@ SERMON_CONTENT_SCHEMA = {
         "outline_points",
         "summary_3lines",
         "key_points",
+        "highlight_quotes",
         "daily_engagements",
     ],
     "additionalProperties": False,
@@ -114,6 +127,7 @@ class GeneratedSermonContent:
     outline_points: List[str]
     summary_3lines: List[str]
     key_points: List[str]
+    highlight_quotes: List[str]
     daily_engagements: List[Dict]
 
 
@@ -132,10 +146,11 @@ def build_user_prompt(sermon: Sermon) -> str:
         "4. \uc804\uccb4 \uc124\uad50 \uc694\uc57d\uc740 1~2\ubb38\ub2e8 \uc815\ub3c4\ub85c \uc791\uc131\n"
         "5. \uc124\uad50 \ud750\ub984 \uc815\ub9ac\ub294 8~10\uac1c \ubb38\uc7a5\uc73c\ub85c \uc21c\uc11c\ub300\ub85c \uc815\ub9ac\n"
         "6. \ud575\uc2ec \uba54\uc2dc\uc9c0 3\uac1c\ub294 \uac01\uac01 1~2\ubb38\uc7a5, \uac00\uae09\uc801 \uac04\uacb0\ud558\uac8c \uc791\uc131\n"
-        "7. \ud654\uc694\uc77c\ubd80\ud130 \ud1a0\uc694\uc77c\uae4c\uc9c0 5\uc77c\uc740 \uac01\uac01 'quiz 1\uac1c + reflection question 1\uac1c + mission 1\uac1c' \uc138\ud2b8\ub97c \ub9cc\ub4e4 \uac83\n"
-        "8. daily_engagements\uc758 day_number\ub294 1~5\ub97c \uc21c\uc11c\ub300\ub85c \uc0ac\uc6a9\ud560 \uac83\n"
-        "9. \ubcc4\ub3c4\uc758 \uc8fc\uac04 \ud034\uc988 \ubb36\uc74c\uacfc \uc8fc\uac04 \ubbf8\uc158 \ubb36\uc74c\uc740 \ub9cc\ub4e4\uc9c0 \ub9d0 \uac83\n"
-        "10. \ucd9c\ub825\uc740 JSON\ub9cc \ubc18\ud658\n\n"
+        "7. \uc124\uad50 \ub9d0\uc500 \uc911 \uad50\uc778\ub4e4\uc774 \uacf5\uac10\ud560 \ub9cc\ud55c \uc778\uc0c1 \ubb38\uc7a5 3\uac1c\ub97c highlight_quotes\ub85c \ubf51\uc744 \uac83\n"
+        "8. \ud654\uc694\uc77c\ubd80\ud130 \ud1a0\uc694\uc77c\uae4c\uc9c0 5\uc77c\uc740 \uac01\uac01 'quiz 1\uac1c + reflection question 1\uac1c + mission 1\uac1c' \uc138\ud2b8\ub97c \ub9cc\ub4e4 \uac83\n"
+        "9. daily_engagements\uc758 day_number\ub294 1~5\ub97c \uc21c\uc11c\ub300\ub85c \uc0ac\uc6a9\ud560 \uac83\n"
+        "10. \ubcc4\ub3c4\uc758 \uc8fc\uac04 \ud034\uc988 \ubb36\uc74c\uacfc \uc8fc\uac04 \ubbf8\uc158 \ubb36\uc74c\uc740 \ub9cc\ub4e4\uc9c0 \ub9d0 \uac83\n"
+        "11. \ucd9c\ub825\uc740 JSON\ub9cc \ubc18\ud658\n\n"
         f"\uc124\uad50 \uc815\ubcf4:\n{source_text}"
     )
 
@@ -166,6 +181,7 @@ def parse_generated_content(payload: str) -> GeneratedSermonContent:
         outline_points=[item.strip() for item in data["outline_points"][:10]],
         summary_3lines=[item.strip() for item in data["summary_3lines"][:3]],
         key_points=[item.strip() for item in data["key_points"][:3]],
+        highlight_quotes=[item.strip() for item in data["highlight_quotes"][:3]],
         daily_engagements=data["daily_engagements"][:5],
     )
 
@@ -244,6 +260,16 @@ def apply_generated_content(sermon: Sermon, generated: GeneratedSermonContent) -
             "approved": False,
         },
     )
+
+    sermon.highlight_choices.all().delete()
+    for index, quote in enumerate(generated.highlight_quotes, start=1):
+        if quote.strip():
+            SermonHighlightChoice.objects.create(
+                sermon=sermon,
+                text=quote.strip(),
+                order=index,
+                ai_generated=True,
+            )
 
     sermon.quizzes.all().delete()
     sermon.missions.all().delete()

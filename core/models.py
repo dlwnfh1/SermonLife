@@ -245,6 +245,42 @@ class SermonSummary(models.Model):
         return f"Summary - {self.sermon.title}"
 
 
+class SermonHighlightChoice(models.Model):
+    sermon = models.ForeignKey(Sermon, on_delete=models.CASCADE, related_name="highlight_choices")
+    text = models.TextField()
+    order = models.PositiveSmallIntegerField(default=1)
+    ai_generated = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["order", "id"]
+        verbose_name = "설교 인상 문장"
+        verbose_name_plural = "설교 인상 문장"
+
+    def __str__(self):
+        return f"{self.sermon.title} - {self.order}"
+
+
+class SermonHighlightVote(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    sermon = models.ForeignKey(Sermon, on_delete=models.CASCADE, related_name="highlight_votes")
+    choice = models.ForeignKey(
+        SermonHighlightChoice,
+        on_delete=models.CASCADE,
+        related_name="votes",
+    )
+    voted_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "sermon"],
+                name="unique_sermon_highlight_vote_per_user",
+            )
+        ]
+        ordering = ["-voted_at", "-id"]
+
+
 class SermonQuiz(models.Model):
     sermon = models.ForeignKey(Sermon, on_delete=models.CASCADE, related_name="quizzes")
     question = models.CharField(max_length=255)
