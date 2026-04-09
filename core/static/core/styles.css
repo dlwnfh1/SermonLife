@@ -602,6 +602,10 @@ a {
     font-weight: 700;
 }
 
+.pastor-nav-link {
+    white-space: nowrap;
+}
+
 .pastor-nav-link-active {
     background: var(--accent);
     border-color: var(--accent);
@@ -2256,6 +2260,26 @@ a {
         width: min(100% - 20px, 1380px);
     }
 
+    .pastor-nav-panel {
+        padding: 12px 14px;
+        overflow: hidden;
+    }
+
+    .pastor-nav {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: 8px;
+        padding-bottom: 2px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .pastor-nav-link {
+        flex: 0 0 auto;
+        min-height: 40px;
+        padding: 0 14px;
+        font-size: 0.9rem;
+    }
+
     .pastor-edit-form .panel {
         padding: 24px;
     }
@@ -2266,6 +2290,79 @@ a {
 
     .pastor-panel-body {
         padding: 0 24px 24px;
+    }
+
+    .pastor-toolbar {
+        align-items: stretch;
+    }
+
+    .pastor-toolbar-buttons,
+    .pastor-toolbar-meta {
+        width: 100%;
+    }
+
+    .pastor-toolbar-buttons {
+        flex-direction: column;
+    }
+
+    .pastor-toolbar-button,
+    .pastor-action-row .action-button,
+    .pastor-member-filter-actions .pastor-toolbar-button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .pastor-action-row {
+        flex-direction: column;
+    }
+
+    .pastor-kpi-card,
+    .pastor-report-table-card,
+    .pastor-day-report-card,
+    .pastor-chart-card,
+    .pastor-quote-card,
+    .pastor-report-hero-copy,
+    .pastor-console-card {
+        padding: 18px;
+        border-radius: 18px;
+    }
+
+    .pastor-kpi-card strong {
+        font-size: 1.2rem;
+    }
+
+    .pastor-report-table-shell {
+        padding: 8px;
+        border-radius: 16px;
+    }
+
+    .pastor-member-table thead th,
+    .pastor-member-table tbody td {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+
+    .pastor-day-summary {
+        padding: 16px 18px;
+        align-items: flex-start;
+    }
+
+    .pastor-day-summary strong {
+        font-size: 1rem;
+    }
+
+    .pastor-day-body {
+        padding: 0 18px 18px;
+    }
+
+    .pastor-console-meta {
+        gap: 12px;
+    }
+
+    .pastor-field textarea#id_sermon-transcript {
+        min-height: 420px;
+        font-size: 0.98rem;
+        line-height: 1.85;
     }
 
     .highlight-chart-row {
@@ -2297,10 +2394,15 @@ a {
 
     .pastor-member-filters {
         grid-template-columns: 1fr;
+        gap: 10px;
     }
 
     .pastor-member-filter-actions {
         padding-bottom: 0;
+    }
+
+    .pastor-report-select {
+        max-width: none;
     }
 
     .highlight-chart-count {
