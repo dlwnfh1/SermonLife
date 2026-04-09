@@ -53,6 +53,40 @@
         </div>
 
         <div class="module">
+            <h2>가장 마음에 남은 한마디</h2>
+            {% if highlight_summary %}
+                <table class="admin-report-table">
+                    <tr>
+                        <th>가장 많이 공감한 말씀</th>
+                        <td>{{ highlight_summary.top_choice.text }}</td>
+                    </tr>
+                    <tr>
+                        <th>공감 수</th>
+                        <td>{{ highlight_summary.top_choice.vote_count }}명 / 총 {{ highlight_summary.total_votes }}명 참여</td>
+                    </tr>
+                </table>
+                <table class="admin-report-table">
+                    <thead>
+                        <tr>
+                            <th>후보</th>
+                            <th>공감 수</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for choice in highlight_summary.choices %}
+                            <tr>
+                                <td>{{ choice.text }}</td>
+                                <td>{{ choice.vote_count }}명</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>아직 공감 문장 후보나 투표 데이터가 없습니다.</p>
+            {% endif %}
+        </div>
+
+        <div class="module">
             <h2>Day별 완료율</h2>
             <table class="admin-report-table">
                 <thead>

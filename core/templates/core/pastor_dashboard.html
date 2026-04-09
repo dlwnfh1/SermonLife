@@ -1,0 +1,96 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>교역자 홈 | SermonLife</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+    <link rel="manifest" href="{% static 'core/manifest.json' %}">
+    <link rel="apple-touch-icon" href="{% static 'core/icons/apple-touch-icon.png' %}">
+    <meta name="theme-color" content="#2f6b84">
+</head>
+<body>
+    <main class="page-shell pastor-shell">
+        <section class="top-actions">
+            <span class="auth-chip">교역자 페이지</span>
+            <a class="text-link" href="{% url 'core:home' %}">사용자 화면</a>
+            <a class="text-link" href="{% url 'core:logout' %}">로그아웃</a>
+        </section>
+
+        <section class="panel pastor-hero">
+            <p class="eyebrow">PASTOR CONSOLE</p>
+            <h1>교역자 홈</h1>
+            <p class="lede">AI가 정리한 설교 내용을 검토하고 직접 수정한 뒤 공개까지 진행하는 전용 화면입니다.</p>
+        </section>
+
+        {% include "core/includes/pastor_nav.html" %}
+
+        {% if messages %}
+            <section class="panel">
+                <div class="auth-messages">
+                    {% for message in messages %}
+                        <p class="message-row {{ message.tags }}">{{ message }}</p>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+
+        {% if sermon %}
+            <section class="panel pastor-dashboard-grid">
+                <article class="content-card">
+                    <p class="section-label">이번 주 설교</p>
+                    <h2>{{ sermon.title }}</h2>
+                    <p class="hero-meta">
+                        {% if sermon.preacher %}{{ sermon.preacher }} · {% endif %}{{ sermon.sermon_date }}
+                        {% if sermon.bible_passage %}<br>{{ sermon.bible_passage }}{% endif %}
+                    </p>
+                    {% if active_challenge %}
+                        <p class="status-badge">{{ active_challenge.title }} · {{ active_challenge.week_start }} ~ {{ active_challenge.week_end }}</p>
+                    {% endif %}
+                    <div class="pastor-action-row">
+                        <a class="action-button" href="{% url 'core:pastor_sermon_edit' sermon.pk %}">설교 검토 및 수정</a>
+                    </div>
+                </article>
+
+                <article class="content-card">
+                    <p class="section-label">빠른 현황</p>
+                    <div class="pastor-stat-list">
+                        <div><strong>공개 상태</strong><span>{{ sermon.get_status_display }}</span></div>
+                        <div><strong>AI 정리</strong><span>{% if sermon.ai_generated %}완료{% else %}대기{% endif %}</span></div>
+                        <div><strong>참여 인원</strong><span>{% if weekly_report %}{{ weekly_report.participant_count }}명{% else %}-{% endif %}</span></div>
+                        <div><strong>5일 완주</strong><span>{% if sermon_report %}{{ sermon_report.weekly_completer_count }}명{% else %}-{% endif %}</span></div>
+                    </div>
+                </article>
+            </section>
+
+            <section class="panel pastor-dashboard-grid">
+                <article class="content-card">
+                    <p class="section-label">설교 개요</p>
+                    <p>{{ summary.overview|default:"아직 설교 개요가 없습니다." }}</p>
+                </article>
+
+                <article class="content-card">
+                    <p class="section-label">최근 참여자</p>
+                    {% if member_reports %}
+                        <div class="pastor-member-list">
+                            {% for report in member_reports %}
+                                <div class="pastor-member-row">
+                                    <strong>{{ report.display_name|default:report.username }}</strong>
+                                    <span>{{ report.total_points }}달란트</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p>아직 참여 기록이 없습니다.</p>
+                    {% endif %}
+                </article>
+            </section>
+        {% else %}
+            <section class="panel">
+                <p>아직 준비된 설교가 없습니다. 관리자가 설교를 생성하고 AI 자동 정리를 먼저 진행해 주세요.</p>
+            </section>
+        {% endif %}
+    </main>
+</body>
+</html>

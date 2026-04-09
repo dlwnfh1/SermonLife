@@ -1,4 +1,7 @@
 from django.contrib import admin
+from django.db.models import Count
+
+from core.models import SermonHighlightChoice
 
 from .models import ContentQualityReport, DailyActionReport, SermonParticipationReport, UserParticipationReport, WeeklyParticipationReport
 from .services import (
@@ -22,6 +25,27 @@ class BaseReportAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # Allow related report rows to be deleted when a sermon is deleted.
         return request.user.is_active and request.user.is_staff
+
+
+def _build_highlight_summary(sermon):
+    if not sermon:
+        return None
+
+    choices = list(
+        SermonHighlightChoice.objects.filter(sermon=sermon)
+        .annotate(vote_count=Count("votes"))
+        .order_by("-vote_count", "order", "id")
+    )
+    if not choices:
+        return None
+
+    total_votes = sum(choice.vote_count for choice in choices)
+    top_choice = choices[0]
+    return {
+        "top_choice": top_choice,
+        "total_votes": total_votes,
+        "choices": choices,
+    }
 
 
 @admin.register(WeeklyParticipationReport)
@@ -49,6 +73,7 @@ class WeeklyParticipationReportAdmin(BaseReportAdmin):
             obj = sync_weekly_participation_report(obj.challenge)
         extra_context = extra_context or {}
         extra_context["report"] = obj
+        extra_context["highlight_summary"] = _build_highlight_summary(obj.sermon if obj else None)
         extra_context["title"] = obj.title if obj else "주간 참여 리포트"
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
 
@@ -78,6 +103,7 @@ class SermonParticipationReportAdmin(BaseReportAdmin):
             obj = sync_sermon_participation_report(obj.sermon)
         extra_context = extra_context or {}
         extra_context["report"] = obj
+        extra_context["highlight_summary"] = _build_highlight_summary(obj.sermon if obj else None)
         extra_context["title"] = obj.title if obj else "설교별 참여 리포트"
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
 

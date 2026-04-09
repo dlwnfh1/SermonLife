@@ -17,6 +17,9 @@
         <section class="top-actions">
             {% if request.user.is_authenticated %}
                 <span class="auth-chip">{{ request.user.first_name|default:request.user.username }}</span>
+                {% if request.user.is_staff or profile.member_role == "pastor" %}
+                    <a class="text-link" href="{% url 'core:pastor_dashboard' %}">교역자 페이지</a>
+                {% endif %}
                 <a class="text-link" href="{% url 'core:my_history' %}">내 기록</a>
                 <a class="text-link" href="{% url 'core:password_change' %}">비밀번호 변경</a>
                 <a class="text-link" href="{% url 'core:logout' %}">로그아웃</a>

@@ -2,16 +2,23 @@ import re
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import AuthenticationForm
+from django.db import transaction
 from django.db.models import Count, Sum
+from django.forms import modelformset_factory
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from .forms import SermonLifeSignUpForm
+from .forms import (
+    PastorDailyEngagementForm,
+    PastorSermonEditForm,
+    PastorSermonSummaryForm,
+    SermonLifeSignUpForm,
+)
 from .models import (
     DailyEngagement,
     DailyMissionCompletion,
@@ -19,6 +26,7 @@ from .models import (
     DailyReflectionResponse,
     PointLedger,
     PointSource,
+    Sermon,
     SermonHighlightChoice,
     SermonHighlightVote,
     SermonStatus,
@@ -26,6 +34,7 @@ from .models import (
     UserProfile,
     WeeklyChallenge,
 )
+from .services.ai_generation import AIContentGenerationError, generate_sermon_content
 from .services.engagement import (
     DAILY_COMPLETION_POINTS,
     MISSION_POINTS,
@@ -35,6 +44,20 @@ from .services.engagement import (
     complete_mission,
     submit_daily_quiz,
     submit_reflection,
+)
+from reports.models import (
+    ContentQualityReport,
+    DailyActionReport,
+    SermonParticipationReport,
+    UserParticipationReport,
+    WeeklyParticipationReport,
+)
+from reports.services import (
+    sync_content_quality_report,
+    sync_daily_action_report,
+    sync_sermon_participation_report,
+    sync_user_participation_report,
+    sync_weekly_participation_report,
 )
 
 
@@ -54,6 +77,25 @@ def _chunk_outline_points(outline_points, chunk_count=5):
     for index, point in enumerate(points):
         chunks[index % chunk_count].append(point)
     return chunks
+
+
+def _build_highlight_summary(sermon):
+    if not sermon:
+        return None
+
+    choices = list(
+        SermonHighlightChoice.objects.filter(sermon=sermon)
+        .annotate(vote_count=Count("votes"))
+        .order_by("-vote_count", "order", "id")
+    )
+    if not choices:
+        return None
+
+    return {
+        "choices": choices,
+        "top_choice": choices[0],
+        "total_votes": sum(choice.vote_count for choice in choices),
+    }
 
 
 def _format_transcript_paragraphs(transcript, sentences_per_paragraph=3):
@@ -302,6 +344,52 @@ def _get_released_daily_or_404(pk):
 
 def _redirect_to_today_set():
     return redirect(f"{reverse('core:home')}#today-set")
+
+
+def _is_pastor_user(user):
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser or user.is_staff:
+        return True
+    profile = UserProfile.objects.filter(user=user).first()
+    return bool(profile and profile.member_role == "pastor")
+
+
+pastor_required = user_passes_test(_is_pastor_user, login_url="core:login")
+
+
+def _build_pastor_publish_checklist(sermon):
+    challenge = sermon.weekly_challenges.order_by("-week_start", "-id").first()
+    try:
+        summary = sermon.summary
+    except SermonSummary.DoesNotExist:
+        summary = None
+
+    approved_days = list(sermon.daily_engagements.filter(approved=True).order_by("day_number"))
+    checklist = [
+        {"label": "설교 제목이 입력되어 있습니다", "ok": bool(sermon.title.strip())},
+        {"label": "자막 및 원문이 준비되어 있습니다", "ok": bool(sermon.transcript.strip())},
+        {"label": "설교 개요가 입력되어 있습니다", "ok": bool(summary and summary.overview.strip())},
+        {"label": "핵심 메시지 3개가 준비되어 있습니다", "ok": bool(summary and summary.key_point1.strip() and summary.key_point2.strip() and summary.key_point3.strip())},
+        {"label": "Day 1~5가 모두 준비되어 있습니다", "ok": len(approved_days) == 5},
+        {"label": "공감 문장 후보가 3개 준비되어 있습니다", "ok": sermon.highlight_choices.count() >= 3},
+        {"label": "주간 챌린지가 연결되어 있습니다", "ok": challenge is not None},
+    ]
+    if approved_days:
+        checklist.extend(
+            {
+                "label": f"Day {daily.day_number}의 퀴즈/묵상/미션이 모두 입력되어 있습니다",
+                "ok": bool(
+                    daily.title.strip()
+                    and daily.quiz_question.strip()
+                    and daily.quiz_answer.strip()
+                    and daily.reflection_question.strip()
+                    and daily.mission_title.strip()
+                ),
+            }
+            for daily in approved_days
+        )
+    return checklist
 
 
 @login_required
@@ -592,3 +680,265 @@ def submit_highlight_vote_view(request):
         messages.success(request, "가장 마음에 남은 말씀에 투표했습니다.")
 
     return redirect(f"{reverse('core:home')}#highlight-panel")
+
+
+@pastor_required
+def pastor_dashboard_view(request):
+    active_challenge = _get_active_challenge()
+    latest_sermon = (
+        Sermon.objects.select_related("summary")
+        .prefetch_related("daily_engagements", "weekly_challenges")
+        .order_by("-sermon_date", "-id")
+        .first()
+    )
+    sermon = active_challenge.sermon if active_challenge else latest_sermon
+    if sermon:
+        try:
+            summary = sermon.summary
+        except SermonSummary.DoesNotExist:
+            summary = None
+    else:
+        summary = None
+
+    weekly_report = None
+    sermon_report = None
+    daily_report = None
+    quality_report = None
+    if active_challenge:
+        weekly_report = sync_weekly_participation_report(active_challenge)
+        daily_report = sync_daily_action_report(active_challenge)
+        quality_report = sync_content_quality_report(active_challenge)
+    if sermon and sermon.is_published:
+        sermon_report = sync_sermon_participation_report(sermon)
+
+    member_reports = [
+        sync_user_participation_report(profile.user)
+        for profile in UserProfile.objects.select_related("user").order_by("-points", "user__username")[:8]
+    ]
+
+    return render(
+        request,
+        "core/pastor_dashboard.html",
+        {
+            "sermon": sermon,
+            "summary": summary,
+            "active_challenge": active_challenge,
+            "weekly_report": weekly_report,
+            "sermon_report": sermon_report,
+            "daily_report": daily_report,
+            "quality_report": quality_report,
+            "member_reports": member_reports,
+            "pastor_menu": "dashboard",
+        },
+    )
+
+
+@pastor_required
+def pastor_sermon_edit_view(request, pk):
+    sermon = get_object_or_404(
+        Sermon.objects.prefetch_related("daily_engagements", "highlight_choices", "weekly_challenges"),
+        pk=pk,
+    )
+    summary, _ = SermonSummary.objects.get_or_create(sermon=sermon)
+    daily_qs = sermon.daily_engagements.order_by("day_number", "id")
+    DailyFormSet = modelformset_factory(DailyEngagement, form=PastorDailyEngagementForm, extra=0)
+
+    checklist = _build_pastor_publish_checklist(sermon)
+    checklist_has_issues = any(not item["ok"] for item in checklist)
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        sermon_form = PastorSermonEditForm(request.POST, instance=sermon, prefix="sermon")
+        summary_form = PastorSermonSummaryForm(request.POST, instance=summary, prefix="summary")
+        daily_formset = DailyFormSet(request.POST, queryset=daily_qs, prefix="days")
+
+        if action == "unpublish":
+            sermon.unpublish()
+            messages.success(request, "설교 공개를 해제했습니다.")
+            return redirect("core:pastor_sermon_edit", pk=sermon.pk)
+
+        if action == "regenerate":
+            if sermon.is_published:
+                messages.warning(request, "이미 공개된 설교는 교역자 페이지에서 다시 정리하지 않도록 막아두었습니다. 직접 수정 후 저장해 주세요.")
+                return redirect("core:pastor_sermon_edit", pk=sermon.pk)
+            try:
+                generate_sermon_content(sermon)
+            except AIContentGenerationError as exc:
+                messages.error(request, f"AI 내용 다시 정리 실패: {exc}")
+            else:
+                messages.success(request, "AI가 저장된 자막을 기준으로 설교 내용을 다시 정리했습니다.")
+            return redirect("core:pastor_sermon_edit", pk=sermon.pk)
+
+        if sermon_form.is_valid() and summary_form.is_valid() and daily_formset.is_valid():
+            with transaction.atomic():
+                sermon_form.save()
+                summary_obj = summary_form.save(commit=False)
+                summary_obj.sermon = sermon
+                summary_obj.approved = True
+                summary_obj.save()
+                daily_formset.save()
+                for choice in sermon.highlight_choices.all().order_by("order", "id"):
+                    updated_text = request.POST.get(f"highlight_choice_{choice.id}", "").strip()
+                    if updated_text:
+                        choice.text = updated_text
+                        choice.save(update_fields=["text"])
+                sermon.approve_generated_content()
+                if action == "publish":
+                    checklist = _build_pastor_publish_checklist(sermon)
+                    checklist_has_issues = any(not item["ok"] for item in checklist)
+                    incomplete_items = [item["label"] for item in checklist if not item["ok"]]
+                    if incomplete_items:
+                        transaction.set_rollback(True)
+                        messages.warning(request, "공개 전에 확인이 필요한 항목이 있습니다: " + ", ".join(incomplete_items[:4]))
+                        return redirect("core:pastor_sermon_edit", pk=sermon.pk)
+                    sermon.publish()
+
+            if action == "publish":
+                messages.success(request, "설교를 공개했습니다. 교인 화면에 바로 반영됩니다.")
+            else:
+                messages.success(request, "수정 내용을 저장했습니다.")
+            return redirect("core:pastor_sermon_edit", pk=sermon.pk)
+
+        messages.error(request, "입력한 내용을 다시 확인해 주세요.")
+    else:
+        sermon_form = PastorSermonEditForm(instance=sermon, prefix="sermon")
+        summary_form = PastorSermonSummaryForm(instance=summary, prefix="summary")
+        daily_formset = DailyFormSet(queryset=daily_qs, prefix="days")
+
+    challenge = sermon.weekly_challenges.order_by("-week_start", "-id").first()
+    highlight_choices = list(sermon.highlight_choices.all())
+    highlight_vote_totals = {
+        row["choice_id"]: row["total"]
+        for row in (
+            SermonHighlightVote.objects.filter(sermon=sermon)
+            .values("choice_id")
+            .annotate(total=Count("id"))
+        )
+    }
+    for choice in highlight_choices:
+        choice.vote_count = highlight_vote_totals.get(choice.id, 0)
+
+    return render(
+        request,
+        "core/pastor_sermon_edit.html",
+        {
+            "sermon": sermon,
+            "challenge": challenge,
+            "sermon_form": sermon_form,
+            "summary_form": summary_form,
+            "daily_formset": daily_formset,
+            "highlight_choices": highlight_choices,
+            "publish_checklist": checklist,
+            "checklist_has_issues": checklist_has_issues,
+            "pastor_menu": "sermon",
+        },
+    )
+
+
+@pastor_required
+def pastor_reports_view(request):
+    available_challenges = list(
+        WeeklyChallenge.objects.filter(
+            sermon__status=SermonStatus.PUBLISHED,
+            sermon__is_published=True,
+        )
+        .select_related("sermon")
+        .order_by("-week_start", "-id")
+    )
+
+    selected_challenge = None
+    selected_challenge_id = request.GET.get("challenge")
+    if selected_challenge_id:
+        try:
+            selected_challenge = next(
+                challenge for challenge in available_challenges if challenge.pk == int(selected_challenge_id)
+            )
+        except (StopIteration, ValueError):
+            selected_challenge = None
+
+    if selected_challenge is None and available_challenges:
+        selected_challenge = available_challenges[1] if len(available_challenges) > 1 else available_challenges[0]
+
+    weekly_report = sync_weekly_participation_report(selected_challenge) if selected_challenge else None
+    daily_report = sync_daily_action_report(selected_challenge) if selected_challenge else None
+    quality_report = sync_content_quality_report(selected_challenge) if selected_challenge else None
+    sermon = selected_challenge.sermon if selected_challenge else None
+    sermon_report = sync_sermon_participation_report(sermon) if sermon else None
+    highlight_summary = _build_highlight_summary(sermon)
+    member_reports = [
+        sync_user_participation_report(profile.user)
+        for profile in UserProfile.objects.select_related("user").order_by("-points", "user__username")[:20]
+    ]
+
+    return render(
+        request,
+        "core/pastor_reports.html",
+        {
+            "active_challenge": selected_challenge,
+            "available_challenges": available_challenges,
+            "weekly_report": weekly_report,
+            "daily_report": daily_report,
+            "quality_report": quality_report,
+            "sermon_report": sermon_report,
+            "highlight_summary": highlight_summary,
+            "member_reports": member_reports,
+            "pastor_menu": "reports",
+        },
+    )
+
+
+@pastor_required
+def pastor_members_view(request):
+    profiles = list(UserProfile.objects.select_related("user").order_by("-points", "user__username"))
+    all_reports = [sync_user_participation_report(profile.user) for profile in profiles]
+
+    search_query = (request.GET.get("q") or "").strip().lower()
+    role_filter = (request.GET.get("role") or "").strip()
+    status_filter = (request.GET.get("status") or "").strip()
+
+    member_reports = []
+    for report in all_reports:
+        if search_query:
+            haystacks = [
+                (report.display_name or "").lower(),
+                (report.username or "").lower(),
+                (report.member_role or "").lower(),
+            ]
+            if not any(search_query in value for value in haystacks):
+                continue
+
+        if role_filter and report.member_role != role_filter:
+            continue
+
+        if status_filter == "active" and not report.active_this_week:
+            continue
+        if status_filter == "inactive" and report.active_this_week:
+            continue
+        if status_filter == "streak" and not report.recent_two_week_streak:
+            continue
+        if status_filter == "away" and not report.inactive_for_two_weeks:
+            continue
+
+        member_reports.append(report)
+
+    role_options = sorted({report.member_role for report in all_reports if report.member_role})
+    summary = {
+        "member_count": len(all_reports),
+        "active_count": sum(1 for report in all_reports if report.active_this_week),
+        "streak_count": sum(1 for report in all_reports if report.recent_two_week_streak),
+        "away_count": sum(1 for report in all_reports if report.inactive_for_two_weeks),
+    }
+
+    return render(
+        request,
+        "core/pastor_members.html",
+        {
+            "member_reports": member_reports,
+            "role_options": role_options,
+            "search_query": request.GET.get("q", ""),
+            "selected_role": role_filter,
+            "selected_status": status_filter,
+            "member_summary": summary,
+            "pastor_menu": "members",
+        },
+    )

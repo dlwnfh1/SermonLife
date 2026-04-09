@@ -1,0 +1,369 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>교역자 리포트 | SermonLife</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+    <link rel="manifest" href="{% static 'core/manifest.json' %}">
+    <link rel="apple-touch-icon" href="{% static 'core/icons/apple-touch-icon.png' %}">
+    <meta name="theme-color" content="#2f6b84">
+</head>
+<body>
+    <main class="page-shell pastor-shell">
+        <section class="top-actions">
+            <a class="text-link" href="{% url 'core:pastor_dashboard' %}">교역자 홈</a>
+            <a class="text-link" href="{% url 'core:home' %}">사용자 화면</a>
+            <a class="text-link" href="{% url 'core:logout' %}">로그아웃</a>
+        </section>
+
+        <section class="panel pastor-hero">
+            <p class="eyebrow">REPORTS</p>
+            <h1>교역자 리포트</h1>
+            <p class="lede">기본적으로 전주 설교 리포트를 먼저 보여주고, 필요하면 이전 설교 리포트도 선택해 볼 수 있습니다.</p>
+        </section>
+
+        {% include "core/includes/pastor_nav.html" %}
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>리포트 대상 설교 선택</h2>
+            </div>
+            {% if available_challenges %}
+                <form method="get" class="pastor-report-filter">
+                    <label class="auth-label pastor-field pastor-report-select">
+                        <span>설교 주차</span>
+                        <select name="challenge" onchange="this.form.submit()">
+                            {% for challenge in available_challenges %}
+                                <option value="{{ challenge.id }}" {% if active_challenge and active_challenge.id == challenge.id %}selected{% endif %}>
+                                    {{ challenge.week_start }} | {{ challenge.sermon.title }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                </form>
+            {% else %}
+                <p>아직 공개된 설교 리포트가 없습니다.</p>
+            {% endif %}
+        </section>
+
+        {% if active_challenge %}
+            <section class="panel pastor-report-hero-panel">
+                <div class="pastor-report-hero-grid">
+                    <article class="pastor-report-hero-copy">
+                        <p class="section-label">선택된 설교</p>
+                        <h2>{{ active_challenge.sermon.title }}</h2>
+                        <p class="pastor-report-hero-meta">
+                            {{ active_challenge.week_start }} ~ {{ active_challenge.week_end }}
+                            {% if sermon_report and sermon_report.sermon_date %}
+                                · 설교일 {{ sermon_report.sermon_date }}
+                            {% endif %}
+                        </p>
+                    </article>
+                    <div class="pastor-kpi-grid">
+                        <article class="pastor-kpi-card">
+                            <span>총 참여 인원</span>
+                            <strong>{% if weekly_report %}{{ weekly_report.participant_count }}명{% else %}-{% endif %}</strong>
+                            <small>이번 주 설교에 참여한 인원</small>
+                        </article>
+                        <article class="pastor-kpi-card">
+                            <span>평균 달란트</span>
+                            <strong>{% if sermon_report %}{{ sermon_report.average_points_per_participant }} 달란트{% else %}-{% endif %}</strong>
+                            <small>참여자 1인당 평균 달란트</small>
+                        </article>
+                        <article class="pastor-kpi-card">
+                            <span>5일 완주</span>
+                            <strong>{% if sermon_report %}{{ sermon_report.weekly_completer_count }}명{% else %}-{% endif %}</strong>
+                            <small>{% if sermon_report %}완주율 {{ sermon_report.weekly_completion_rate }}%{% else %}완주 데이터 없음{% endif %}</small>
+                        </article>
+                        <article class="pastor-kpi-card">
+                            <span>총 달란트</span>
+                            <strong>{% if weekly_report %}{{ weekly_report.total_points }} 달란트{% else %}-{% endif %}</strong>
+                            <small>이번 주 전체 적립 달란트</small>
+                        </article>
+                    </div>
+                </div>
+            </section>
+        {% endif %}
+
+        <section class="pastor-report-grid">
+            <section class="panel">
+                <div class="panel-header">
+                    <h2>주간 참여 흐름</h2>
+                </div>
+                {% if weekly_report and weekly_report.day_rows %}
+                    <div class="pastor-chart-card">
+                        <div class="pastor-chart-list">
+                            {% for row in weekly_report.day_rows %}
+                                <div class="pastor-chart-row">
+                                    <div class="pastor-chart-copy">
+                                        <strong>Day {{ row.day_number }}</strong>
+                                        <span>{{ row.title }}</span>
+                                    </div>
+                                    <div class="pastor-chart-track">
+                                        <span class="pastor-chart-fill" style="width: {{ row.completion_rate }}%;"></span>
+                                    </div>
+                                    <div class="pastor-chart-value">{{ row.completed_count }}명 · {{ row.completion_rate }}%</div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% else %}
+                    <p>주간 참여 흐름 데이터가 없습니다.</p>
+                {% endif %}
+            </section>
+
+            <section class="panel">
+                <div class="panel-header">
+                    <h2>설교 참여 구성</h2>
+                </div>
+                {% if sermon_report and sermon_report.action_rows %}
+                    <div class="pastor-chart-card">
+                        <div class="pastor-chart-list">
+                            {% for row in sermon_report.action_rows %}
+                                <div class="pastor-chart-row">
+                                    <div class="pastor-chart-copy">
+                                        <strong>{{ row.label }}</strong>
+                                        <span>{{ row.count }}명 참여</span>
+                                    </div>
+                                    <div class="pastor-chart-track">
+                                        <span class="pastor-chart-fill pastor-chart-fill-accent" style="width: {{ row.rate }}%;"></span>
+                                    </div>
+                                    <div class="pastor-chart-value">{{ row.rate }}%</div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% else %}
+                    <p>설교 참여 구성 데이터가 없습니다.</p>
+                {% endif %}
+            </section>
+        </section>
+
+        <section class="pastor-report-grid">
+            <section class="panel">
+                <div class="panel-header">
+                    <h2>가장 마음에 남은 한마디</h2>
+                </div>
+                {% if highlight_summary %}
+                    <article class="pastor-quote-card">
+                        <p class="section-label">가장 많이 공감한 말씀</p>
+                        <strong>{{ highlight_summary.top_choice.text }}</strong>
+                        <p>{{ highlight_summary.top_choice.vote_count }}명이 공감했고, 총 {{ highlight_summary.total_votes }}명이 참여했습니다.</p>
+                    </article>
+
+                    <div class="pastor-chart-card">
+                        <div class="pastor-chart-list">
+                            {% for choice in highlight_summary.choices %}
+                                <div class="pastor-chart-row">
+                                    <div class="pastor-chart-copy">
+                                        <strong>후보 {{ forloop.counter }}</strong>
+                                        <span>{{ choice.text }}</span>
+                                    </div>
+                                    <div class="pastor-chart-track">
+                                        {% if highlight_summary.top_choice.vote_count %}
+                                            <span class="pastor-chart-fill" style="width: {% widthratio choice.vote_count highlight_summary.top_choice.vote_count 100 %}%;"></span>
+                                        {% else %}
+                                            <span class="pastor-chart-fill" style="width: 0%;"></span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="pastor-chart-value">{{ choice.vote_count }}표</div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% else %}
+                    <p>아직 공감 문장 후보 또는 투표 데이터가 없습니다.</p>
+                {% endif %}
+            </section>
+
+            <section class="panel">
+                <div class="panel-header">
+                    <h2>콘텐츠 점검 요약</h2>
+                </div>
+                {% if quality_report %}
+                    <div class="pastor-kpi-grid pastor-kpi-grid-compact">
+                        <article class="pastor-kpi-card">
+                            <span>점검 이슈</span>
+                            <strong>{{ quality_report.issue_count }}건</strong>
+                            <small>주의가 필요한 항목 수</small>
+                        </article>
+                        <article class="pastor-kpi-card">
+                            <span>가장 낮은 퀴즈 정확도</span>
+                            <strong>{{ quality_report.lowest_quiz_accuracy_label|default:"-" }}</strong>
+                            <small>{% if quality_report.lowest_quiz_accuracy_label %}{{ quality_report.lowest_quiz_accuracy_rate }}%{% else %}데이터 없음{% endif %}</small>
+                        </article>
+                        <article class="pastor-kpi-card">
+                            <span>가장 낮은 묵상 반응</span>
+                            <strong>{{ quality_report.lowest_reflection_label|default:"-" }}</strong>
+                            <small>{% if quality_report.lowest_reflection_label %}{{ quality_report.lowest_reflection_rate }}%{% else %}데이터 없음{% endif %}</small>
+                        </article>
+                        <article class="pastor-kpi-card">
+                            <span>가장 낮은 미션 반응</span>
+                            <strong>{{ quality_report.lowest_mission_label|default:"-" }}</strong>
+                            <small>{% if quality_report.lowest_mission_label %}{{ quality_report.lowest_mission_rate }}%{% else %}데이터 없음{% endif %}</small>
+                        </article>
+                    </div>
+                {% else %}
+                    <p>콘텐츠 점검 리포트가 없습니다.</p>
+                {% endif %}
+            </section>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Day별 행동 리포트</h2>
+            </div>
+            {% if daily_report and daily_report.day_rows %}
+                <div class="pastor-report-day-grid">
+                    {% for row in daily_report.day_rows %}
+                        <article class="pastor-day-report-card">
+                            <p class="section-label">Day {{ row.day_number }}</p>
+                            <h3>{{ row.title }}</h3>
+                            <div class="pastor-mini-chart-list">
+                                <div class="pastor-mini-chart-row">
+                                    <span>퀴즈</span>
+                                    <div class="pastor-mini-chart-track"><span class="pastor-mini-chart-fill" style="width: {{ row.quiz_rate }}%;"></span></div>
+                                    <strong>{{ row.quiz_rate }}%</strong>
+                                </div>
+                                <div class="pastor-mini-chart-row">
+                                    <span>묵상</span>
+                                    <div class="pastor-mini-chart-track"><span class="pastor-mini-chart-fill pastor-chart-fill-accent" style="width: {{ row.reflection_rate }}%;"></span></div>
+                                    <strong>{{ row.reflection_rate }}%</strong>
+                                </div>
+                                <div class="pastor-mini-chart-row">
+                                    <span>미션</span>
+                                    <div class="pastor-mini-chart-track"><span class="pastor-mini-chart-fill pastor-chart-fill-soft" style="width: {{ row.mission_rate }}%;"></span></div>
+                                    <strong>{{ row.mission_rate }}%</strong>
+                                </div>
+                            </div>
+                            <p class="pastor-day-report-meta">일일 보너스 {{ row.daily_bonus_count }}명 · 주간 완주 누적 {{ row.weekly_bonus_cumulative }}명</p>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>Day별 행동 데이터가 없습니다.</p>
+            {% endif %}
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>상세 표 리포트</h2>
+            </div>
+            <div class="pastor-report-section-stack">
+                <article class="pastor-report-table-card">
+                    <div class="pastor-report-table-head">
+                        <div>
+                            <p class="section-label">주간 상세</p>
+                            <h3>주간 참여 상세</h3>
+                        </div>
+                        <p>각 Day별 완료 인원과 완료율을 표로 비교합니다.</p>
+                    </div>
+                    {% if weekly_report and weekly_report.day_rows %}
+                        <div class="pastor-member-table-wrap pastor-report-table-shell">
+                            <table class="pastor-member-table">
+                                <thead>
+                                    <tr>
+                                        <th>Day</th>
+                                        <th>제목</th>
+                                        <th>완료 인원</th>
+                                        <th>완료율</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in weekly_report.day_rows %}
+                                        <tr>
+                                            <td>Day {{ row.day_number }}</td>
+                                            <td>{{ row.title }}</td>
+                                            <td>{{ row.completed_count }}명</td>
+                                            <td>{{ row.completion_rate }}%</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p>주간 참여 상세 데이터가 없습니다.</p>
+                    {% endif %}
+                </article>
+
+                <article class="pastor-report-table-card">
+                    <div class="pastor-report-table-head">
+                        <div>
+                            <p class="section-label">설교 상세</p>
+                            <h3>설교별 참여 상세</h3>
+                        </div>
+                        <p>퀴즈, 묵상, 미션, 완주 등 참여 항목을 한 표에서 비교합니다.</p>
+                    </div>
+                    {% if sermon_report and sermon_report.action_rows %}
+                        <div class="pastor-member-table-wrap pastor-report-table-shell">
+                            <table class="pastor-member-table">
+                                <thead>
+                                    <tr>
+                                        <th>항목</th>
+                                        <th>참여 인원</th>
+                                        <th>참여율</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in sermon_report.action_rows %}
+                                        <tr>
+                                            <td>{{ row.label }}</td>
+                                            <td>{{ row.count }}명</td>
+                                            <td>{{ row.rate }}%</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p>설교별 참여 상세 데이터가 없습니다.</p>
+                    {% endif %}
+                </article>
+
+                <article class="pastor-report-table-card">
+                    <div class="pastor-report-table-head">
+                        <div>
+                            <p class="section-label">콘텐츠 점검</p>
+                            <h3>콘텐츠 점검 상세</h3>
+                        </div>
+                        <p>반응이 낮은 Day와 주의할 항목을 표로 확인합니다.</p>
+                    </div>
+                    {% if quality_report and quality_report.quality_rows %}
+                        <div class="pastor-member-table-wrap pastor-report-table-shell">
+                            <table class="pastor-member-table">
+                                <thead>
+                                    <tr>
+                                        <th>Day</th>
+                                        <th>제목</th>
+                                        <th>퀴즈 정확도</th>
+                                        <th>묵상 반응</th>
+                                        <th>미션 반응</th>
+                                        <th>주의 항목</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in quality_report.quality_rows %}
+                                        <tr>
+                                            <td>Day {{ row.day_number }}</td>
+                                            <td>{{ row.title }}</td>
+                                            <td>{{ row.quiz_correct_count }}/{{ row.quiz_attempt_count }} ({{ row.quiz_accuracy_rate }}%)</td>
+                                            <td>{{ row.reflection_count }}명 ({{ row.reflection_rate }}%)</td>
+                                            <td>{{ row.mission_count }}명 ({{ row.mission_rate }}%)</td>
+                                            <td>{% if row.flags %}{{ row.flags|join:", " }}{% else %}-{% endif %}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p>콘텐츠 점검 상세 데이터가 없습니다.</p>
+                    {% endif %}
+                </article>
+            </div>
+        </section>
+
+    </main>
+</body>
+</html>

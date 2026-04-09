@@ -567,6 +567,887 @@ a {
     white-space: nowrap;
 }
 
+.pastor-shell {
+    padding-bottom: 40px;
+    width: min(1380px, calc(100% - 36px));
+}
+
+.pastor-hero h1 {
+    margin: 10px 0 8px;
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4vw, 3.2rem);
+}
+
+.pastor-nav-panel {
+    padding: 16px 18px;
+}
+
+.pastor-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.pastor-nav-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 999px;
+    background: rgba(236, 225, 209, 0.78);
+    border: 1px solid rgba(32, 25, 19, 0.08);
+    color: var(--ink);
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.pastor-nav-link-active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fffaf2;
+}
+
+.pastor-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.pastor-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.pastor-stat-list {
+    display: grid;
+    gap: 12px;
+}
+
+.pastor-stat-list div,
+.pastor-member-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(32, 25, 19, 0.08);
+}
+
+.pastor-stat-list div:last-child,
+.pastor-member-row:last-child {
+    border-bottom: 0;
+}
+
+.pastor-member-list {
+    display: grid;
+    gap: 2px;
+}
+
+.pastor-edit-form {
+    display: grid;
+    gap: 18px;
+}
+
+.pastor-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+}
+
+.pastor-toolbar-buttons,
+.pastor-toolbar-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.pastor-toolbar-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 999px;
+    font: inherit;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.pastor-toolbar-button:hover,
+.pastor-toolbar-button:focus-visible {
+    transform: translateY(-1px);
+}
+
+.pastor-toolbar-button-primary {
+    background: var(--accent);
+    color: #fffaf2;
+}
+
+.pastor-toolbar-button-primary:hover,
+.pastor-toolbar-button-primary:focus-visible {
+    background: #75482c;
+    color: #fffaf2;
+}
+
+.pastor-toolbar-button-secondary {
+    background: rgba(236, 225, 209, 0.9);
+    color: var(--ink);
+    border: 1px solid rgba(32, 25, 19, 0.08);
+}
+
+.pastor-toolbar-button-secondary:hover,
+.pastor-toolbar-button-secondary:focus-visible {
+    background: rgba(225, 211, 193, 0.96);
+    color: var(--ink);
+}
+
+.pastor-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 18px;
+}
+
+.pastor-form-grid-compact {
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+}
+
+.pastor-console-overview {
+    display: grid;
+    gap: 20px;
+}
+
+.pastor-console-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.pastor-console-grid-tight {
+    margin-bottom: 18px;
+}
+
+.pastor-console-card {
+    padding: 22px 24px;
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(255, 250, 242, 0.96), rgba(241, 234, 222, 0.92));
+    border: 1px solid rgba(47, 107, 132, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+}
+
+.pastor-console-card-wide {
+    grid-column: 1 / -1;
+}
+
+.pastor-console-card strong {
+    display: block;
+    margin-top: 8px;
+    color: var(--ink);
+    font-size: 1.06rem;
+    line-height: 1.7;
+    font-family: var(--font-body);
+}
+
+.pastor-console-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 24px;
+    margin-top: 10px;
+}
+
+.pastor-console-meta span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.pastor-console-meta strong {
+    margin-top: 6px;
+}
+
+.pastor-console-bullets {
+    margin: 12px 0 0;
+    padding-left: 20px;
+    color: var(--ink);
+    line-height: 1.75;
+    font-family: var(--font-body);
+}
+
+.pastor-console-bullets li + li {
+    margin-top: 8px;
+}
+
+.pastor-console-edit-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.pastor-console-field {
+    margin-bottom: 0;
+}
+
+.pastor-console-field textarea,
+.pastor-console-field input {
+    background: rgba(255, 255, 255, 0.78);
+}
+
+.pastor-empty-copy {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.7;
+}
+
+.pastor-form-stack {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+.pastor-field-wide {
+    grid-column: 1 / -1;
+}
+
+.pastor-day-stack {
+    display: grid;
+    gap: 18px;
+}
+
+.pastor-day-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.pastor-highlight-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.pastor-summary-lines {
+    display: grid;
+    gap: 12px;
+}
+
+.pastor-keypoint-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.pastor-keypoint-card {
+    padding: 18px;
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255, 250, 242, 0.96), rgba(241, 234, 222, 0.92));
+    border: 1px solid rgba(47, 107, 132, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+}
+
+.pastor-keypoint-card .auth-label {
+    margin-bottom: 0;
+}
+
+.pastor-keypoint-card textarea {
+    min-height: 150px;
+}
+
+.pastor-day-summary {
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 22px;
+    cursor: pointer;
+}
+
+.pastor-day-summary::-webkit-details-marker {
+    display: none;
+}
+
+.pastor-day-summary strong {
+    display: block;
+    margin-top: 6px;
+    font-size: 1.1rem;
+    line-height: 1.4;
+    font-family: var(--font-body);
+}
+
+.pastor-day-summary-hint {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 68px;
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(236, 225, 209, 0.78);
+    color: var(--muted);
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.pastor-toggle-close {
+    display: none;
+}
+
+.pastor-panel-details[open] .pastor-toggle-open,
+.pastor-day-card[open] .pastor-toggle-open {
+    display: none;
+}
+
+.pastor-panel-details[open] .pastor-toggle-close,
+.pastor-day-card[open] .pastor-toggle-close {
+    display: inline;
+}
+
+.pastor-day-card[open] .pastor-day-summary-hint {
+    background: rgba(47, 107, 132, 0.14);
+    color: var(--accent);
+}
+
+.pastor-panel-details {
+    padding: 0;
+    overflow: hidden;
+}
+
+.pastor-panel-summary {
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 28px 32px;
+    cursor: pointer;
+}
+
+.pastor-panel-summary::-webkit-details-marker {
+    display: none;
+}
+
+.pastor-panel-summary h2 {
+    margin: 0;
+}
+
+.pastor-panel-summary .pastor-section-help {
+    margin: 8px 0 0;
+}
+
+.pastor-toggle-text {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 72px;
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: rgba(236, 225, 209, 0.78);
+    color: var(--muted);
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.pastor-panel-details[open] .pastor-toggle-text {
+    background: rgba(47, 107, 132, 0.14);
+    color: var(--accent);
+}
+
+.pastor-panel-body {
+    padding: 0 32px 32px;
+    border-top: 1px solid rgba(32, 25, 19, 0.08);
+}
+
+.pastor-day-body {
+    padding: 0 22px 22px;
+    border-top: 1px solid rgba(32, 25, 19, 0.08);
+}
+
+.pastor-section-help {
+    margin: 0 0 14px;
+    color: var(--muted);
+    font-size: 0.96rem;
+    line-height: 1.65;
+}
+
+.pastor-checklist {
+    display: grid;
+    gap: 10px;
+}
+
+.pastor-check-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(32, 25, 19, 0.08);
+}
+
+.pastor-check-item.is-ok {
+    background: rgba(229, 246, 236, 0.8);
+    border-color: rgba(20, 83, 45, 0.18);
+}
+
+.pastor-check-item.is-pending {
+    background: rgba(255, 245, 235, 0.88);
+    border-color: rgba(146, 64, 14, 0.18);
+}
+
+.pastor-check-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 78px;
+    min-height: 34px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.78);
+    color: var(--ink);
+}
+
+.pastor-member-table-wrap {
+    overflow-x: auto;
+}
+
+.pastor-report-filter {
+    margin-top: 12px;
+}
+
+.pastor-report-select {
+    max-width: 460px;
+    margin-bottom: 0;
+}
+
+.pastor-report-hero-panel {
+    overflow: hidden;
+}
+
+.pastor-report-hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.25fr);
+    gap: 20px;
+    align-items: stretch;
+}
+
+.pastor-report-hero-copy {
+    padding: 26px 28px;
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(255, 250, 242, 0.98), rgba(241, 234, 222, 0.92));
+    border: 1px solid rgba(47, 107, 132, 0.12);
+}
+
+.pastor-report-hero-copy h2 {
+    margin: 12px 0 10px;
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 3.6vw, 2.8rem);
+    line-height: 1.28;
+}
+
+.pastor-report-hero-meta {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.8;
+}
+
+.pastor-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.pastor-kpi-grid-compact {
+    margin-top: 8px;
+}
+
+.pastor-kpi-card {
+    padding: 20px 22px;
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255, 250, 242, 0.98), rgba(234, 225, 212, 0.94));
+    border: 1px solid rgba(32, 25, 19, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+}
+
+.pastor-kpi-card span,
+.pastor-kpi-card strong,
+.pastor-kpi-card small {
+    display: block;
+}
+
+.pastor-kpi-card span {
+    color: var(--muted);
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.pastor-kpi-card strong {
+    margin-top: 10px;
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: 1.45rem;
+    line-height: 1.35;
+}
+
+.pastor-kpi-card small {
+    margin-top: 8px;
+    color: var(--accent);
+    font-size: 0.86rem;
+    line-height: 1.55;
+}
+
+.pastor-report-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    margin-top: 24px;
+}
+
+.pastor-chart-card {
+    padding: 20px 22px;
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(255, 250, 242, 0.98), rgba(240, 233, 223, 0.94));
+    border: 1px solid rgba(32, 25, 19, 0.08);
+}
+
+.pastor-chart-list {
+    display: grid;
+    gap: 16px;
+}
+
+.pastor-chart-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(180px, 1fr) auto;
+    gap: 14px;
+    align-items: center;
+}
+
+.pastor-chart-copy strong,
+.pastor-chart-copy span {
+    display: block;
+}
+
+.pastor-chart-copy strong {
+    color: var(--ink);
+    font-size: 0.98rem;
+}
+
+.pastor-chart-copy span {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.55;
+}
+
+.pastor-chart-track {
+    height: 12px;
+    border-radius: 999px;
+    background: rgba(47, 107, 132, 0.12);
+    overflow: hidden;
+}
+
+.pastor-chart-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2f6b84 0%, #1f7a6d 100%);
+}
+
+.pastor-chart-fill-accent {
+    background: linear-gradient(90deg, #8b5c3b 0%, #b77945 100%);
+}
+
+.pastor-chart-fill-soft {
+    background: linear-gradient(90deg, #5f7f54 0%, #7da06f 100%);
+}
+
+.pastor-chart-value {
+    min-width: 84px;
+    color: var(--ink);
+    font-size: 0.94rem;
+    font-weight: 700;
+    text-align: right;
+}
+
+.pastor-quote-card {
+    margin-bottom: 18px;
+    padding: 24px 26px;
+    border-radius: 24px;
+    background: linear-gradient(180deg, #f2e4d2 0%, rgba(255, 250, 242, 0.95) 100%);
+    border: 1px solid rgba(139, 92, 59, 0.22);
+}
+
+.pastor-quote-card strong {
+    display: block;
+    margin-top: 10px;
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: 1.14rem;
+    line-height: 1.7;
+}
+
+.pastor-quote-card p:last-child {
+    margin: 12px 0 0;
+    color: var(--muted);
+}
+
+.pastor-report-day-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.pastor-day-report-card {
+    padding: 22px 24px;
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(255, 250, 242, 0.98), rgba(240, 233, 223, 0.94));
+    border: 1px solid rgba(32, 25, 19, 0.08);
+}
+
+.pastor-day-report-card h3 {
+    margin: 10px 0 16px;
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: 1.18rem;
+    line-height: 1.4;
+}
+
+.pastor-mini-chart-list {
+    display: grid;
+    gap: 12px;
+}
+
+.pastor-mini-chart-row {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr) 46px;
+    gap: 10px;
+    align-items: center;
+}
+
+.pastor-mini-chart-row span {
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.pastor-mini-chart-row strong {
+    color: var(--ink);
+    font-size: 0.9rem;
+    text-align: right;
+}
+
+.pastor-mini-chart-track {
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(47, 107, 132, 0.12);
+    overflow: hidden;
+}
+
+.pastor-mini-chart-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2f6b84 0%, #1f7a6d 100%);
+}
+
+.pastor-day-report-meta {
+    margin: 16px 0 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+.pastor-report-section-stack {
+    display: grid;
+    gap: 18px;
+}
+
+.pastor-report-table-card {
+    padding: 22px 24px;
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(255, 250, 242, 0.98), rgba(240, 233, 223, 0.94));
+    border: 1px solid rgba(32, 25, 19, 0.08);
+}
+
+.pastor-report-table-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 18px;
+    margin-bottom: 16px;
+}
+
+.pastor-report-table-head p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.65;
+}
+
+.pastor-report-table-card h3 {
+    margin: 8px 0 0;
+    font-family: var(--font-display);
+    font-size: 1.18rem;
+    line-height: 1.4;
+}
+
+.pastor-report-table-shell {
+    padding: 10px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.58);
+    border: 1px solid rgba(32, 25, 19, 0.06);
+}
+
+.pastor-report-table-shell .pastor-member-table {
+    min-width: 100%;
+}
+
+.pastor-report-table-shell .pastor-member-table thead th {
+    position: sticky;
+    top: 0;
+    background: #f5ede0;
+    z-index: 1;
+}
+
+.pastor-member-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.pastor-member-table thead th {
+    padding: 12px 14px;
+    color: var(--ink);
+    font-size: 0.92rem;
+    font-weight: 800;
+    text-align: left;
+    border-bottom: 1px solid rgba(32, 25, 19, 0.1);
+}
+
+.pastor-member-table tbody td {
+    padding: 12px 14px;
+    color: var(--muted);
+    line-height: 1.6;
+    border-bottom: 1px solid rgba(32, 25, 19, 0.08);
+    background: rgba(255, 250, 242, 0.55);
+}
+
+.pastor-member-table tbody tr:nth-child(even) td {
+    background: rgba(241, 234, 222, 0.72);
+}
+
+.pastor-member-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.pastor-member-filters {
+    display: grid;
+    grid-template-columns: minmax(260px, 1.5fr) repeat(2, minmax(180px, 0.8fr)) auto;
+    gap: 14px 16px;
+    align-items: end;
+}
+
+.pastor-member-filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    padding-bottom: 16px;
+}
+
+.pastor-member-subtext {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 0.86rem;
+}
+
+.pastor-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    background: rgba(236, 225, 209, 0.78);
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.pastor-status-badge.is-good {
+    background: rgba(224, 244, 230, 0.92);
+    color: #1e6a35;
+}
+
+.pastor-status-badge.is-warn {
+    background: rgba(255, 236, 214, 0.95);
+    color: #9a4d11;
+}
+
+.pastor-status-badge.is-muted {
+    background: rgba(236, 225, 209, 0.78);
+    color: var(--muted);
+}
+
+.pastor-member-table th,
+.pastor-member-table td {
+    white-space: nowrap;
+}
+
+.pastor-field textarea,
+.pastor-field input,
+.pastor-field select {
+    width: 100%;
+    border-radius: 18px;
+    display: block;
+}
+
+.pastor-field textarea {
+    padding: 18px 20px;
+    border: 1px solid rgba(32, 25, 19, 0.14);
+    background: #fffaf4;
+    color: var(--ink);
+    font-size: 1rem;
+    line-height: 1.9;
+    resize: vertical;
+    max-width: none;
+    font-family: var(--font-body);
+}
+
+.pastor-field textarea#id_sermon-transcript {
+    min-height: 720px;
+    font-size: 1.02rem;
+    line-height: 2;
+    letter-spacing: -0.01em;
+}
+
+.pastor-field input,
+.pastor-field select {
+    padding: 14px 16px;
+    border: 1px solid rgba(32, 25, 19, 0.14);
+    background: rgba(255, 255, 255, 0.82);
+    font: inherit;
+    font-family: var(--font-body);
+}
+
+.pastor-edit-form .panel {
+    padding: 34px 38px;
+}
+
+.pastor-edit-form .panel h2 {
+    font-size: 1.65rem;
+}
+
+.pastor-day-card textarea {
+    min-height: 110px;
+}
+
 .mobile-routine-hint {
     margin: 12px 0 0;
     color: var(--accent);
@@ -1357,13 +2238,69 @@ a {
     .highlight-vote-grid,
     .daily-focus-grid,
     .points-guide-grid,
-    .history-grid {
+    .history-grid,
+    .pastor-dashboard-grid,
+    .pastor-form-grid,
+    .pastor-highlight-list,
+    .pastor-keypoint-grid,
+    .pastor-console-grid,
+    .pastor-console-meta,
+    .pastor-report-grid,
+    .pastor-report-day-grid,
+    .pastor-report-hero-grid,
+    .pastor-kpi-grid {
         grid-template-columns: 1fr;
+    }
+
+    .pastor-shell {
+        width: min(100% - 20px, 1380px);
+    }
+
+    .pastor-edit-form .panel {
+        padding: 24px;
+    }
+
+    .pastor-panel-summary {
+        padding: 22px 24px;
+    }
+
+    .pastor-panel-body {
+        padding: 0 24px 24px;
     }
 
     .highlight-chart-row {
         grid-template-columns: 1fr;
         gap: 6px;
+    }
+
+    .pastor-chart-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .pastor-chart-value {
+        text-align: left;
+        min-width: 0;
+    }
+
+    .pastor-mini-chart-row {
+        grid-template-columns: 1fr;
+    }
+
+    .pastor-mini-chart-row strong {
+        text-align: left;
+    }
+
+    .pastor-report-table-head {
+        flex-direction: column;
+    }
+
+    .pastor-member-filters {
+        grid-template-columns: 1fr;
+    }
+
+    .pastor-member-filter-actions {
+        padding-bottom: 0;
     }
 
     .highlight-chart-count {
