@@ -150,6 +150,28 @@ def _get_active_challenge():
     )
 
 
+def _get_default_pastor_sermon(available_sermons, active_challenge=None):
+    review_sermon = next(
+        (
+            sermon
+            for sermon in available_sermons
+            if not sermon.is_published and (sermon.ai_generated or sermon.status != SermonStatus.DRAFT)
+        ),
+        None,
+    )
+    if review_sermon:
+        return review_sermon
+
+    unpublished_sermon = next((sermon for sermon in available_sermons if not sermon.is_published), None)
+    if unpublished_sermon:
+        return unpublished_sermon
+
+    if active_challenge:
+        return active_challenge.sermon
+
+    return available_sermons[0] if available_sermons else None
+
+
 def _get_summary(sermon):
     if not sermon:
         return None
@@ -690,61 +712,30 @@ def pastor_dashboard_view(request):
         .prefetch_related("daily_engagements", "weekly_challenges")
         .order_by("-sermon_date", "-id")
     )
-    latest_sermon = available_sermons[0] if available_sermons else None
-
-    sermon = active_challenge.sermon if active_challenge else latest_sermon
+    sermon = _get_default_pastor_sermon(available_sermons, active_challenge)
     selected_sermon_id = request.GET.get("sermon")
     if selected_sermon_id:
         try:
             sermon = next(item for item in available_sermons if item.pk == int(selected_sermon_id))
         except (StopIteration, ValueError):
             pass
-
-    challenge = None
     if sermon:
-        if active_challenge and active_challenge.sermon_id == sermon.id:
-            challenge = active_challenge
-        else:
-            challenge = sermon.weekly_challenges.order_by("-week_start", "-id").first()
-
-    if sermon:
-        try:
-            summary = sermon.summary
-        except SermonSummary.DoesNotExist:
-            summary = None
-    else:
-        summary = None
-
-    weekly_report = None
-    sermon_report = None
-    daily_report = None
-    quality_report = None
-    if challenge:
-        weekly_report = sync_weekly_participation_report(challenge)
-        daily_report = sync_daily_action_report(challenge)
-        quality_report = sync_content_quality_report(challenge)
-    if sermon and sermon.is_published:
-        sermon_report = sync_sermon_participation_report(sermon)
-
-    member_reports = [
-        sync_user_participation_report(profile.user)
-        for profile in UserProfile.objects.select_related("user").order_by("-points", "user__username")[:8]
-    ]
+        return redirect("core:pastor_sermon_edit", pk=sermon.pk)
 
     return render(
         request,
         "core/pastor_dashboard.html",
         {
-            "sermon": sermon,
-            "summary": summary,
-            "active_challenge": challenge,
+            "sermon": None,
+            "summary": None,
+            "active_challenge": None,
             "available_sermons": available_sermons,
-            "weekly_report": weekly_report,
-            "sermon_report": sermon_report,
-            "daily_report": daily_report,
-            "quality_report": quality_report,
-            "member_reports": member_reports,
-            "pastor_menu": "dashboard",
+            "weekly_report": None,
+            "sermon_report": None,
+            "daily_report": None,
+            "quality_report": None,
+            "member_reports": [],
+            "pastor_menu": "sermon",
         },
     )
 
@@ -754,6 +745,9 @@ def pastor_sermon_edit_view(request, pk):
     sermon = get_object_or_404(
         Sermon.objects.prefetch_related("daily_engagements", "highlight_choices", "weekly_challenges"),
         pk=pk,
+    )
+    available_sermons = list(
+        Sermon.objects.order_by("-sermon_date", "-id").only("id", "title", "sermon_date")
     )
     summary, _ = SermonSummary.objects.get_or_create(sermon=sermon)
     daily_qs = sermon.daily_engagements.order_by("day_number", "id")
@@ -840,6 +834,7 @@ def pastor_sermon_edit_view(request, pk):
         {
             "sermon": sermon,
             "challenge": challenge,
+            "available_sermons": available_sermons,
             "sermon_form": sermon_form,
             "summary_form": summary_form,
             "daily_formset": daily_formset,
