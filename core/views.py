@@ -685,13 +685,28 @@ def submit_highlight_vote_view(request):
 @pastor_required
 def pastor_dashboard_view(request):
     active_challenge = _get_active_challenge()
-    latest_sermon = (
+    available_sermons = list(
         Sermon.objects.select_related("summary")
         .prefetch_related("daily_engagements", "weekly_challenges")
         .order_by("-sermon_date", "-id")
-        .first()
     )
+    latest_sermon = available_sermons[0] if available_sermons else None
+
     sermon = active_challenge.sermon if active_challenge else latest_sermon
+    selected_sermon_id = request.GET.get("sermon")
+    if selected_sermon_id:
+        try:
+            sermon = next(item for item in available_sermons if item.pk == int(selected_sermon_id))
+        except (StopIteration, ValueError):
+            pass
+
+    challenge = None
+    if sermon:
+        if active_challenge and active_challenge.sermon_id == sermon.id:
+            challenge = active_challenge
+        else:
+            challenge = sermon.weekly_challenges.order_by("-week_start", "-id").first()
+
     if sermon:
         try:
             summary = sermon.summary
@@ -704,10 +719,10 @@ def pastor_dashboard_view(request):
     sermon_report = None
     daily_report = None
     quality_report = None
-    if active_challenge:
-        weekly_report = sync_weekly_participation_report(active_challenge)
-        daily_report = sync_daily_action_report(active_challenge)
-        quality_report = sync_content_quality_report(active_challenge)
+    if challenge:
+        weekly_report = sync_weekly_participation_report(challenge)
+        daily_report = sync_daily_action_report(challenge)
+        quality_report = sync_content_quality_report(challenge)
     if sermon and sermon.is_published:
         sermon_report = sync_sermon_participation_report(sermon)
 
@@ -722,7 +737,8 @@ def pastor_dashboard_view(request):
         {
             "sermon": sermon,
             "summary": summary,
-            "active_challenge": active_challenge,
+            "active_challenge": challenge,
+            "available_sermons": available_sermons,
             "weekly_report": weekly_report,
             "sermon_report": sermon_report,
             "daily_report": daily_report,

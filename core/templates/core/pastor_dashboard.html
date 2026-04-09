@@ -40,6 +40,22 @@
             <section class="panel pastor-dashboard-grid">
                 <article class="content-card">
                     <p class="section-label">이번 주 설교</p>
+
+                    {% if available_sermons %}
+                        <form method="get" class="pastor-report-filter">
+                            <label class="auth-label pastor-field pastor-report-select">
+                                <span>설교 선택</span>
+                                <select name="sermon" onchange="this.form.submit()">
+                                    {% for item in available_sermons %}
+                                        <option value="{{ item.id }}" {% if sermon.id == item.id %}selected{% endif %}>
+                                            {{ item.sermon_date }} | {{ item.title }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                        </form>
+                    {% endif %}
+
                     <h2>{{ sermon.title }}</h2>
                     <p class="hero-meta">
                         {% if sermon.preacher %}{{ sermon.preacher }} · {% endif %}{{ sermon.sermon_date }}
