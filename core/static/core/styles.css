@@ -568,8 +568,43 @@ a {
 }
 
 .pastor-shell {
+    position: relative;
     padding-bottom: 40px;
     width: min(1380px, calc(100% - 36px));
+    padding-top: 18px;
+}
+
+.pastor-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: 36px;
+    background:
+        radial-gradient(circle at top left, rgba(47, 107, 132, 0.12), transparent 42%),
+        linear-gradient(180deg, rgba(233, 239, 236, 0.88) 0%, rgba(242, 238, 232, 0.96) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52);
+}
+
+.pastor-shell .panel {
+    background: linear-gradient(180deg, rgba(251, 248, 242, 0.97), rgba(241, 236, 228, 0.97));
+    border: 1px solid rgba(48, 59, 64, 0.08);
+    box-shadow: 0 18px 44px rgba(31, 43, 49, 0.08);
+}
+
+.pastor-shell .content-card {
+    background: linear-gradient(180deg, rgba(255, 252, 247, 0.98), rgba(244, 239, 231, 0.96));
+    border: 1px solid rgba(48, 59, 64, 0.08);
+}
+
+.pastor-shell .top-actions {
+    margin-bottom: 10px;
+}
+
+.pastor-shell .top-actions .text-link {
+    background: rgba(246, 241, 233, 0.92);
+    border: 1px solid rgba(48, 59, 64, 0.08);
+    box-shadow: 0 10px 24px rgba(31, 43, 49, 0.06);
 }
 
 .pastor-hero h1 {
@@ -578,8 +613,15 @@ a {
     font-size: clamp(2rem, 4vw, 3.2rem);
 }
 
+.pastor-hero {
+    background:
+        radial-gradient(circle at top right, rgba(47, 107, 132, 0.14), transparent 34%),
+        linear-gradient(180deg, rgba(247, 243, 236, 0.98), rgba(237, 232, 224, 0.98));
+}
+
 .pastor-nav-panel {
     padding: 16px 18px;
+    background: linear-gradient(180deg, rgba(246, 242, 236, 0.96), rgba(236, 231, 222, 0.94));
 }
 
 .pastor-nav {
@@ -595,8 +637,8 @@ a {
     min-height: 42px;
     padding: 0 16px;
     border-radius: 999px;
-    background: rgba(236, 225, 209, 0.78);
-    border: 1px solid rgba(32, 25, 19, 0.08);
+    background: rgba(230, 223, 213, 0.8);
+    border: 1px solid rgba(48, 59, 64, 0.1);
     color: var(--ink);
     text-decoration: none;
     font-weight: 700;
@@ -607,8 +649,8 @@ a {
 }
 
 .pastor-nav-link-active {
-    background: var(--accent);
-    border-color: var(--accent);
+    background: #416d7e;
+    border-color: #416d7e;
     color: #fffaf2;
 }
 
