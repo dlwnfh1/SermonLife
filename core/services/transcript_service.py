@@ -22,6 +22,9 @@ FFMPEG_PATH = os.environ.get(
 TRANSCRIPTION_CHUNK_SECONDS = int(os.environ.get("TRANSCRIPTION_CHUNK_SECONDS", "600"))
 VTT_TIMESTAMP_PATTERN = re.compile(r"^\d{2}:\d{2}:\d{2}\.\d{3}\s+-->\s+\d{2}:\d{2}:\d{2}\.\d{3}$")
 VIDEO_EXTENSIONS = {".mov", ".mp4", ".avi", ".mkv", ".wmv", ".m4v", ".webm", ".ogv"}
+TRANSCRIPT_PHRASE_NORMALIZATIONS = (
+    (re.compile(r"추건\s*합니다"), "축원 합니다"),
+)
 
 
 class TranscriptFetchError(Exception):
@@ -68,13 +71,20 @@ def _normalize_transcript_lines(lines):
     return "\n".join(cleaned)
 
 
+def _apply_transcript_phrase_normalizations(transcript_text: str) -> str:
+    normalized = transcript_text
+    for pattern, replacement in TRANSCRIPT_PHRASE_NORMALIZATIONS:
+        normalized = pattern.sub(replacement, normalized)
+    return normalized
+
+
 def _fetch_transcript_from_youtube_api(video_id: str, languages):
     api = YouTubeTranscriptApi()
     fetched = api.fetch(video_id, languages=languages, preserve_formatting=False)
     transcript_text = "\n".join(item.text.strip() for item in fetched if item.text.strip())
     if not transcript_text:
         raise TranscriptFetchError(f"Transcript for video {video_id} was empty.")
-    return transcript_text
+    return _apply_transcript_phrase_normalizations(transcript_text)
 
 
 def _download_subtitles_with_ytdlp(youtube_url: str, languages):
@@ -104,7 +114,7 @@ def _download_subtitles_with_ytdlp(youtube_url: str, languages):
         transcript_text = "\n".join(part for part in merged if part.strip()).strip()
         if not transcript_text:
             raise TranscriptFetchError(f"yt-dlp subtitle files for video {video_id} were empty.")
-        return transcript_text
+        return _apply_transcript_phrase_normalizations(transcript_text)
 
 
 def _download_audio_with_ytdlp(youtube_url: str):
@@ -149,7 +159,7 @@ def _transcribe_audio_with_openai(audio_path):
     transcript_text = data.get("text", "").strip()
     if not transcript_text:
         raise TranscriptFetchError("OpenAI transcription returned an empty transcript.")
-    return transcript_text
+    return _apply_transcript_phrase_normalizations(transcript_text)
 
 
 def _resolve_ffmpeg_path() -> str:
@@ -208,7 +218,7 @@ def _transcribe_in_chunks(audio_path: Path) -> str:
     merged = "\n".join(part.strip() for part in transcripts if part.strip()).strip()
     if not merged:
         raise TranscriptFetchError("Chunked transcription produced an empty transcript.")
-    return merged
+    return _apply_transcript_phrase_normalizations(merged)
 
 
 def _extract_audio_track(media_path: Path) -> Path:
