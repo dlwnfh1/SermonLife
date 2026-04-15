@@ -572,6 +572,7 @@ a {
     padding-bottom: 40px;
     width: min(1380px, calc(100% - 36px));
     padding-top: 18px;
+    overflow-x: clip;
 }
 
 .pastor-shell::before {
@@ -1320,6 +1321,8 @@ a {
     border-radius: 24px;
     background: linear-gradient(180deg, rgba(255, 250, 242, 0.98), rgba(240, 233, 223, 0.94));
     border: 1px solid rgba(32, 25, 19, 0.08);
+    min-width: 0;
+    overflow: hidden;
 }
 
 .pastor-report-table-head {
@@ -1348,6 +1351,10 @@ a {
     border-radius: 22px;
     background: rgba(255, 255, 255, 0.58);
     border: 1px solid rgba(32, 25, 19, 0.06);
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
 .pastor-report-table-shell .pastor-member-table {
@@ -1362,7 +1369,8 @@ a {
 }
 
 .pastor-member-table {
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     border-collapse: collapse;
 }
 
@@ -2376,6 +2384,13 @@ a {
     .pastor-report-table-shell {
         padding: 8px;
         border-radius: 16px;
+        max-width: 100%;
+        overflow-x: auto;
+    }
+
+    .pastor-member-table {
+        width: max-content;
+        min-width: 100%;
     }
 
     .pastor-member-table thead th,
