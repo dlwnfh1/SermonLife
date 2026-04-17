@@ -1990,31 +1990,35 @@ a {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
-    margin-top: 12px;
+    gap: 12px;
+    margin-top: 14px;
 }
 
 .voice-input-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 40px;
-    padding: 0 14px;
+    min-height: 52px;
+    padding: 0 20px;
     border-radius: 999px;
-    border: 1px solid rgba(47, 107, 132, 0.18);
-    background: rgba(238, 247, 250, 0.95);
-    color: #205466;
+    border: 1px solid rgba(47, 107, 132, 0.2);
+    background: linear-gradient(180deg, rgba(242, 250, 252, 0.98), rgba(226, 242, 247, 0.98));
+    color: #1e5465;
     font: inherit;
     font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+    box-shadow: 0 12px 24px rgba(47, 107, 132, 0.12);
     cursor: pointer;
-    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .voice-input-button:hover,
 .voice-input-button:focus-visible {
-    background: rgba(224, 241, 247, 0.98);
-    border-color: rgba(47, 107, 132, 0.32);
+    background: linear-gradient(180deg, rgba(231, 245, 249, 1), rgba(214, 235, 242, 1));
+    border-color: rgba(47, 107, 132, 0.34);
     transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(47, 107, 132, 0.16);
 }
 
 .voice-input-button-listening {
@@ -2030,16 +2034,20 @@ a {
 }
 
 .voice-input-button-secondary {
-    min-height: 42px;
+    min-height: 48px;
     background: rgba(255, 255, 255, 0.92);
     color: #2f6b84;
     border-color: rgba(47, 107, 132, 0.22);
+    box-shadow: none;
 }
 
 .voice-entry-status {
+    display: none;
+    width: 100%;
+    margin-top: 2px;
     color: var(--muted);
-    font-size: 0.9rem;
-    line-height: 1.5;
+    font-size: 0.95rem;
+    line-height: 1.55;
 }
 
 .voice-entry-status-active {
@@ -2098,6 +2106,7 @@ a {
 
 .action-button-row .action-button {
     margin-top: 0;
+    min-height: 48px;
 }
 
 @keyframes error-pulse {
