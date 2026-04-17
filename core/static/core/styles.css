@@ -1892,6 +1892,39 @@ a {
     width: 100%;
 }
 
+.listen-card {
+    display: grid;
+    gap: 14px;
+    margin-bottom: 18px;
+    padding: 18px 20px;
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(237, 247, 249, 0.96), rgba(226, 240, 244, 0.96));
+    border: 1px solid rgba(47, 107, 132, 0.14);
+    box-shadow: 0 16px 30px rgba(47, 107, 132, 0.08);
+}
+
+.listen-card-compact {
+    margin-top: 6px;
+    margin-bottom: 18px;
+}
+
+.listen-card-copy {
+    display: grid;
+    gap: 6px;
+}
+
+.listen-card-copy strong {
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: 1.04rem;
+    line-height: 1.6;
+}
+
+.listen-audio-player {
+    width: 100%;
+    min-height: 46px;
+}
+
 .daily-stack {
     margin-top: 18px;
 }

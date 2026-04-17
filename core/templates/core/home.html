@@ -177,6 +177,17 @@
                 <div class="panel-header">
                     <h2>이번 주 한눈에 보기</h2>
                 </div>
+                {% if weekly_audio_clip and weekly_audio_clip.file %}
+                    <div class="listen-card">
+                        <div class="listen-card-copy">
+                            <p class="section-label">이번 주 요약 듣기</p>
+                            <strong>한눈에 보기, 마음에 남은 말씀, 5일 루틴을 음성으로 들어보세요.</strong>
+                        </div>
+                        <audio class="audio-player listen-audio-player" controls preload="none">
+                            <source src="{{ weekly_audio_clip.file.url }}" type="audio/mpeg">
+                        </audio>
+                    </div>
+                {% endif %}
                 {% if overview %}
                     <p class="overview-text">{{ overview|linebreaksbr }}</p>
                 {% else %}
@@ -298,6 +309,17 @@
                     </div>
                 {% endif %}
                 {% if current_daily %}
+                    {% if today_audio_clip and today_audio_clip.file %}
+                        <div class="listen-card listen-card-compact">
+                            <div class="listen-card-copy">
+                                <p class="section-label">오늘 내용 듣기</p>
+                                <strong>오늘의 설교 흐름, 핵심 메시지, 묵상 질문과 미션을 음성으로 들어보세요.</strong>
+                            </div>
+                            <audio class="audio-player listen-audio-player" controls preload="none">
+                                <source src="{{ today_audio_clip.file.url }}" type="audio/mpeg">
+                            </audio>
+                        </div>
+                    {% endif %}
                     <div class="daily-stack">
                         <article class="content-card highlight-card">
                             <p class="section-label">{{ current_daily.title }}</p>

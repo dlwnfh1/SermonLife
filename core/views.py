@@ -26,6 +26,8 @@ from .models import (
     DailyReflectionResponse,
     PointLedger,
     PointSource,
+    SermonAudioClip,
+    SermonAudioClipKind,
     Sermon,
     SermonHighlightChoice,
     SermonHighlightVote,
@@ -292,6 +294,8 @@ def _build_home_context(request):
     highlight_vote = None
     top_highlight_choice = None
     total_highlight_voters = 0
+    weekly_audio_clip = None
+    today_audio_clip = None
     if sermon:
         highlight_choices = list(sermon.highlight_choices.all())
         if request.user.is_authenticated:
@@ -315,6 +319,25 @@ def _build_home_context(request):
             top_highlight_choice = max(
                 highlight_choices,
                 key=lambda choice: (getattr(choice, "vote_count", 0), -choice.order),
+            )
+        weekly_audio_clip = (
+            SermonAudioClip.objects.filter(
+                sermon=sermon,
+                kind=SermonAudioClipKind.WEEKLY_SUMMARY,
+                day_number=0,
+            )
+            .exclude(file="")
+            .first()
+        )
+        if current_day_number:
+            today_audio_clip = (
+                SermonAudioClip.objects.filter(
+                    sermon=sermon,
+                    kind=SermonAudioClipKind.DAILY_CONTENT,
+                    day_number=current_day_number,
+                )
+                .exclude(file="")
+                .first()
             )
     weekly_base_max_points = (QUIZ_POINTS + REFLECTION_POINTS + MISSION_POINTS + DAILY_COMPLETION_POINTS) * 5
     weekly_total_max_points = weekly_base_max_points + WEEKLY_COMPLETION_POINTS
@@ -345,6 +368,8 @@ def _build_home_context(request):
         "highlight_vote": highlight_vote,
         "top_highlight_choice": top_highlight_choice,
         "total_highlight_voters": total_highlight_voters,
+        "weekly_audio_clip": weekly_audio_clip,
+        "today_audio_clip": today_audio_clip,
         "highlight_messages": highlight_messages,
         "remaining_messages": getattr(request, "_remaining_messages", []),
     }
@@ -840,7 +865,13 @@ def pastor_sermon_edit_view(request, pk):
                     sermon.publish()
 
             if action == "publish":
-                messages.success(request, "설교를 공개했습니다. 교인 화면에 바로 반영됩니다.")
+                if sermon.audio_error:
+                    messages.warning(
+                        request,
+                        "설교를 공개했습니다. 다만 듣기 음성 생성은 완료되지 않았습니다. 교인 화면 텍스트는 바로 반영됩니다.",
+                    )
+                else:
+                    messages.success(request, "설교를 공개했습니다. 교인 화면에 바로 반영됩니다.")
             else:
                 messages.success(request, "수정 내용을 저장했습니다.")
             return redirect("core:pastor_sermon_edit", pk=sermon.pk)

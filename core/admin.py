@@ -19,6 +19,7 @@ from .models import (
     PointLedger,
     SourceMediaAsset,
     Sermon,
+    SermonAudioClip,
     SermonStatus,
     SermonSummary,
     UserProfile,
@@ -362,8 +363,10 @@ class SermonAdmin(admin.ModelAdmin):
         "published_at",
         "last_imported_at",
         "last_ai_generated_at",
+        "last_audio_generated_at",
         "import_error",
         "ai_error",
+        "audio_error",
     )
     change_form_template = "admin/core/sermon/change_form.html"
     fieldsets = (
@@ -590,7 +593,14 @@ class SermonAdmin(admin.ModelAdmin):
             return HttpResponseRedirect(reverse("admin:core_sermon_changelist"))
 
         sermon.publish()
-        self.message_user(request, f"'{sermon.title}' 설교를 바로 공개했습니다.", level=messages.SUCCESS)
+        if sermon.audio_error:
+            self.message_user(
+                request,
+                f"'{sermon.title}' 설교를 공개했습니다. 다만 듣기 음성 생성은 완료되지 않았습니다.",
+                level=messages.WARNING,
+            )
+        else:
+            self.message_user(request, f"'{sermon.title}' 설교를 바로 공개했습니다.", level=messages.SUCCESS)
         return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
 
     def unpublish_single_view(self, request, object_id):
@@ -678,6 +688,13 @@ class UserProfileAdmin(admin.ModelAdmin):
 class PointLedgerAdmin(admin.ModelAdmin):
     list_display = ("user", "challenge", "source", "points", "created_at")
     search_fields = ("user__username", "challenge__title", "sermon__title", "note")
+
+
+@admin.register(SermonAudioClip)
+class SermonAudioClipAdmin(admin.ModelAdmin):
+    list_display = ("sermon", "kind", "day_number", "title", "voice", "generated_at")
+    search_fields = ("sermon__title", "title", "voice")
+    list_filter = ("kind", "voice")
 
 
 

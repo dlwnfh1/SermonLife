@@ -121,8 +121,10 @@ class Sermon(models.Model):
     ai_generated = models.BooleanField(default=False)
     import_error = models.TextField(blank=True)
     ai_error = models.TextField(blank=True)
+    audio_error = models.TextField(blank=True)
     last_imported_at = models.DateTimeField(null=True, blank=True)
     last_ai_generated_at = models.DateTimeField(null=True, blank=True)
+    last_audio_generated_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
         max_length=20,
         choices=SermonStatus.choices,
@@ -201,6 +203,13 @@ class Sermon(models.Model):
         latest_challenge = self.weekly_challenges.order_by("-week_start", "-id").first()
         if latest_challenge:
             latest_challenge.activate()
+        try:
+            from core.services.sermon_audio import generate_sermon_audio_package
+
+            generate_sermon_audio_package(self, challenge=latest_challenge)
+        except Exception as exc:
+            self.audio_error = str(exc)
+            self.save(update_fields=["audio_error", "updated_at"])
 
     def unpublish(self):
         self.is_published = False
@@ -279,6 +288,37 @@ class SermonHighlightVote(models.Model):
             )
         ]
         ordering = ["-voted_at", "-id"]
+
+
+class SermonAudioClipKind(models.TextChoices):
+    WEEKLY_SUMMARY = "weekly_summary", "주간 요약 듣기"
+    DAILY_CONTENT = "daily_content", "오늘 내용 듣기"
+
+
+class SermonAudioClip(models.Model):
+    sermon = models.ForeignKey(Sermon, on_delete=models.CASCADE, related_name="audio_clips")
+    kind = models.CharField(max_length=30, choices=SermonAudioClipKind.choices)
+    day_number = models.PositiveSmallIntegerField(default=0)
+    title = models.CharField(max_length=120, blank=True)
+    script = models.TextField(blank=True)
+    voice = models.CharField(max_length=50, blank=True)
+    file = models.FileField(upload_to="sermons/audio/generated/", blank=True, null=True)
+    error = models.TextField(blank=True)
+    generated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["kind", "day_number", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sermon", "kind", "day_number"],
+                name="unique_sermon_audio_clip_per_kind_day",
+            )
+        ]
+
+    def __str__(self):
+        if self.kind == SermonAudioClipKind.WEEKLY_SUMMARY:
+            return f"{self.sermon.title} - 주간 요약 듣기"
+        return f"{self.sermon.title} - Day {self.day_number} 듣기"
 
 
 class SermonQuiz(models.Model):
