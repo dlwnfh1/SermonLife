@@ -545,6 +545,29 @@
         (function () {
             var voiceButtons = Array.prototype.slice.call(document.querySelectorAll(".voice-input-button"));
             var transcribeUrl = "{% url 'core:transcribe_voice_note' %}";
+            var voiceStatusTimers = {};
+
+            function startVoiceProgress(status) {
+                if (!status || voiceStatusTimers[status.id]) {
+                    return;
+                }
+
+                var frames = ["⌛", "⏳"];
+                var frameIndex = 0;
+                status.textContent = frames[frameIndex];
+                voiceStatusTimers[status.id] = window.setInterval(function () {
+                    frameIndex = (frameIndex + 1) % frames.length;
+                    status.textContent = frames[frameIndex];
+                }, 420);
+            }
+
+            function stopVoiceProgress(status) {
+                if (!status || !voiceStatusTimers[status.id]) {
+                    return;
+                }
+                window.clearInterval(voiceStatusTimers[status.id]);
+                delete voiceStatusTimers[status.id];
+            }
 
             function setVoiceStatus(button, text, state) {
                 var statusId = button.getAttribute("data-voice-label-id");
@@ -554,12 +577,13 @@
                 }
                 status.classList.remove("voice-entry-status-error", "voice-entry-status-active");
                 if (state === "active") {
-                    status.textContent = "──────";
                     status.style.display = "block";
                     status.classList.add("voice-entry-status-active");
+                    startVoiceProgress(status);
                     return;
                 }
 
+                stopVoiceProgress(status);
                 if (state === "error") {
                     status.textContent = text;
                     status.style.display = text ? "block" : "none";
