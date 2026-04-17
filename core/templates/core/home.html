@@ -379,12 +379,12 @@
                                 {% if request.user.is_authenticated %}
                                     <form method="post" action="{% url 'core:submit_reflection' current_daily.id %}" class="action-form">
                                         {% csrf_token %}
-                                        <div class="voice-entry-toolbar">
-                                            <button type="button" class="voice-input-button" data-voice-target="response_text" data-voice-label-id="reflection-voice-status" data-idle-label="🎤 말로 입력 시작" data-listening-label="■ 녹음 중">🎤 말로 입력 시작</button>
+                                        <div class="voice-entry-toolbar voice-entry-toolbar-primary">
+                                            <button type="button" class="voice-input-button voice-input-button-primary" data-voice-target="response_text" data-voice-label-id="reflection-voice-status" data-idle-label="🎤 말로 입력 시작" data-listening-label="■ 녹음 중">🎤 말로 입력 시작</button>
                                             <span id="reflection-voice-status" class="voice-entry-status" aria-live="polite"></span>
                                         </div>
                                         <textarea name="response_text" rows="5" placeholder="묵상 답변을 10자 이상 적어 보세요.">{% if current_daily_state.reflection %}{{ current_daily_state.reflection.response_text }}{% endif %}</textarea>
-                                        <div class="action-button-row">
+                                        <div class="action-button-row action-button-row-voice">
                                             <button type="button" class="voice-input-button voice-input-button-secondary" data-voice-target="response_text" data-voice-label-id="reflection-voice-status" data-voice-mode="append" data-idle-label="추가로 말하기" data-listening-label="■ 녹음 중">추가로 말하기</button>
                                             <button type="button" class="voice-input-button voice-input-button-secondary" data-voice-target="response_text" data-voice-label-id="reflection-voice-status" data-voice-mode="replace" data-idle-label="새로 말하기" data-listening-label="■ 녹음 중">새로 말하기</button>
                                             <button type="submit" class="action-button">묵상 저장</button>
@@ -400,12 +400,12 @@
                                 {% if request.user.is_authenticated %}
                                     <form method="post" action="{% url 'core:complete_mission' current_daily.id %}" class="action-form">
                                         {% csrf_token %}
-                                        <div class="voice-entry-toolbar">
-                                            <button type="button" class="voice-input-button" data-voice-target="mission_note" data-voice-label-id="mission-voice-status" data-idle-label="🎤 말로 입력 시작" data-listening-label="■ 녹음 중">🎤 말로 입력 시작</button>
+                                        <div class="voice-entry-toolbar voice-entry-toolbar-primary">
+                                            <button type="button" class="voice-input-button voice-input-button-primary" data-voice-target="mission_note" data-voice-label-id="mission-voice-status" data-idle-label="🎤 말로 입력 시작" data-listening-label="■ 녹음 중">🎤 말로 입력 시작</button>
                                             <span id="mission-voice-status" class="voice-entry-status" aria-live="polite"></span>
                                         </div>
                                         <textarea name="mission_note" rows="3" placeholder="실천 메모를 남길 수 있습니다.">{% if current_daily_state.mission %}{{ current_daily_state.mission.note }}{% endif %}</textarea>
-                                        <div class="action-button-row">
+                                        <div class="action-button-row action-button-row-voice">
                                             <button type="button" class="voice-input-button voice-input-button-secondary" data-voice-target="mission_note" data-voice-label-id="mission-voice-status" data-voice-mode="append" data-idle-label="추가로 말하기" data-listening-label="■ 녹음 중">추가로 말하기</button>
                                             <button type="button" class="voice-input-button voice-input-button-secondary" data-voice-target="mission_note" data-voice-label-id="mission-voice-status" data-voice-mode="replace" data-idle-label="새로 말하기" data-listening-label="■ 녹음 중">새로 말하기</button>
                                             <button type="submit" class="action-button">미션 완료</button>

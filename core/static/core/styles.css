@@ -1994,23 +1994,46 @@ a {
     margin-top: 14px;
 }
 
+.voice-entry-toolbar-primary {
+    display: block;
+}
+
 .voice-input-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 52px;
-    padding: 0 20px;
+    min-height: 56px;
+    padding: 0 22px;
     border-radius: 999px;
     border: 1px solid rgba(47, 107, 132, 0.2);
     background: linear-gradient(180deg, rgba(242, 250, 252, 0.98), rgba(226, 242, 247, 0.98));
     color: #1e5465;
     font: inherit;
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 1.03rem;
     letter-spacing: -0.01em;
     box-shadow: 0 12px 24px rgba(47, 107, 132, 0.12);
     cursor: pointer;
     transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.voice-input-button-primary {
+    width: 100%;
+    min-height: 66px;
+    padding: 0 24px;
+    justify-content: space-between;
+    background: linear-gradient(180deg, rgba(59, 137, 164, 0.98), rgba(36, 103, 127, 0.98));
+    color: #fffaf2;
+    border-color: rgba(33, 90, 112, 0.9);
+    box-shadow: 0 18px 36px rgba(32, 83, 103, 0.18);
+    font-size: 1.08rem;
+}
+
+.voice-input-button-primary::after {
+    content: "눌러서 말하기";
+    font-size: 0.9rem;
+    font-weight: 600;
+    opacity: 0.88;
 }
 
 .voice-input-button:hover,
@@ -2027,6 +2050,12 @@ a {
     color: #fffaf2;
 }
 
+.voice-input-button-primary:hover,
+.voice-input-button-primary:focus-visible {
+    background: linear-gradient(180deg, rgba(72, 149, 175, 1), rgba(41, 112, 137, 1));
+    border-color: rgba(33, 90, 112, 0.95);
+}
+
 .voice-input-button-disabled {
     opacity: 0.56;
     cursor: not-allowed;
@@ -2034,11 +2063,13 @@ a {
 }
 
 .voice-input-button-secondary {
-    min-height: 48px;
-    background: rgba(255, 255, 255, 0.92);
+    flex: 1 1 180px;
+    min-height: 54px;
+    background: rgba(255, 255, 255, 0.96);
     color: #2f6b84;
-    border-color: rgba(47, 107, 132, 0.22);
-    box-shadow: none;
+    border-color: rgba(47, 107, 132, 0.18);
+    box-shadow: 0 10px 20px rgba(47, 107, 132, 0.08);
+    font-size: 0.98rem;
 }
 
 .voice-entry-status {
@@ -2099,14 +2130,19 @@ a {
 .action-button-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
     margin-top: 14px;
 }
 
 .action-button-row .action-button {
     margin-top: 0;
-    min-height: 48px;
+    min-height: 54px;
+    padding: 0 24px;
+}
+
+.action-button-row-voice .action-button {
+    flex: 1 1 160px;
 }
 
 @keyframes error-pulse {
