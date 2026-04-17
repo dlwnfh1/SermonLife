@@ -2079,10 +2079,11 @@ a {
     color: var(--muted);
     font-size: 0.95rem;
     line-height: 1.55;
+    letter-spacing: 0.2em;
 }
 
 .voice-entry-status-active {
-    color: #205466;
+    color: rgba(47, 107, 132, 0.72);
     font-weight: 700;
 }
 

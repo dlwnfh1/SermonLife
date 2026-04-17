@@ -552,17 +552,23 @@
                 if (!status) {
                     return;
                 }
-                if (state !== "error") {
-                    status.textContent = "";
-                    status.style.display = "none";
-                    status.classList.remove("voice-entry-status-error", "voice-entry-status-active");
+                status.classList.remove("voice-entry-status-error", "voice-entry-status-active");
+                if (state === "active") {
+                    status.textContent = "──────";
+                    status.style.display = "block";
+                    status.classList.add("voice-entry-status-active");
                     return;
                 }
 
-                status.textContent = text;
-                status.classList.remove("voice-entry-status-error", "voice-entry-status-active");
-                status.style.display = text ? "block" : "none";
-                status.classList.add("voice-entry-status-error");
+                if (state === "error") {
+                    status.textContent = text;
+                    status.style.display = text ? "block" : "none";
+                    status.classList.add("voice-entry-status-error");
+                    return;
+                }
+
+                status.textContent = "";
+                status.style.display = "none";
             }
 
             function setVoiceButtonState(button, recording, disabled) {
