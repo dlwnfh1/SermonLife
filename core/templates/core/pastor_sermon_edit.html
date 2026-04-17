@@ -54,7 +54,7 @@
             <article class="content-card">
                 <p class="section-label">현재 상태</p>
                 <div class="pastor-stat-list">
-                    <div><strong>공개 상태</strong><span>{{ sermon.get_status_display }}</span></div>
+                    <div><strong>공개 상태</strong><span>{{ publication_state_label }}</span></div>
                     <div><strong>AI 정리 상태</strong><span>{% if sermon.ai_generated %}완료{% else %}대기{% endif %}</span></div>
                     <div><strong>설교일</strong><span>{{ sermon.sermon_date|default:"-" }}</span></div>
                     <div><strong>설교자</strong><span>{{ sermon.preacher|default:"-" }}</span></div>
@@ -75,14 +75,14 @@
                         <button type="submit" name="action" value="regenerate" class="action-button">AI 내용 다시 정리</button>
                     {% endif %}
                     <button type="submit" name="action" value="save" class="pastor-toolbar-button pastor-toolbar-button-secondary">저장</button>
-                    {% if sermon.is_published %}
+                    {% if is_current_public_sermon %}
                         <button type="submit" name="action" value="unpublish" class="pastor-toolbar-button pastor-toolbar-button-secondary">공개 해제</button>
-                    {% else %}
+                    {% elif not sermon.is_published %}
                         <button type="submit" name="action" value="publish" class="pastor-toolbar-button pastor-toolbar-button-primary">검토 완료 및 공개</button>
                     {% endif %}
                 </div>
                 <div class="pastor-toolbar-meta">
-                    <span class="status-badge">상태: {{ sermon.get_status_display }}</span>
+                    <span class="status-badge">상태: {{ publication_state_label }}</span>
                     {% if challenge %}
                         <span class="status-badge">{{ challenge.title }}</span>
                     {% endif %}

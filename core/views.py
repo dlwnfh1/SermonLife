@@ -35,6 +35,7 @@ from .models import (
     SermonSummary,
     UserProfile,
     WeeklyChallenge,
+    get_current_public_sermon_id,
 )
 from .services.ai_generation import AIContentGenerationError, generate_sermon_content
 from .services.transcript_service import TranscriptFetchError, transcribe_uploaded_audio
@@ -173,6 +174,17 @@ def _get_default_pastor_sermon(available_sermons, active_challenge=None):
         return active_challenge.sermon
 
     return available_sermons[0] if available_sermons else None
+
+
+def _get_publication_state(sermon, current_public_sermon_id=None):
+    if not sermon:
+        return {"label": "미공개", "is_current": False}
+    current_public_sermon_id = current_public_sermon_id or get_current_public_sermon_id()
+    if sermon.is_published and sermon.pk == current_public_sermon_id:
+        return {"label": "현재 공개 중", "is_current": True}
+    if sermon.is_published:
+        return {"label": "이전 공개", "is_current": False}
+    return {"label": "미공개", "is_current": False}
 
 
 def _get_summary(sermon):
@@ -810,6 +822,8 @@ def pastor_sermon_edit_view(request, pk):
     available_sermons = list(
         Sermon.objects.order_by("-sermon_date", "-id").only("id", "title", "sermon_date")
     )
+    current_public_sermon_id = get_current_public_sermon_id()
+    publication_state = _get_publication_state(sermon, current_public_sermon_id)
     summary, _ = SermonSummary.objects.get_or_create(sermon=sermon)
     daily_qs = sermon.daily_engagements.order_by("day_number", "id")
     DailyFormSet = modelformset_factory(DailyEngagement, form=PastorDailyEngagementForm, extra=0)
@@ -824,6 +838,9 @@ def pastor_sermon_edit_view(request, pk):
         daily_formset = DailyFormSet(request.POST, queryset=daily_qs, prefix="days")
 
         if action == "unpublish":
+            if not publication_state["is_current"]:
+                messages.warning(request, "현재 공개 중인 설교만 공개 해제할 수 있습니다.")
+                return redirect("core:pastor_sermon_edit", pk=sermon.pk)
             sermon.unpublish()
             messages.success(request, "설교 공개를 해제했습니다.")
             return redirect("core:pastor_sermon_edit", pk=sermon.pk)
@@ -908,6 +925,8 @@ def pastor_sermon_edit_view(request, pk):
             "highlight_choices": highlight_choices,
             "publish_checklist": checklist,
             "checklist_has_issues": checklist_has_issues,
+            "publication_state_label": publication_state["label"],
+            "is_current_public_sermon": publication_state["is_current"],
             "pastor_menu": "sermon",
         },
     )

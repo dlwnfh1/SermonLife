@@ -15,6 +15,7 @@ from django.conf import settings
 from .models import (
     DailyEngagement,
     get_source_media_root,
+    get_current_public_sermon_id,
     MediaStorageSetting,
     PointLedger,
     SourceMediaAsset,
@@ -349,9 +350,9 @@ class SermonAdmin(admin.ModelAdmin):
         "title",
         "sermon_date",
         "preacher",
+        "publication_state_display",
         "status",
         "ai_generated",
-        "is_published",
         "last_imported_at",
         "last_ai_generated_at",
     )
@@ -413,6 +414,16 @@ class SermonAdmin(admin.ModelAdmin):
         css = {"all": ("core/admin-compact.css",)}
         js = ("core/admin-inline-toggle.js", "core/admin-sermon-defaults.js")
 
+    def publication_state_display(self, obj):
+        current_public_sermon_id = get_current_public_sermon_id()
+        if obj.is_published and obj.pk == current_public_sermon_id:
+            return "현재 공개 중"
+        if obj.is_published:
+            return "이전 공개"
+        return "미공개"
+
+    publication_state_display.short_description = "공개 상태"
+
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "source_media_asset":
             sync_source_media_assets()
@@ -463,6 +474,15 @@ class SermonAdmin(admin.ModelAdmin):
         extra_context = extra_context or {}
         extra_context["show_prepare_button"] = True
         if object_id:
+            sermon = self.get_object(request, object_id)
+            current_public_sermon_id = get_current_public_sermon_id()
+            is_current_public_sermon = bool(
+                sermon and sermon.is_published and sermon.pk == current_public_sermon_id
+            )
+            if sermon and sermon.is_published:
+                publication_state_label = "현재 공개 중" if is_current_public_sermon else "이전 공개"
+            else:
+                publication_state_label = "미공개"
             extra_context["publish_url"] = reverse("admin:core_sermon_publish", args=[object_id])
             extra_context["unpublish_url"] = reverse("admin:core_sermon_unpublish", args=[object_id])
             extra_context["regenerate_ai_url"] = reverse("admin:core_sermon_regenerate_ai", args=[object_id])
@@ -475,6 +495,8 @@ class SermonAdmin(admin.ModelAdmin):
                 args=[object_id],
             )
             extra_context["delete_url"] = reverse("admin:core_sermon_delete", args=[object_id])
+            extra_context["publication_state_label"] = publication_state_label
+            extra_context["is_current_public_sermon"] = is_current_public_sermon
         return super().changeform_view(request, object_id, form_url, extra_context=extra_context)
 
     def response_add(self, request, obj, post_url_continue=None):
@@ -608,6 +630,14 @@ class SermonAdmin(admin.ModelAdmin):
         if sermon is None:
             self.message_user(request, "설교를 찾을 수 없습니다.", level=messages.ERROR)
             return HttpResponseRedirect(reverse("admin:core_sermon_changelist"))
+
+        if sermon.pk != get_current_public_sermon_id():
+            self.message_user(
+                request,
+                "현재 공개 중인 설교만 공개 해제할 수 있습니다.",
+                level=messages.WARNING,
+            )
+            return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
 
         sermon.unpublish()
         self.message_user(

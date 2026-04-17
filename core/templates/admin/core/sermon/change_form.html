@@ -96,6 +96,9 @@
         <div>
             {% if change %}
                 <h1>설교 검토 및 수정</h1>
+                {% if publication_state_label %}
+                    <div class="sermon-admin-state-label">공개 상태: {{ publication_state_label }}</div>
+                {% endif %}
             {% else %}
                 <h1>설교 등록</h1>
             {% endif %}
@@ -138,7 +141,7 @@
                     data-progress-text="설교를 공개하고 사용자 화면에 반영하고 있습니다."
                 >검토 완료 및 공개</a>
             {% endif %}
-            {% if change and original and unpublish_url and original.is_published %}
+            {% if change and original and unpublish_url and is_current_public_sermon %}
                 <a
                     class="sermon-secondary-button button js-admin-progress"
                     href="{{ unpublish_url }}"

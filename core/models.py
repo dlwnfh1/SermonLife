@@ -83,6 +83,29 @@ def get_source_media_root():
     return Path(settings.MEDIA_ROOT) / get_source_media_subdir()
 
 
+def get_current_public_sermon_id():
+    active_challenge = (
+        WeeklyChallenge.objects.filter(
+            is_active=True,
+            sermon__is_published=True,
+            sermon__status=SermonStatus.PUBLISHED,
+        )
+        .select_related("sermon")
+        .order_by("-week_start", "-id")
+        .first()
+    )
+    if active_challenge and active_challenge.sermon_id:
+        return active_challenge.sermon_id
+
+    latest_published = (
+        Sermon.objects.filter(is_published=True, status=SermonStatus.PUBLISHED)
+        .order_by("-published_at", "-sermon_date", "-id")
+        .only("id")
+        .first()
+    )
+    return latest_published.id if latest_published else None
+
+
 def source_media_upload_to(instance, filename):
     subdir = get_source_media_subdir()
     return f"{subdir}/{filename}"

@@ -26,6 +26,13 @@
     margin: 0;
 }
 
+.sermon-admin-state-label {
+    margin-top: 8px;
+    color: #4d6470;
+    font-size: 13px;
+    font-weight: 700;
+}
+
 .sermon-admin-header p {
     margin: 8px 0 0;
     color: #666;
