@@ -2029,6 +2029,13 @@ a {
     transform: none;
 }
 
+.voice-input-button-secondary {
+    min-height: 42px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #2f6b84;
+    border-color: rgba(47, 107, 132, 0.22);
+}
+
 .voice-entry-status {
     color: var(--muted);
     font-size: 0.9rem;
@@ -2079,6 +2086,18 @@ a {
     font-weight: 700;
     cursor: pointer;
     text-decoration: none;
+}
+
+.action-button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-top: 14px;
+}
+
+.action-button-row .action-button {
+    margin-top: 0;
 }
 
 @keyframes error-pulse {

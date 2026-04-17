@@ -384,7 +384,11 @@
                                             <span id="reflection-voice-status" class="voice-entry-status">짧게 말씀하시면 자동으로 글로 입력됩니다.</span>
                                         </div>
                                         <textarea name="response_text" rows="5" placeholder="묵상 답변을 10자 이상 적어 보세요.">{% if current_daily_state.reflection %}{{ current_daily_state.reflection.response_text }}{% endif %}</textarea>
-                                        <button type="submit" class="action-button">묵상 저장</button>
+                                        <div class="action-button-row">
+                                            <button type="button" class="voice-input-button voice-input-button-secondary" data-voice-target="response_text" data-voice-label-id="reflection-voice-status" data-voice-mode="append" data-idle-label="추가로 말하기" data-listening-label="■ 녹음 중">추가로 말하기</button>
+                                            <button type="button" class="voice-input-button voice-input-button-secondary" data-voice-target="response_text" data-voice-label-id="reflection-voice-status" data-voice-mode="replace" data-idle-label="새로 말하기" data-listening-label="■ 녹음 중">새로 말하기</button>
+                                            <button type="submit" class="action-button">묵상 저장</button>
+                                        </div>
                                     </form>
                                 {% endif %}
                             </article>
@@ -401,7 +405,11 @@
                                             <span id="mission-voice-status" class="voice-entry-status">실천한 내용을 짧게 말씀해 보세요.</span>
                                         </div>
                                         <textarea name="mission_note" rows="3" placeholder="실천 메모를 남길 수 있습니다.">{% if current_daily_state.mission %}{{ current_daily_state.mission.note }}{% endif %}</textarea>
-                                        <button type="submit" class="action-button">미션 완료</button>
+                                        <div class="action-button-row">
+                                            <button type="button" class="voice-input-button voice-input-button-secondary" data-voice-target="mission_note" data-voice-label-id="mission-voice-status" data-voice-mode="append" data-idle-label="추가로 말하기" data-listening-label="■ 녹음 중">추가로 말하기</button>
+                                            <button type="button" class="voice-input-button voice-input-button-secondary" data-voice-target="mission_note" data-voice-label-id="mission-voice-status" data-voice-mode="replace" data-idle-label="새로 말하기" data-listening-label="■ 녹음 중">새로 말하기</button>
+                                            <button type="submit" class="action-button">미션 완료</button>
+                                        </div>
                                     </form>
                                 {% endif %}
                             </article>
@@ -561,6 +569,7 @@
             var activeStopTimer = null;
             var activeProgressTimer = null;
             var activeTarget = null;
+            var activeMode = "append";
 
             function clearTimers() {
                 if (activeStopTimer) {
@@ -589,6 +598,7 @@
                 activeButton = null;
                 activeChunks = [];
                 activeTarget = null;
+                activeMode = "append";
             }
 
             function fileExtensionForMimeType(mimeType) {
@@ -614,7 +624,7 @@
                 return (bytes / 1024).toFixed(1) + "KB";
             }
 
-            function uploadVoiceBlob(button, target, blob, mimeType) {
+            function uploadVoiceBlob(button, target, blob, mimeType, mode) {
                 var csrfToken = getCookie("csrftoken");
                 var formData = new FormData();
                 var extension = fileExtensionForMimeType(mimeType);
@@ -648,7 +658,11 @@
                             throw new Error("전사된 텍스트가 비어 있습니다.");
                         }
 
-                        target.value = target.value ? (target.value.trim() + " " + transcript) : transcript;
+                        if (mode === "replace") {
+                            target.value = transcript;
+                        } else {
+                            target.value = target.value ? (target.value.trim() + " " + transcript) : transcript;
+                        }
                         target.dispatchEvent(new Event("input", { bubbles: true }));
                         setVoiceStatus(
                             button,
@@ -674,6 +688,7 @@
                 setVoiceButtonState(button, false, false);
 
                 button.addEventListener("click", function () {
+                    var mode = button.getAttribute("data-voice-mode") || "append";
                     if (activeRecorder && activeButton === button) {
                         activeRecorder.stop();
                         setVoiceStatus(button, "녹음을 마무리하고 있습니다...", "active");
@@ -708,6 +723,7 @@
                             activeStream = stream;
                             activeChunks = [];
                             activeTarget = target;
+                            activeMode = mode;
 
                             recorder.addEventListener("dataavailable", function (event) {
                                 if (event.data && event.data.size) {
@@ -722,19 +738,19 @@
                                     "녹음 완료: " + formatBytes(blob.size) + " 파일을 전송합니다.",
                                     "active"
                                 );
-                                uploadVoiceBlob(button, target, blob, recorder.mimeType || mimeType || "audio/webm");
+                                uploadVoiceBlob(button, target, blob, recorder.mimeType || mimeType || "audio/webm", activeMode);
                             });
 
                             recorder.start();
                             setVoiceButtonState(button, true, false);
-                            setVoiceStatus(button, "녹음 중입니다... 10초 안으로 말씀해 주세요.", "active");
+                            setVoiceStatus(button, "녹음 중입니다... 20초 안으로 말씀해 주세요.", "active");
 
                             activeStopTimer = window.setTimeout(function () {
                                 if (activeRecorder === recorder && recorder.state === "recording") {
                                     setVoiceStatus(button, "녹음 시간이 끝나 전송을 준비합니다...", "active");
                                     recorder.stop();
                                 }
-                            }, 10000);
+                            }, 20000);
                         })
                         .catch(function (error) {
                             var message = "마이크를 시작하지 못했습니다.";
