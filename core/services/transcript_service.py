@@ -311,6 +311,19 @@ def transcribe_audio_file(audio_path: str) -> str:
     return _transcribe_in_chunks(transcribable_path)
 
 
+def transcribe_uploaded_audio(uploaded_file) -> str:
+    suffix = Path(getattr(uploaded_file, "name", "")).suffix.lower() or ".webm"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp_file:
+        for chunk in uploaded_file.chunks():
+            tmp_file.write(chunk)
+        temp_path = Path(tmp_file.name)
+
+    try:
+        return transcribe_audio_file(str(temp_path))
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+
 def fetch_youtube_transcript(youtube_url: str, languages=None) -> str:
     languages = languages or ["ko", "en"]
     video_id = extract_video_id(youtube_url)

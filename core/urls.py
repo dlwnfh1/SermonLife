@@ -16,6 +16,7 @@ from .views import (
     submit_highlight_vote_view,
     submit_daily_quiz_view,
     submit_reflection_view,
+    transcribe_voice_note_view,
     watch_sermon_view,
 )
 
@@ -49,5 +50,6 @@ urlpatterns = [
     path("daily/<int:pk>/quiz/", submit_daily_quiz_view, name="submit_daily_quiz"),
     path("daily/<int:pk>/reflection/", submit_reflection_view, name="submit_reflection"),
     path("daily/<int:pk>/mission/", complete_mission_view, name="complete_mission"),
+    path("voice/transcribe/", transcribe_voice_note_view, name="transcribe_voice_note"),
     path("highlight/vote/", submit_highlight_vote_view, name="submit_highlight_vote"),
 ]

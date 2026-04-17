@@ -379,6 +379,10 @@
                                 {% if request.user.is_authenticated %}
                                     <form method="post" action="{% url 'core:submit_reflection' current_daily.id %}" class="action-form">
                                         {% csrf_token %}
+                                        <div class="voice-entry-toolbar">
+                                            <button type="button" class="voice-input-button" data-voice-target="response_text" data-voice-label-id="reflection-voice-status" data-idle-label="🎤 말로 입력" data-listening-label="■ 녹음 중">🎤 말로 입력</button>
+                                            <span id="reflection-voice-status" class="voice-entry-status">짧게 말씀하시면 자동으로 글로 입력됩니다.</span>
+                                        </div>
                                         <textarea name="response_text" rows="5" placeholder="묵상 답변을 10자 이상 적어 보세요.">{% if current_daily_state.reflection %}{{ current_daily_state.reflection.response_text }}{% endif %}</textarea>
                                         <button type="submit" class="action-button">묵상 저장</button>
                                     </form>
@@ -392,6 +396,10 @@
                                 {% if request.user.is_authenticated %}
                                     <form method="post" action="{% url 'core:complete_mission' current_daily.id %}" class="action-form">
                                         {% csrf_token %}
+                                        <div class="voice-entry-toolbar">
+                                            <button type="button" class="voice-input-button" data-voice-target="mission_note" data-voice-label-id="mission-voice-status" data-idle-label="🎤 말로 입력" data-listening-label="■ 녹음 중">🎤 말로 입력</button>
+                                            <span id="mission-voice-status" class="voice-entry-status">실천한 내용을 짧게 말씀해 보세요.</span>
+                                        </div>
                                         <textarea name="mission_note" rows="3" placeholder="실천 메모를 남길 수 있습니다.">{% if current_daily_state.mission %}{{ current_daily_state.mission.note }}{% endif %}</textarea>
                                         <button type="submit" class="action-button">미션 완료</button>
                                     </form>
@@ -490,6 +498,257 @@
             window.addEventListener("hashchange", syncFromHash);
             syncFromHash();
             ensureFreshDayView();
+        })();
+
+        (function () {
+            var voiceButtons = Array.prototype.slice.call(document.querySelectorAll(".voice-input-button"));
+            var transcribeUrl = "{% url 'core:transcribe_voice_note' %}";
+
+            function setVoiceStatus(button, text, state) {
+                var statusId = button.getAttribute("data-voice-label-id");
+                var status = statusId ? document.getElementById(statusId) : null;
+                if (!status) {
+                    return;
+                }
+                status.textContent = text;
+                status.classList.remove("voice-entry-status-error", "voice-entry-status-active");
+                if (state === "error") {
+                    status.classList.add("voice-entry-status-error");
+                } else if (state === "active") {
+                    status.classList.add("voice-entry-status-active");
+                }
+            }
+
+            function setVoiceButtonState(button, recording, disabled) {
+                var idleLabel = button.getAttribute("data-idle-label") || "🎤 말로 입력";
+                var recordingLabel = button.getAttribute("data-listening-label") || "■ 녹음 중";
+                button.textContent = recording ? recordingLabel : idleLabel;
+                button.disabled = !!disabled;
+                button.classList.toggle("voice-input-button-listening", !!recording);
+                button.classList.toggle("voice-input-button-disabled", !!disabled);
+            }
+
+            function getCookie(name) {
+                var cookieValue = null;
+                if (!document.cookie) {
+                    return cookieValue;
+                }
+                document.cookie.split(";").forEach(function (cookie) {
+                    var trimmed = cookie.trim();
+                    if (trimmed.substring(0, name.length + 1) === (name + "=")) {
+                        cookieValue = decodeURIComponent(trimmed.substring(name.length + 1));
+                    }
+                });
+                return cookieValue;
+            }
+
+            if (!voiceButtons.length) {
+                return;
+            }
+
+            if (!window.MediaRecorder || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                voiceButtons.forEach(function (button) {
+                    setVoiceButtonState(button, false, true);
+                    setVoiceStatus(button, "이 브라우저에서는 음성 녹음 테스트를 지원하지 않습니다.", "error");
+                });
+                return;
+            }
+
+            var activeRecorder = null;
+            var activeButton = null;
+            var activeStream = null;
+            var activeChunks = [];
+            var activeStopTimer = null;
+            var activeProgressTimer = null;
+            var activeTarget = null;
+
+            function clearTimers() {
+                if (activeStopTimer) {
+                    window.clearTimeout(activeStopTimer);
+                    activeStopTimer = null;
+                }
+                if (activeProgressTimer) {
+                    window.clearTimeout(activeProgressTimer);
+                    activeProgressTimer = null;
+                }
+            }
+
+            function stopActiveStream() {
+                if (activeStream) {
+                    activeStream.getTracks().forEach(function (track) {
+                        track.stop();
+                    });
+                    activeStream = null;
+                }
+            }
+
+            function resetActiveState() {
+                clearTimers();
+                stopActiveStream();
+                activeRecorder = null;
+                activeButton = null;
+                activeChunks = [];
+                activeTarget = null;
+            }
+
+            function fileExtensionForMimeType(mimeType) {
+                if (!mimeType) {
+                    return "webm";
+                }
+                if (mimeType.indexOf("ogg") !== -1) {
+                    return "ogg";
+                }
+                if (mimeType.indexOf("mp4") !== -1 || mimeType.indexOf("mpeg") !== -1) {
+                    return "mp4";
+                }
+                return "webm";
+            }
+
+            function formatBytes(bytes) {
+                if (!bytes) {
+                    return "0KB";
+                }
+                if (bytes < 1024) {
+                    return bytes + "B";
+                }
+                return (bytes / 1024).toFixed(1) + "KB";
+            }
+
+            function uploadVoiceBlob(button, target, blob, mimeType) {
+                var csrfToken = getCookie("csrftoken");
+                var formData = new FormData();
+                var extension = fileExtensionForMimeType(mimeType);
+                formData.append("audio", blob, "voice-note." + extension);
+
+                setVoiceStatus(button, "업로드 중입니다... (" + formatBytes(blob.size) + ", " + (mimeType || "audio/webm") + ")", "active");
+
+                activeProgressTimer = window.setTimeout(function () {
+                    setVoiceStatus(button, "전사 중입니다...", "active");
+                }, 600);
+
+                fetch(transcribeUrl, {
+                    method: "POST",
+                    body: formData,
+                    headers: csrfToken ? { "X-CSRFToken": csrfToken } : {},
+                    credentials: "same-origin"
+                })
+                    .then(function (response) {
+                        return response.json().then(function (data) {
+                            return { ok: response.ok, status: response.status, data: data };
+                        });
+                    })
+                    .then(function (result) {
+                        clearTimers();
+                        if (!result.ok || !result.data.ok) {
+                            throw new Error(result.data.error || "음성 전사에 실패했습니다.");
+                        }
+
+                        var transcript = (result.data.text || "").trim();
+                        if (!transcript) {
+                            throw new Error("전사된 텍스트가 비어 있습니다.");
+                        }
+
+                        target.value = target.value ? (target.value.trim() + " " + transcript) : transcript;
+                        target.dispatchEvent(new Event("input", { bubbles: true }));
+                        setVoiceStatus(
+                            button,
+                            "입력 완료: 전사된 내용이 입력칸에 추가되었습니다. (" +
+                                formatBytes(result.data.size) +
+                                ", " +
+                                (result.data.content_type || "unknown") +
+                                ")",
+                            ""
+                        );
+                    })
+                    .catch(function (error) {
+                        clearTimers();
+                        setVoiceStatus(button, error.message || "음성 전사에 실패했습니다. 다시 시도해 주세요.", "error");
+                    })
+                    .finally(function () {
+                        setVoiceButtonState(button, false, false);
+                        resetActiveState();
+                    });
+            }
+
+            voiceButtons.forEach(function (button) {
+                setVoiceButtonState(button, false, false);
+
+                button.addEventListener("click", function () {
+                    if (activeRecorder && activeButton === button) {
+                        activeRecorder.stop();
+                        setVoiceStatus(button, "녹음을 마무리하고 있습니다...", "active");
+                        return;
+                    }
+
+                    if (activeRecorder) {
+                        activeRecorder.stop();
+                    }
+
+                    var fieldName = button.getAttribute("data-voice-target");
+                    var target = document.querySelector('textarea[name="' + fieldName + '"]');
+                    if (!target) {
+                        setVoiceStatus(button, "입력칸을 찾지 못했습니다.", "error");
+                        return;
+                    }
+
+                    navigator.mediaDevices.getUserMedia({ audio: true })
+                        .then(function (stream) {
+                            var mimeType = "";
+                            if (window.MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+                                mimeType = "audio/webm;codecs=opus";
+                            } else if (window.MediaRecorder.isTypeSupported("audio/webm")) {
+                                mimeType = "audio/webm";
+                            } else if (window.MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")) {
+                                mimeType = "audio/ogg;codecs=opus";
+                            }
+
+                            var recorder = mimeType ? new MediaRecorder(stream, { mimeType: mimeType }) : new MediaRecorder(stream);
+                            activeRecorder = recorder;
+                            activeButton = button;
+                            activeStream = stream;
+                            activeChunks = [];
+                            activeTarget = target;
+
+                            recorder.addEventListener("dataavailable", function (event) {
+                                if (event.data && event.data.size) {
+                                    activeChunks.push(event.data);
+                                }
+                            });
+
+                            recorder.addEventListener("stop", function () {
+                                var blob = new Blob(activeChunks, { type: recorder.mimeType || mimeType || "audio/webm" });
+                                setVoiceStatus(
+                                    button,
+                                    "녹음 완료: " + formatBytes(blob.size) + " 파일을 전송합니다.",
+                                    "active"
+                                );
+                                uploadVoiceBlob(button, target, blob, recorder.mimeType || mimeType || "audio/webm");
+                            });
+
+                            recorder.start();
+                            setVoiceButtonState(button, true, false);
+                            setVoiceStatus(button, "녹음 중입니다... 10초 안으로 말씀해 주세요.", "active");
+
+                            activeStopTimer = window.setTimeout(function () {
+                                if (activeRecorder === recorder && recorder.state === "recording") {
+                                    setVoiceStatus(button, "녹음 시간이 끝나 전송을 준비합니다...", "active");
+                                    recorder.stop();
+                                }
+                            }, 10000);
+                        })
+                        .catch(function (error) {
+                            var message = "마이크를 시작하지 못했습니다.";
+                            if (error && (error.name === "NotAllowedError" || error.name === "SecurityError")) {
+                                message = "마이크 권한이 허용되지 않았습니다. 브라우저 권한을 확인해 주세요.";
+                            } else if (error && error.name === "NotFoundError") {
+                                message = "사용 가능한 마이크를 찾지 못했습니다.";
+                            }
+                            setVoiceButtonState(button, false, false);
+                            setVoiceStatus(button, message, "error");
+                            resetActiveState();
+                        });
+                });
+            });
         })();
     </script>
 </body>

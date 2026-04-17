@@ -7,7 +7,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.db import transaction
 from django.db.models import Count, Sum
 from django.forms import modelformset_factory
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -35,6 +35,7 @@ from .models import (
     WeeklyChallenge,
 )
 from .services.ai_generation import AIContentGenerationError, generate_sermon_content
+from .services.transcript_service import TranscriptFetchError, transcribe_uploaded_audio
 from .services.engagement import (
     DAILY_COMPLETION_POINTS,
     MISSION_POINTS,
@@ -674,6 +675,41 @@ def complete_mission_view(request, pk):
     else:
         messages.success(request, f"오늘의 미션이 완료되었습니다. 7점을 받았습니다.{bonus_suffix}")
     return _redirect_to_today_set()
+
+
+@login_required
+@require_POST
+def transcribe_voice_note_view(request):
+    audio_file = request.FILES.get("audio")
+    if not audio_file:
+        return JsonResponse({"ok": False, "error": "녹음 파일이 전달되지 않았습니다."}, status=400)
+
+    file_size = getattr(audio_file, "size", 0) or 0
+    content_type = getattr(audio_file, "content_type", "") or "unknown"
+
+    try:
+        transcript = transcribe_uploaded_audio(audio_file)
+    except TranscriptFetchError as exc:
+        message = str(exc)
+        if "empty transcript" in message.lower():
+            readable_size = f"{round(file_size / 1024, 1)}KB"
+            message = (
+                f"전사 결과가 비어 있습니다. 녹음 파일은 {readable_size}, 형식은 {content_type}입니다. "
+                "조금 더 크게 또렷하게 말씀해 보시거나, 마이크를 입 가까이 두고 다시 시도해 주세요."
+            )
+        return JsonResponse({"ok": False, "error": message, "size": file_size, "content_type": content_type}, status=400)
+    except Exception:
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "음성 전사 중 오류가 발생했습니다. 다시 시도해 주세요.",
+                "size": file_size,
+                "content_type": content_type,
+            },
+            status=500,
+        )
+
+    return JsonResponse({"ok": True, "text": transcript, "size": file_size, "content_type": content_type})
 @login_required
 @require_POST
 def submit_highlight_vote_view(request):

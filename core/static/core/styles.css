@@ -1986,6 +1986,65 @@ a {
     resize: vertical;
 }
 
+.voice-entry-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.voice-input-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(47, 107, 132, 0.18);
+    background: rgba(238, 247, 250, 0.95);
+    color: #205466;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.voice-input-button:hover,
+.voice-input-button:focus-visible {
+    background: rgba(224, 241, 247, 0.98);
+    border-color: rgba(47, 107, 132, 0.32);
+    transform: translateY(-1px);
+}
+
+.voice-input-button-listening {
+    background: rgba(47, 107, 132, 0.96);
+    border-color: rgba(47, 107, 132, 0.96);
+    color: #fffaf2;
+}
+
+.voice-input-button-disabled {
+    opacity: 0.56;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.voice-entry-status {
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.voice-entry-status-active {
+    color: #205466;
+    font-weight: 700;
+}
+
+.voice-entry-status-error {
+    color: #9a4d11;
+    font-weight: 700;
+}
+
 .choice-group {
     display: grid;
     gap: 10px;
