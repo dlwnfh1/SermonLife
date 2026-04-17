@@ -2145,6 +2145,11 @@ a {
     flex: 1 1 160px;
 }
 
+.action-button-row-voice .voice-input-button-secondary {
+    flex: 1 1 calc(50% - 6px);
+    max-width: calc(50% - 6px);
+}
+
 @keyframes error-pulse {
     0% {
         transform: scale(1);
