@@ -432,12 +432,19 @@
             var dockLinks = Array.prototype.slice.call(document.querySelectorAll(".mobile-dock-link"));
             var refreshStorageKey = "sermonlife-last-home-date";
             var refreshFlagKey = "sermonlife-home-auto-refreshed";
+            var resumeReloadFlagKey = "sermonlife-home-resume-reloaded";
+            var pageLoadedAt = Date.now();
+            var hiddenAt = null;
 
             function todayStamp() {
                 var now = new Date();
                 var month = String(now.getMonth() + 1).padStart(2, "0");
                 var day = String(now.getDate()).padStart(2, "0");
                 return now.getFullYear() + "-" + month + "-" + day;
+            }
+
+            function minuteStamp() {
+                return Math.floor(Date.now() / 60000).toString();
             }
 
             function ensureFreshDayView() {
@@ -462,16 +469,42 @@
                 }
             }
 
-            window.addEventListener("pageshow", ensureFreshDayView);
-            window.addEventListener("focus", ensureFreshDayView);
+            function reloadIfResumedAfterDelay() {
+                var now = Date.now();
+                var hiddenDuration = hiddenAt ? now - hiddenAt : 0;
+                var pageAge = now - pageLoadedAt;
+                var shouldReload = hiddenDuration > 45000 || pageAge > 600000;
+                var minuteKey = minuteStamp();
+                var alreadyReloaded = window.sessionStorage.getItem(resumeReloadFlagKey);
+
+                if (shouldReload && alreadyReloaded !== minuteKey) {
+                    window.sessionStorage.setItem(resumeReloadFlagKey, minuteKey);
+                    window.location.reload();
+                }
+            }
+
+            window.addEventListener("pageshow", function () {
+                ensureFreshDayView();
+                reloadIfResumedAfterDelay();
+            });
+            window.addEventListener("focus", function () {
+                ensureFreshDayView();
+                reloadIfResumedAfterDelay();
+            });
             document.addEventListener("visibilitychange", function () {
+                if (document.visibilityState === "hidden") {
+                    hiddenAt = Date.now();
+                    return;
+                }
                 if (document.visibilityState === "visible") {
                     ensureFreshDayView();
+                    reloadIfResumedAfterDelay();
                 }
             });
 
             if (!dockLinks.length) {
                 ensureFreshDayView();
+                reloadIfResumedAfterDelay();
                 return;
             }
 
@@ -506,6 +539,7 @@
             window.addEventListener("hashchange", syncFromHash);
             syncFromHash();
             ensureFreshDayView();
+            reloadIfResumedAfterDelay();
         })();
 
         (function () {
