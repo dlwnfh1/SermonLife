@@ -882,13 +882,7 @@ def pastor_sermon_edit_view(request, pk):
                     sermon.publish()
 
             if action == "publish":
-                if sermon.audio_error:
-                    messages.warning(
-                        request,
-                        "설교를 공개했습니다. 다만 듣기 음성 생성은 완료되지 않았습니다. 교인 화면 텍스트는 바로 반영됩니다.",
-                    )
-                else:
-                    messages.success(request, "설교를 공개했습니다. 교인 화면에 바로 반영됩니다.")
+                messages.success(request, "설교를 공개했습니다. 교인 화면에 바로 반영됩니다.")
             else:
                 messages.success(request, "수정 내용을 저장했습니다.")
             return redirect("core:pastor_sermon_edit", pk=sermon.pk)

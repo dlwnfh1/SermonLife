@@ -629,14 +629,7 @@ class SermonAdmin(admin.ModelAdmin):
             return HttpResponseRedirect(reverse("admin:core_sermon_changelist"))
 
         sermon.publish()
-        if sermon.audio_error:
-            self.message_user(
-                request,
-                f"'{sermon.title}' 설교를 공개했습니다. 다만 듣기 음성 생성은 완료되지 않았습니다.",
-                level=messages.WARNING,
-            )
-        else:
-            self.message_user(request, f"'{sermon.title}' 설교를 바로 공개했습니다.", level=messages.SUCCESS)
+        self.message_user(request, f"'{sermon.title}' 설교를 바로 공개했습니다.", level=messages.SUCCESS)
         return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
 
     def unpublish_single_view(self, request, object_id):

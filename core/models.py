@@ -240,13 +240,6 @@ class Sermon(models.Model):
         latest_challenge = self.weekly_challenges.order_by("-week_start", "-id").first()
         if latest_challenge:
             latest_challenge.activate()
-        try:
-            from core.services.sermon_audio import generate_sermon_audio_package
-
-            generate_sermon_audio_package(self, challenge=latest_challenge)
-        except Exception as exc:
-            self.audio_error = str(exc)
-            self.save(update_fields=["audio_error", "updated_at"])
 
     def unpublish(self):
         self.is_published = False
