@@ -911,12 +911,7 @@ def pastor_sermon_edit_view(request, pk):
 @pastor_required
 def pastor_reports_view(request):
     available_challenges = list(
-        WeeklyChallenge.objects.filter(
-            sermon__status=SermonStatus.PUBLISHED,
-            sermon__is_published=True,
-        )
-        .select_related("sermon")
-        .order_by("-week_start", "-id")
+        WeeklyChallenge.objects.select_related("sermon").order_by("-week_start", "-id")
     )
 
     selected_challenge = None
