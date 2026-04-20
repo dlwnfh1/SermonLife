@@ -248,7 +248,7 @@ class Sermon(models.Model):
         self.weekly_challenges.update(is_active=False)
 
     def approve_generated_content(self):
-        self.status = SermonStatus.APPROVED
+        self.status = SermonStatus.PUBLISHED if self.is_published else SermonStatus.APPROVED
         self.save(update_fields=["status", "updated_at"])
 
         SermonSummary.objects.filter(sermon=self).update(approved=True)

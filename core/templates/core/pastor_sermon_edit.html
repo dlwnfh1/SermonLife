@@ -77,7 +77,7 @@
                     <button type="submit" name="action" value="save" class="pastor-toolbar-button pastor-toolbar-button-secondary">저장</button>
                     {% if is_current_public_sermon %}
                         <button type="submit" name="action" value="unpublish" class="pastor-toolbar-button pastor-toolbar-button-secondary">공개 해제</button>
-                    {% elif not sermon.is_published %}
+                    {% else %}
                         <button type="submit" name="action" value="publish" class="pastor-toolbar-button pastor-toolbar-button-primary">검토 완료 및 공개</button>
                     {% endif %}
                 </div>

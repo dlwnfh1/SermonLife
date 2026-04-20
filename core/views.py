@@ -155,24 +155,6 @@ def _get_active_challenge():
 
 
 def _get_default_pastor_sermon(available_sermons, active_challenge=None):
-    review_sermon = next(
-        (
-            sermon
-            for sermon in available_sermons
-            if not sermon.is_published and (sermon.ai_generated or sermon.status != SermonStatus.DRAFT)
-        ),
-        None,
-    )
-    if review_sermon:
-        return review_sermon
-
-    unpublished_sermon = next((sermon for sermon in available_sermons if not sermon.is_published), None)
-    if unpublished_sermon:
-        return unpublished_sermon
-
-    if active_challenge:
-        return active_challenge.sermon
-
     return available_sermons[0] if available_sermons else None
 
 
@@ -783,7 +765,7 @@ def pastor_dashboard_view(request):
     available_sermons = list(
         Sermon.objects.select_related("summary")
         .prefetch_related("daily_engagements", "weekly_challenges")
-        .order_by("-sermon_date", "-id")
+        .order_by("-created_at", "-id")
     )
     sermon = _get_default_pastor_sermon(available_sermons, active_challenge)
     selected_sermon_id = request.GET.get("sermon")
@@ -820,7 +802,7 @@ def pastor_sermon_edit_view(request, pk):
         pk=pk,
     )
     available_sermons = list(
-        Sermon.objects.order_by("-sermon_date", "-id").only("id", "title", "sermon_date")
+        Sermon.objects.order_by("-created_at", "-id").only("id", "title", "sermon_date")
     )
     current_public_sermon_id = get_current_public_sermon_id()
     publication_state = _get_publication_state(sermon, current_public_sermon_id)
