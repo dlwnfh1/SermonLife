@@ -197,6 +197,13 @@ class Sermon(models.Model):
                     return self.source_media_asset.file.url
                 except Exception:
                     return ""
+        if self.audio_file:
+            audio_suffix = Path(self.audio_file.name).suffix.lower()
+            if audio_suffix in {".mp4", ".webm", ".ogv"}:
+                try:
+                    return self.audio_file.url
+                except Exception:
+                    return ""
         return ""
 
     @property
@@ -204,11 +211,18 @@ class Sermon(models.Model):
         if self.source_media_asset and self.source_media_asset.file:
             if Path(self.source_media_asset.file.name).suffix.lower() in {".mp4", ".webm", ".ogv"}:
                 return True
+        if self.audio_file and Path(self.audio_file.name).suffix.lower() in {".mp4", ".webm", ".ogv"}:
+            return True
         return False
 
     @property
     def hosted_video_mime_type(self):
-        suffix = Path(self.source_media_asset.file.name).suffix.lower() if self.source_media_asset and self.source_media_asset.file else ""
+        if self.source_media_asset and self.source_media_asset.file:
+            suffix = Path(self.source_media_asset.file.name).suffix.lower()
+        elif self.audio_file:
+            suffix = Path(self.audio_file.name).suffix.lower()
+        else:
+            suffix = ""
         return {
             ".mp4": "video/mp4",
             ".mov": "video/quicktime",
@@ -254,6 +268,11 @@ class Sermon(models.Model):
         if self.source_media_asset and self.source_media_asset.file:
             try:
                 return self.source_media_asset.file.path
+            except Exception:
+                return ""
+        if self.audio_file:
+            try:
+                return self.audio_file.path
             except Exception:
                 return ""
         return self.source_media_path

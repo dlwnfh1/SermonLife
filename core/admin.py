@@ -231,6 +231,15 @@ class SermonAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["audio_file"].label = "오디오/임시 업로드 파일"
+        self.fields["audio_file"].help_text = (
+            "가능하면 아래 '원본 파일' 메뉴에 먼저 업로드한 뒤 'AI 작업용 원본 파일'에서 선택해 주세요. "
+            "여기에 올린 mp4도 AI 자동 정리에는 사용할 수 있지만, 원본 파일 드롭다운에는 바로 표시되지 않습니다."
+        )
+        self.fields["source_media_asset"].label = "AI 작업용 원본 파일"
+        self.fields["source_media_asset"].help_text = (
+            "'원본 파일' 메뉴 또는 uploads/sermons 폴더에 있는 설교 영상/음성 파일입니다."
+        )
         if not self.is_bound and getattr(self.instance, "pk", None):
             self.initial["transcript"] = _format_transcript_for_editing(self.instance.transcript)
 
@@ -239,11 +248,16 @@ def sync_source_media_assets():
     root = get_source_media_root()
     root.mkdir(parents=True, exist_ok=True)
     relative_prefix = root.relative_to(Path(settings.MEDIA_ROOT)).as_posix()
+    allowed_suffixes = {".mp4", ".mov", ".m4v", ".webm", ".ogv", ".mp3", ".m4a", ".wav"}
 
     disk_relative_paths = set()
-    for path in root.iterdir():
-        if path.is_file():
-            disk_relative_paths.add(f"{relative_prefix}/{path.name}")
+    for path in root.rglob("*"):
+        if not path.is_file() or path.suffix.lower() not in allowed_suffixes:
+            continue
+        relative_to_root = path.relative_to(root).as_posix()
+        if relative_to_root.startswith("audio/generated/"):
+            continue
+        disk_relative_paths.add(f"{relative_prefix}/{relative_to_root}")
 
     existing_assets = {asset.file.name: asset for asset in SourceMediaAsset.objects.all()}
 
