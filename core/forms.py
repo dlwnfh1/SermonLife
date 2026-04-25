@@ -14,7 +14,7 @@ class SermonLifeSignUpForm(UserCreationForm):
     first_name = forms.CharField(label="이름", max_length=150, required=False)
     member_role = forms.ChoiceField(
         label="직분/구분",
-        choices=MemberRole.choices,
+        choices=[choice for choice in MemberRole.choices if choice[0] != MemberRole.PASTOR],
         required=False,
         initial=MemberRole.MEMBER,
     )
@@ -42,6 +42,12 @@ class SermonLifeSignUpForm(UserCreationForm):
         if User.objects.filter(username=username).exists():
             raise forms.ValidationError("이미 사용 중인 아이디입니다.")
         return username
+
+    def clean_member_role(self):
+        member_role = (self.cleaned_data.get("member_role") or MemberRole.MEMBER).strip()
+        if member_role == MemberRole.PASTOR:
+            raise forms.ValidationError("목회자 권한은 관리자 페이지에서만 부여할 수 있습니다.")
+        return member_role or MemberRole.MEMBER
 
 
 def _format_transcript_for_pastor_edit(value):

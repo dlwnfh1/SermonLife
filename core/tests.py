@@ -253,6 +253,22 @@ class HomeViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "이미 사용 중인 아이디입니다.")
 
+    def test_signup_rejects_pastor_role_selection(self):
+        response = self.client.post(
+            reverse("core:signup"),
+            {
+                "username": "pastorlike",
+                "first_name": "Tester",
+                "member_role": "pastor",
+                "password1": "StrongPassword123!",
+                "password2": "StrongPassword123!",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(username="pastorlike").exists())
+        self.assertContains(response, "목회자 권한은 관리자 페이지에서만 부여할 수 있습니다.")
+
     def test_logged_in_user_can_change_password(self):
         user = User.objects.create_user(username="pwuser", password="1234")
         self.client.force_login(user)
