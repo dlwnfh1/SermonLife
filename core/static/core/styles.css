@@ -417,16 +417,18 @@ a {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 32px;
-    padding: 4px 12px;
+    min-height: 36px;
+    padding: 6px 14px;
     border-radius: 999px;
-    background: rgba(47, 107, 132, 0.1);
-    border: 1px solid rgba(47, 107, 132, 0.16);
-    color: var(--accent);
-    font-size: 0.86rem;
+    background: linear-gradient(135deg, #8b5c3b, #a06d47);
+    border: 1px solid rgba(139, 92, 59, 0.2);
+    color: #fffaf2;
+    font-size: 0.9rem;
     font-weight: 700;
     line-height: 1;
     white-space: nowrap;
+    text-decoration: none;
+    box-shadow: 0 10px 20px rgba(139, 92, 59, 0.16);
 }
 
 .hero-period {
