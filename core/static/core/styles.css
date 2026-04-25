@@ -862,9 +862,12 @@ a {
 }
 
 .pastor-tab-input {
-    position: absolute;
+    position: fixed;
     opacity: 0;
     pointer-events: none;
+    width: 1px;
+    height: 1px;
+    inset: auto auto -100px -100px;
 }
 
 .pastor-tab-controls {
