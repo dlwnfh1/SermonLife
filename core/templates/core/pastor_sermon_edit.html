@@ -35,44 +35,251 @@
             </section>
         {% endif %}
 
-        <section class="panel pastor-dashboard-grid">
-            <article class="content-card">
-                <p class="section-label">검토할 설교 선택</p>
-                {% if available_sermons %}
-                    <label class="auth-label pastor-field pastor-report-select">
-                        <span>설교 목록</span>
-                        <select onchange="if (this.value) { window.location.href = this.value; }">
-                            {% for item in available_sermons %}
-                                <option value="{% url 'core:pastor_sermon_edit' item.pk %}" {% if item.pk == sermon.pk %}selected{% endif %}>
-                                    {{ item.sermon_date }} | {{ item.title }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </label>
-                {% endif %}
-            </article>
-            <article class="content-card">
-                <p class="section-label">현재 상태</p>
-                <div class="pastor-stat-list">
-                    <div><strong>공개 상태</strong><span>{{ publication_state_label }}</span></div>
-                    <div><strong>AI 정리 상태</strong><span>{% if sermon.ai_generated %}완료{% else %}대기{% endif %}</span></div>
-                    <div><strong>설교일</strong><span>{{ sermon.sermon_date|default:"-" }}</span></div>
-                    <div><strong>설교자</strong><span>{{ sermon.preacher|default:"-" }}</span></div>
-                    {% if challenge %}
-                        <div><strong>연결 주간</strong><span>{{ challenge.title }}</span></div>
-                        <div><strong>주간 기간</strong><span>{{ challenge.week_start }} ~ {{ challenge.week_end }}</span></div>
-                    {% endif %}
-                </div>
-            </article>
-        </section>
-
         <form method="post" class="pastor-edit-form">
             {% csrf_token %}
 
-            <section class="panel pastor-toolbar">
-                <div class="pastor-toolbar-buttons">
+            <section class="panel pastor-mobile-topbar">
+                <div class="pastor-mobile-topbar-head">
+                    <article class="content-card pastor-mobile-select-card">
+                        <p class="section-label">검토할 설교</p>
+                        {% if available_sermons %}
+                            <label class="auth-label pastor-field pastor-report-select">
+                                <span>설교 목록</span>
+                                <select onchange="if (this.value) { window.location.href = this.value; }">
+                                    {% for item in available_sermons %}
+                                        <option value="{% url 'core:pastor_sermon_edit' item.pk %}" {% if item.pk == sermon.pk %}selected{% endif %}>
+                                            {{ item.sermon_date }} | {{ item.title }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                        {% endif %}
+                    </article>
+                    <article class="content-card pastor-mobile-status-card">
+                        <p class="section-label">현재 상태</p>
+                        <div class="pastor-stat-list">
+                            <div><strong>공개 상태</strong><span>{{ publication_state_label }}</span></div>
+                            <div><strong>AI 정리 상태</strong><span>{% if sermon.ai_generated %}완료{% else %}대기{% endif %}</span></div>
+                            <div><strong>설교일</strong><span>{{ sermon.sermon_date|default:"-" }}</span></div>
+                            <div><strong>설교자</strong><span>{{ sermon.preacher|default:"-" }}</span></div>
+                            {% if challenge %}
+                                <div><strong>주간 기간</strong><span>{{ challenge.week_start }} ~ {{ challenge.week_end }}</span></div>
+                            {% endif %}
+                        </div>
+                    </article>
+                </div>
+
+                <div class="pastor-tab-bar">
+                    <input class="pastor-tab-input" type="radio" name="pastor-tab" id="pastor-tab-overview" checked>
+                    <input class="pastor-tab-input" type="radio" name="pastor-tab" id="pastor-tab-transcript">
+                    <input class="pastor-tab-input" type="radio" name="pastor-tab" id="pastor-tab-summary">
+                    <input class="pastor-tab-input" type="radio" name="pastor-tab" id="pastor-tab-days">
+
+                    <div class="pastor-tab-controls">
+                        <label class="pastor-tab-control" for="pastor-tab-overview">검토</label>
+                        <label class="pastor-tab-control" for="pastor-tab-transcript">자막</label>
+                        <label class="pastor-tab-control" for="pastor-tab-summary">요약</label>
+                        <label class="pastor-tab-control" for="pastor-tab-days">5일</label>
+                    </div>
+
+                    <section class="panel pastor-toolbar pastor-toolbar-desktop">
+                        <div class="pastor-toolbar-buttons">
+                            {% if not sermon.is_published %}
+                                <button type="submit" name="action" value="regenerate" class="action-button">AI 내용 다시 정리</button>
+                            {% endif %}
+                            <button type="submit" name="action" value="save" class="pastor-toolbar-button pastor-toolbar-button-secondary">저장</button>
+                            {% if is_current_public_sermon %}
+                                <button type="submit" name="action" value="unpublish" class="pastor-toolbar-button pastor-toolbar-button-secondary">공개 해제</button>
+                            {% else %}
+                                <button type="submit" name="action" value="publish" class="pastor-toolbar-button pastor-toolbar-button-primary">검토 완료 및 공개</button>
+                            {% endif %}
+                        </div>
+                        <div class="pastor-toolbar-meta">
+                            <span class="status-badge">상태: {{ publication_state_label }}</span>
+                            {% if challenge %}
+                                <span class="status-badge">{{ challenge.title }}</span>
+                            {% endif %}
+                        </div>
+                    </section>
+
+                    <div class="pastor-tab-panels">
+                        <section class="pastor-tab-panel pastor-tab-panel-overview">
+                            {% if checklist_has_issues %}
+                                <section class="panel">
+                                    <div class="panel-header"><h2>공개 전 확인 필요 항목</h2></div>
+                                    <div class="pastor-checklist">
+                                        {% for item in publish_checklist %}
+                                            {% if not item.ok %}
+                                                <div class="pastor-check-item is-pending">
+                                                    <span class="pastor-check-icon">확인 필요</span>
+                                                    <span>{{ item.label }}</span>
+                                                </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </section>
+                            {% endif %}
+
+                            <section class="panel pastor-console-overview">
+                                <div class="panel-header"><h2>검토 요약</h2></div>
+                                <div class="pastor-console-grid">
+                                    <article class="pastor-console-card pastor-console-card-wide">
+                                        <p class="section-label">기본 정보</p>
+                                        <div class="pastor-console-meta">
+                                            <label class="auth-label pastor-field pastor-console-field">
+                                                <span>{{ sermon_form.title.label }}</span>
+                                                {{ sermon_form.title }}
+                                                {% if sermon_form.title.errors %}<small class="field-error">{{ sermon_form.title.errors|striptags }}</small>{% endif %}
+                                            </label>
+                                            <label class="auth-label pastor-field pastor-console-field">
+                                                <span>{{ sermon_form.preacher.label }}</span>
+                                                {{ sermon_form.preacher }}
+                                                {% if sermon_form.preacher.errors %}<small class="field-error">{{ sermon_form.preacher.errors|striptags }}</small>{% endif %}
+                                            </label>
+                                            <label class="auth-label pastor-field pastor-console-field">
+                                                <span>{{ sermon_form.sermon_date.label }}</span>
+                                                {{ sermon_form.sermon_date }}
+                                                {% if sermon_form.sermon_date.errors %}<small class="field-error">{{ sermon_form.sermon_date.errors|striptags }}</small>{% endif %}
+                                            </label>
+                                            <label class="auth-label pastor-field pastor-console-field">
+                                                <span>{{ sermon_form.bible_passage.label }}</span>
+                                                {{ sermon_form.bible_passage }}
+                                                {% if sermon_form.bible_passage.errors %}<small class="field-error">{{ sermon_form.bible_passage.errors|striptags }}</small>{% endif %}
+                                            </label>
+                                        </div>
+                                    </article>
+
+                                    <article class="pastor-console-card">
+                                        <p class="section-label">설교 개요</p>
+                                        <label class="auth-label pastor-field pastor-console-field">
+                                            {{ summary_form.overview }}
+                                            {% if summary_form.overview.errors %}<small class="field-error">{{ summary_form.overview.errors|striptags }}</small>{% endif %}
+                                        </label>
+                                    </article>
+
+                                    <article class="pastor-console-card">
+                                        <p class="section-label">마음에 남는 부분</p>
+                                        <div class="pastor-console-edit-list">
+                                            {% if highlight_choices %}
+                                                {% for choice in highlight_choices %}
+                                                    <label class="auth-label pastor-field pastor-console-field">
+                                                        <span>후보 {{ forloop.counter }}</span>
+                                                        <textarea name="highlight_choice_{{ choice.id }}" rows="4">{{ choice.text }}</textarea>
+                                                    </label>
+                                                {% endfor %}
+                                            {% else %}
+                                                <p class="pastor-empty-copy">아직 공감 문장 후보가 없습니다.</p>
+                                            {% endif %}
+                                        </div>
+                                    </article>
+                                </div>
+                            </section>
+                        </section>
+
+                        <section class="pastor-tab-panel pastor-tab-panel-transcript">
+                            <section class="panel pastor-panel-shell">
+                                <div class="panel-header"><h2>자막 및 원문</h2></div>
+                                <div class="pastor-panel-body pastor-panel-body-open">
+                                    <label class="auth-label pastor-field pastor-field-wide">
+                                        <span>{{ sermon_form.transcript.label }}</span>
+                                        {{ sermon_form.transcript }}
+                                        {% if sermon_form.transcript.errors %}<small class="field-error">{{ sermon_form.transcript.errors|striptags }}</small>{% endif %}
+                                    </label>
+                                </div>
+                            </section>
+                        </section>
+
+                        <section class="pastor-tab-panel pastor-tab-panel-summary">
+                            <section class="panel">
+                                <div class="panel-header"><h2>요약 및 핵심 메시지</h2></div>
+                                <div class="pastor-console-grid pastor-console-grid-tight">
+                                    <article class="pastor-console-card">
+                                        <p class="section-label">요약</p>
+                                        <div class="pastor-console-edit-list">
+                                            <label class="auth-label pastor-field pastor-console-field">
+                                                <span>{{ summary_form.summary_line1.label }}</span>
+                                                {{ summary_form.summary_line1 }}
+                                                {% if summary_form.summary_line1.errors %}<small class="field-error">{{ summary_form.summary_line1.errors|striptags }}</small>{% endif %}
+                                            </label>
+                                            <label class="auth-label pastor-field pastor-console-field">
+                                                <span>{{ summary_form.summary_line2.label }}</span>
+                                                {{ summary_form.summary_line2 }}
+                                                {% if summary_form.summary_line2.errors %}<small class="field-error">{{ summary_form.summary_line2.errors|striptags }}</small>{% endif %}
+                                            </label>
+                                            <label class="auth-label pastor-field pastor-console-field">
+                                                <span>{{ summary_form.summary_line3.label }}</span>
+                                                {{ summary_form.summary_line3 }}
+                                                {% if summary_form.summary_line3.errors %}<small class="field-error">{{ summary_form.summary_line3.errors|striptags }}</small>{% endif %}
+                                            </label>
+                                        </div>
+                                    </article>
+
+                                    <article class="pastor-console-card">
+                                        <p class="section-label">핵심 메시지</p>
+                                        <div class="pastor-console-edit-list">
+                                            <label class="auth-label pastor-field pastor-console-field">
+                                                <span>{{ summary_form.key_point1.label }}</span>
+                                                {{ summary_form.key_point1 }}
+                                                {% if summary_form.key_point1.errors %}<small class="field-error">{{ summary_form.key_point1.errors|striptags }}</small>{% endif %}
+                                            </label>
+                                            <label class="auth-label pastor-field pastor-console-field">
+                                                <span>{{ summary_form.key_point2.label }}</span>
+                                                {{ summary_form.key_point2 }}
+                                                {% if summary_form.key_point2.errors %}<small class="field-error">{{ summary_form.key_point2.errors|striptags }}</small>{% endif %}
+                                            </label>
+                                            <label class="auth-label pastor-field pastor-console-field">
+                                                <span>{{ summary_form.key_point3.label }}</span>
+                                                {{ summary_form.key_point3 }}
+                                                {% if summary_form.key_point3.errors %}<small class="field-error">{{ summary_form.key_point3.errors|striptags }}</small>{% endif %}
+                                            </label>
+                                        </div>
+                                    </article>
+                                </div>
+                            </section>
+                        </section>
+
+                        <section class="pastor-tab-panel pastor-tab-panel-days">
+                            <section class="panel">
+                                <div class="panel-header"><h2>Day 1~5 직접 수정</h2></div>
+                                {{ daily_formset.management_form }}
+                                <div class="pastor-day-stack">
+                                    {% for form in daily_formset %}
+                                        <details class="content-card pastor-day-card">
+                                            <summary class="pastor-day-summary">
+                                                <div>
+                                                    <p class="section-label">Day {{ form.instance.day_number }}</p>
+                                                    <strong>{{ form.instance.title|default:"제목을 입력해 주세요." }}</strong>
+                                                </div>
+                                                <span class="pastor-day-summary-hint">
+                                                    <span class="pastor-toggle-open">열기</span>
+                                                    <span class="pastor-toggle-close">접기</span>
+                                                </span>
+                                            </summary>
+                                            <div class="pastor-day-body">
+                                                <div class="pastor-form-stack">
+                                                    {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                                                    {% for field in form.visible_fields %}
+                                                        <label class="auth-label pastor-field">
+                                                            <span>{{ field.label }}</span>
+                                                            {{ field }}
+                                                            {% if field.errors %}<small class="field-error">{{ field.errors|striptags }}</small>{% endif %}
+                                                        </label>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </details>
+                                    {% endfor %}
+                                </div>
+                            </section>
+                        </section>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel pastor-bottom-actionbar">
+                <div class="pastor-bottom-actionbar-inner">
                     {% if not sermon.is_published %}
-                        <button type="submit" name="action" value="regenerate" class="action-button">AI 내용 다시 정리</button>
+                        <button type="submit" name="action" value="regenerate" class="pastor-toolbar-button pastor-toolbar-button-secondary">AI 다시 정리</button>
                     {% endif %}
                     <button type="submit" name="action" value="save" class="pastor-toolbar-button pastor-toolbar-button-secondary">저장</button>
                     {% if is_current_public_sermon %}
@@ -80,183 +287,6 @@
                     {% else %}
                         <button type="submit" name="action" value="publish" class="pastor-toolbar-button pastor-toolbar-button-primary">검토 완료 및 공개</button>
                     {% endif %}
-                </div>
-                <div class="pastor-toolbar-meta">
-                    <span class="status-badge">상태: {{ publication_state_label }}</span>
-                    {% if challenge %}
-                        <span class="status-badge">{{ challenge.title }}</span>
-                    {% endif %}
-                </div>
-            </section>
-
-            {% if checklist_has_issues %}
-                <section class="panel">
-                    <div class="panel-header"><h2>공개 전 확인 필요 항목</h2></div>
-                    <div class="pastor-checklist">
-                        {% for item in publish_checklist %}
-                            {% if not item.ok %}
-                                <div class="pastor-check-item is-pending">
-                                    <span class="pastor-check-icon">확인 필요</span>
-                                    <span>{{ item.label }}</span>
-                                </div>
-                            {% endif %}
-                        {% endfor %}
-                    </div>
-                </section>
-            {% endif %}
-
-            <section class="panel pastor-console-overview">
-                <div class="panel-header"><h2>검토 요약</h2></div>
-                <div class="pastor-console-grid">
-                    <article class="pastor-console-card pastor-console-card-wide">
-                        <p class="section-label">기본 정보</p>
-                        <div class="pastor-console-meta">
-                            <label class="auth-label pastor-field pastor-console-field">
-                                <span>{{ sermon_form.title.label }}</span>
-                                {{ sermon_form.title }}
-                                {% if sermon_form.title.errors %}<small class="field-error">{{ sermon_form.title.errors|striptags }}</small>{% endif %}
-                            </label>
-                            <label class="auth-label pastor-field pastor-console-field">
-                                <span>{{ sermon_form.preacher.label }}</span>
-                                {{ sermon_form.preacher }}
-                                {% if sermon_form.preacher.errors %}<small class="field-error">{{ sermon_form.preacher.errors|striptags }}</small>{% endif %}
-                            </label>
-                            <label class="auth-label pastor-field pastor-console-field">
-                                <span>{{ sermon_form.sermon_date.label }}</span>
-                                {{ sermon_form.sermon_date }}
-                                {% if sermon_form.sermon_date.errors %}<small class="field-error">{{ sermon_form.sermon_date.errors|striptags }}</small>{% endif %}
-                            </label>
-                            <label class="auth-label pastor-field pastor-console-field">
-                                <span>{{ sermon_form.bible_passage.label }}</span>
-                                {{ sermon_form.bible_passage }}
-                                {% if sermon_form.bible_passage.errors %}<small class="field-error">{{ sermon_form.bible_passage.errors|striptags }}</small>{% endif %}
-                            </label>
-                        </div>
-                    </article>
-
-                    <article class="pastor-console-card">
-                        <p class="section-label">설교 개요</p>
-                        <label class="auth-label pastor-field pastor-console-field">
-                            {{ summary_form.overview }}
-                            {% if summary_form.overview.errors %}<small class="field-error">{{ summary_form.overview.errors|striptags }}</small>{% endif %}
-                        </label>
-                    </article>
-
-                    <article class="pastor-console-card">
-                        <p class="section-label">마음에 남는 부분</p>
-                        <div class="pastor-console-edit-list">
-                            {% if highlight_choices %}
-                                {% for choice in highlight_choices %}
-                                    <label class="auth-label pastor-field pastor-console-field">
-                                        <span>후보 {{ forloop.counter }}</span>
-                                        <textarea name="highlight_choice_{{ choice.id }}" rows="4">{{ choice.text }}</textarea>
-                                    </label>
-                                {% endfor %}
-                            {% else %}
-                                <p class="pastor-empty-copy">아직 공감 문장 후보가 없습니다.</p>
-                            {% endif %}
-                        </div>
-                    </article>
-                </div>
-            </section>
-
-            <details class="panel pastor-panel-details">
-                <summary class="pastor-panel-summary">
-                    <div>
-                        <h2>자막 및 원문</h2>
-                        <p class="pastor-section-help">문장과 문단이 읽기 좋게 보이도록 정리되어 있으며, 필요하면 바로 수정할 수 있습니다.</p>
-                    </div>
-                    <span class="pastor-toggle-text">
-                        <span class="pastor-toggle-open">열기</span>
-                        <span class="pastor-toggle-close">접기</span>
-                    </span>
-                </summary>
-                <div class="pastor-panel-body">
-                    <label class="auth-label pastor-field pastor-field-wide">
-                        <span>{{ sermon_form.transcript.label }}</span>
-                        {{ sermon_form.transcript }}
-                        {% if sermon_form.transcript.errors %}<small class="field-error">{{ sermon_form.transcript.errors|striptags }}</small>{% endif %}
-                    </label>
-                </div>
-            </details>
-
-            <section class="panel">
-                <div class="panel-header"><h2>요약 및 핵심 메시지</h2></div>
-                <div class="pastor-console-grid pastor-console-grid-tight">
-                    <article class="pastor-console-card">
-                        <p class="section-label">요약</p>
-                        <div class="pastor-console-edit-list">
-                            <label class="auth-label pastor-field pastor-console-field">
-                                <span>{{ summary_form.summary_line1.label }}</span>
-                                {{ summary_form.summary_line1 }}
-                                {% if summary_form.summary_line1.errors %}<small class="field-error">{{ summary_form.summary_line1.errors|striptags }}</small>{% endif %}
-                            </label>
-                            <label class="auth-label pastor-field pastor-console-field">
-                                <span>{{ summary_form.summary_line2.label }}</span>
-                                {{ summary_form.summary_line2 }}
-                                {% if summary_form.summary_line2.errors %}<small class="field-error">{{ summary_form.summary_line2.errors|striptags }}</small>{% endif %}
-                            </label>
-                            <label class="auth-label pastor-field pastor-console-field">
-                                <span>{{ summary_form.summary_line3.label }}</span>
-                                {{ summary_form.summary_line3 }}
-                                {% if summary_form.summary_line3.errors %}<small class="field-error">{{ summary_form.summary_line3.errors|striptags }}</small>{% endif %}
-                            </label>
-                        </div>
-                    </article>
-
-                    <article class="pastor-console-card">
-                        <p class="section-label">핵심 메시지</p>
-                        <div class="pastor-console-edit-list">
-                            <label class="auth-label pastor-field pastor-console-field">
-                                <span>{{ summary_form.key_point1.label }}</span>
-                                {{ summary_form.key_point1 }}
-                                {% if summary_form.key_point1.errors %}<small class="field-error">{{ summary_form.key_point1.errors|striptags }}</small>{% endif %}
-                            </label>
-                            <label class="auth-label pastor-field pastor-console-field">
-                                <span>{{ summary_form.key_point2.label }}</span>
-                                {{ summary_form.key_point2 }}
-                                {% if summary_form.key_point2.errors %}<small class="field-error">{{ summary_form.key_point2.errors|striptags }}</small>{% endif %}
-                            </label>
-                            <label class="auth-label pastor-field pastor-console-field">
-                                <span>{{ summary_form.key_point3.label }}</span>
-                                {{ summary_form.key_point3 }}
-                                {% if summary_form.key_point3.errors %}<small class="field-error">{{ summary_form.key_point3.errors|striptags }}</small>{% endif %}
-                            </label>
-                        </div>
-                    </article>
-                </div>
-            </section>
-
-            <section class="panel">
-                <div class="panel-header"><h2>Day 1~5 직접 수정</h2></div>
-                {{ daily_formset.management_form }}
-                <div class="pastor-day-stack">
-                    {% for form in daily_formset %}
-                        <details class="content-card pastor-day-card" {% if forloop.first %}open{% endif %}>
-                            <summary class="pastor-day-summary">
-                                <div>
-                                    <p class="section-label">Day {{ form.instance.day_number }}</p>
-                                    <strong>{{ form.instance.title|default:"제목을 입력해 주세요" }}</strong>
-                                </div>
-                                <span class="pastor-day-summary-hint">
-                                    <span class="pastor-toggle-open">열기</span>
-                                    <span class="pastor-toggle-close">접기</span>
-                                </span>
-                            </summary>
-                            <div class="pastor-day-body">
-                                <div class="pastor-form-stack">
-                                    {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
-                                    {% for field in form.visible_fields %}
-                                        <label class="auth-label pastor-field">
-                                            <span>{{ field.label }}</span>
-                                            {{ field }}
-                                            {% if field.errors %}<small class="field-error">{{ field.errors|striptags }}</small>{% endif %}
-                                        </label>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </details>
-                    {% endfor %}
                 </div>
             </section>
         </form>

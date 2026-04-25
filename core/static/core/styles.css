@@ -828,6 +828,112 @@ a {
     gap: 18px;
 }
 
+.pastor-mobile-topbar {
+    display: grid;
+    gap: 16px;
+    padding: 16px;
+}
+
+.pastor-mobile-topbar-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: 14px;
+}
+
+.pastor-mobile-select-card,
+.pastor-mobile-status-card {
+    padding: 18px;
+    border-radius: 22px;
+}
+
+.pastor-mobile-status-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.pastor-tab-bar {
+    display: grid;
+    gap: 18px;
+}
+
+.pastor-tab-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.pastor-tab-controls {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    position: sticky;
+    top: 12px;
+    z-index: 24;
+    padding: 8px;
+    border-radius: 20px;
+    background: rgba(247, 243, 236, 0.92);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 14px 28px rgba(31, 43, 49, 0.08);
+}
+
+.pastor-tab-control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    width: 100%;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(232, 224, 213, 0.88);
+    border: 1px solid rgba(48, 59, 64, 0.1);
+    color: var(--ink);
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.pastor-tab-control:hover,
+.pastor-tab-control:focus-visible {
+    transform: translateY(-1px);
+}
+
+.pastor-tab-panels {
+    display: grid;
+}
+
+.pastor-tab-panel {
+    display: none;
+    gap: 18px;
+}
+
+#pastor-tab-overview:checked ~ .pastor-tab-controls label[for="pastor-tab-overview"],
+#pastor-tab-transcript:checked ~ .pastor-tab-controls label[for="pastor-tab-transcript"],
+#pastor-tab-summary:checked ~ .pastor-tab-controls label[for="pastor-tab-summary"],
+#pastor-tab-days:checked ~ .pastor-tab-controls label[for="pastor-tab-days"] {
+    background: #416d7e;
+    border-color: #416d7e;
+    color: #fffaf2;
+}
+
+#pastor-tab-overview:checked ~ .pastor-tab-panels .pastor-tab-panel-overview,
+#pastor-tab-transcript:checked ~ .pastor-tab-panels .pastor-tab-panel-transcript,
+#pastor-tab-summary:checked ~ .pastor-tab-panels .pastor-tab-panel-summary,
+#pastor-tab-days:checked ~ .pastor-tab-panels .pastor-tab-panel-days {
+    display: grid;
+}
+
+.pastor-panel-shell {
+    padding: 0;
+    overflow: hidden;
+}
+
+.pastor-panel-body-open {
+    padding: 0 24px 24px;
+}
+
 .pastor-toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -842,6 +948,10 @@ a {
     flex-wrap: wrap;
     gap: 10px;
     align-items: center;
+}
+
+.pastor-toolbar-desktop {
+    margin: 0;
 }
 
 .pastor-toolbar-button {
@@ -1631,6 +1741,31 @@ a {
 
 .pastor-day-card textarea {
     min-height: 110px;
+}
+
+.pastor-bottom-actionbar {
+    position: sticky;
+    bottom: 12px;
+    z-index: 24;
+    padding: 12px;
+    background: linear-gradient(180deg, rgba(251, 248, 242, 0.92), rgba(241, 236, 228, 0.98));
+    backdrop-filter: blur(10px);
+}
+
+.pastor-bottom-actionbar-inner {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.pastor-bottom-actionbar .pastor-toolbar-button {
+    flex: 1 1 180px;
+}
+
+@media (min-width: 901px) {
+    .pastor-bottom-actionbar {
+        display: none;
+    }
 }
 
 .mobile-routine-hint {
@@ -2627,6 +2762,39 @@ a {
         padding: 24px;
     }
 
+    .pastor-mobile-topbar {
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .pastor-mobile-topbar-head {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .pastor-mobile-select-card,
+    .pastor-mobile-status-card {
+        padding: 14px;
+        border-radius: 18px;
+    }
+
+    .pastor-tab-controls {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        top: 8px;
+        padding: 6px;
+    }
+
+    .pastor-tab-control {
+        min-height: 40px;
+        padding: 0 8px;
+        font-size: 0.9rem;
+    }
+
+    .pastor-toolbar-desktop {
+        display: none;
+    }
+
     .pastor-panel-summary {
         padding: 22px 24px;
     }
@@ -2657,6 +2825,27 @@ a {
 
     .pastor-action-row {
         flex-direction: column;
+    }
+
+    .pastor-bottom-actionbar {
+        position: fixed;
+        left: 50%;
+        bottom: 14px;
+        transform: translateX(-50%);
+        width: min(calc(100% - 20px), 760px);
+        padding: 10px;
+        border-radius: 24px;
+        z-index: 42;
+    }
+
+    .pastor-bottom-actionbar-inner {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .pastor-bottom-actionbar .pastor-toolbar-button {
+        flex: none;
+        width: 100%;
     }
 
     .pastor-kpi-card,
