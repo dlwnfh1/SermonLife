@@ -121,6 +121,9 @@ class PastorSermonSummaryForm(forms.ModelForm):
         )
         widgets = {
             "overview": forms.Textarea(attrs={"rows": 7, "style": "min-height: 160px;"}),
+            "summary_line1": forms.Textarea(attrs={"rows": 2}),
+            "summary_line2": forms.Textarea(attrs={"rows": 2}),
+            "summary_line3": forms.Textarea(attrs={"rows": 2}),
             "key_point1": forms.Textarea(attrs={"rows": 3}),
             "key_point2": forms.Textarea(attrs={"rows": 3}),
             "key_point3": forms.Textarea(attrs={"rows": 3}),
@@ -154,8 +157,16 @@ class PastorDailyEngagementForm(forms.ModelForm):
             "mission_description",
         )
         widgets = {
+            "title": forms.Textarea(attrs={"rows": 2}),
             "intro": forms.Textarea(attrs={"rows": 4}),
+            "quiz_question": forms.Textarea(attrs={"rows": 3}),
+            "quiz_choice1": forms.Textarea(attrs={"rows": 2}),
+            "quiz_choice2": forms.Textarea(attrs={"rows": 2}),
+            "quiz_choice3": forms.Textarea(attrs={"rows": 2}),
+            "quiz_choice4": forms.Textarea(attrs={"rows": 2}),
+            "quiz_answer": forms.Textarea(attrs={"rows": 2}),
             "quiz_explanation": forms.Textarea(attrs={"rows": 3}),
             "reflection_question": forms.Textarea(attrs={"rows": 3}),
+            "mission_title": forms.Textarea(attrs={"rows": 2}),
             "mission_description": forms.Textarea(attrs={"rows": 3}),
         }
