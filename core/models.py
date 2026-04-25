@@ -141,6 +141,7 @@ class Sermon(models.Model):
     source_media_path = models.CharField(max_length=500, blank=True)
     transcript = models.TextField(blank=True)
     bible_passage = models.CharField(max_length=255, blank=True)
+    bible_text = models.TextField(blank=True)
     ai_generated = models.BooleanField(default=False)
     import_error = models.TextField(blank=True)
     ai_error = models.TextField(blank=True)

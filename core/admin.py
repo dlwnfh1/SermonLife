@@ -391,6 +391,7 @@ class SermonAdmin(admin.ModelAdmin):
                 "fields": (
                     ("title", "preacher"),
                     ("sermon_date", "bible_passage"),
+                    "bible_text",
                 )
             },
         ),

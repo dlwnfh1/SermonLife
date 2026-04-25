@@ -1,4 +1,4 @@
-{% load static %}
+﻿{% load static %}
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -67,9 +67,16 @@
                         <h2>{{ sermon.title }}</h2>
                         <p class="hero-meta">
                             {% if sermon.preacher %}{{ sermon.preacher }} · {% endif %}{{ sermon.sermon_date }}
-                            {% if sermon.bible_passage %}<br>{{ sermon.bible_passage }}{% endif %}
+                            {% if sermon.bible_passage %}
+                                <br>
+                                <span class="hero-scripture-inline">
+                                    <span>{{ sermon.bible_passage }}</span>
+                                    {% if sermon.bible_text %}
+                                        <a class="hero-scripture-link" href="#scripture-modal">말씀 읽기</a>
+                                    {% endif %}
+                                </span>
+                            {% endif %}
                         </p>
-                        <p class="status-badge">공개 상태: {{ sermon.get_status_display }}</p>
                         {% if current_daily %}
                             <div class="hero-today-card">
                                 <span class="hero-today-label">오늘 Day {{ current_day_number }}</span>
@@ -100,6 +107,24 @@
                 <a class="mobile-dock-link" href="#daily-routine-panel">루틴</a>
                 <a class="mobile-dock-link" href="#today-set">오늘</a>
             </nav>
+
+            {% if sermon.bible_text %}
+                <div class="scripture-modal" id="scripture-modal">
+                    <a class="scripture-modal-backdrop" href="#" aria-label="닫기"></a>
+                    <section class="scripture-modal-card" aria-labelledby="scripture-modal-title">
+                        <div class="scripture-modal-head">
+                            <div>
+                                <p class="section-label">말씀 읽기</p>
+                                <h2 id="scripture-modal-title">{{ sermon.bible_passage|default:"성경 본문" }}</h2>
+                            </div>
+                            <a class="scripture-modal-close" href="#" aria-label="닫기">닫기</a>
+                        </div>
+                        <div class="scripture-modal-body">
+                            <p class="scripture-modal-text">{{ sermon.bible_text|linebreaksbr }}</p>
+                        </div>
+                    </section>
+                </div>
+            {% endif %}
 
             <section class="panel stat-panel">
                 <div class="stat-card">
@@ -845,3 +870,4 @@
     </script>
 </body>
 </html>
+

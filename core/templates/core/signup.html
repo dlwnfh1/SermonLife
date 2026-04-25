@@ -32,7 +32,15 @@
                 {% for field in form %}
                     <label class="auth-label">
                         <span>{{ field.label }}</span>
-                        {{ field }}
+                        {% if field.name == "member_role" %}
+                            <select name="{{ field.html_name }}" id="{{ field.id_for_label }}" class="auth-role-select">
+                                {% for value, label in field.field.choices %}
+                                    <option value="{{ value }}" {% if field.value == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        {% else %}
+                            {{ field }}
+                        {% endif %}
                         {% if field.errors %}
                             <small class="field-error">{{ field.errors|striptags }}</small>
                         {% endif %}
