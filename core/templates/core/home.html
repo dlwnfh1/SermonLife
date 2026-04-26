@@ -90,23 +90,17 @@
         </section>
 
         {% if sermon %}
-            <section class="quick-nav" aria-label="빠른 이동">
-                {% if sermon.hosted_video_url or sermon.youtube_embed_url or sermon.transcript %}
-                    <a class="quick-nav-chip" href="#media-panel">설교 보기</a>
-                {% endif %}
-                <a class="quick-nav-chip" href="#overview-panel">한눈에 보기</a>
-                <a class="quick-nav-chip" href="#daily-routine-panel">5일 루틴</a>
-                <a class="quick-nav-chip quick-nav-chip-primary" href="#today-set">오늘 참여</a>
-            </section>
+            <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-sermon" checked>
+            <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-overview">
+            <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-routine">
+            <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-today">
 
-            <nav class="mobile-dock-nav" aria-label="모바일 빠른 이동">
-                {% if sermon.hosted_video_url or sermon.youtube_embed_url or sermon.transcript %}
-                    <a class="mobile-dock-link" href="#media-panel">보기</a>
-                {% endif %}
-                <a class="mobile-dock-link" href="#overview-panel">요약</a>
-                <a class="mobile-dock-link" href="#daily-routine-panel">루틴</a>
-                <a class="mobile-dock-link" href="#today-set">오늘</a>
-            </nav>
+            <section class="home-tab-bar" aria-label="홈 탭">
+                <label class="home-tab-control" for="home-tab-sermon">설교</label>
+                <label class="home-tab-control" for="home-tab-overview">요약</label>
+                <label class="home-tab-control" for="home-tab-routine">루틴</label>
+                <label class="home-tab-control" for="home-tab-today">오늘</label>
+            </section>
 
             {% if sermon.bible_text %}
                 <div class="scripture-modal" id="scripture-modal">
@@ -130,168 +124,152 @@
                 <div class="stat-card">
                     <strong>이번 주 달란트</strong>
                     <span>{{ weekly_points }}달란트 / {{ weekly_base_max_points }}달란트</span>
-                    <small>5일 완주 보너스 {{ weekly_bonus_points_value }}달란트 별도</small>
                 </div>
                 <div class="stat-card">
                     <strong>완료 Day</strong>
-                    <span>{{ completed_days_count }} / 5{% if weekly_bonus_awarded %} | 완주 보너스 획득{% endif %}</span>
-                    <small>누적 달란트 {{ total_points }}달란트 · <a href="{% url 'core:my_history' %}">자세히 보기</a></small>
+                    <span>{{ completed_days_count }} / 5 · 누적 {{ total_points }}달란트{% if weekly_bonus_awarded %} · 완주 보너스 획득{% endif %}</span>
                 </div>
             </section>
 
-            <section class="panel points-guide-panel">
-                <details class="points-guide-details">
-                    <summary class="points-guide-summary">
-                        <span>달란트 안내</span>
-                        <small>달란트 구조 보기</small>
-                    </summary>
-                    <div class="points-guide-grid">
-                        <article class="points-guide-card">
-                            <strong>하루 1일 루틴</strong>
-                            <ul class="points-guide-list">
-                                <li>퀴즈 정답 {{ quiz_points_value }}달란트</li>
-                                <li>묵상 답변 저장 {{ reflection_points_value }}달란트</li>
-                                <li>미션 완료 {{ mission_points_value }}달란트</li>
-                                <li>하루 완료 보너스 {{ daily_bonus_points_value }}달란트</li>
-                            </ul>
-                        </article>
-                        <article class="points-guide-card">
-                            <strong>이번 주 최대 달란트</strong>
-                            <ul class="points-guide-list">
-                                <li>5일치 기본 달란트 {{ weekly_base_max_points }}달란트</li>
-                                <li>5일 완주 보너스 {{ weekly_bonus_points_value }}달란트</li>
-                            </ul>
-                            <p class="points-guide-total">총 최대 {{ weekly_total_max_points }}달란트</p>
-                        </article>
-                    </div>
-                </details>
-            </section>
+            <div class="home-tab-panels">
 
-            {% if sermon.hosted_video_url or sermon.youtube_embed_url or sermon.transcript %}
-                <section class="panel media-panel" id="media-panel">
-                    <div class="panel-header">
-                        <h2>설교 다시 보기 · 읽기</h2>
-                    </div>
-                    <div class="media-grid">
-                        {% if sermon.hosted_video_url or sermon.youtube_embed_url %}
-                            <article class="media-card">
-                                <p class="section-label">영상으로 보기</p>
-                                <div class="video-link-card">
-                                    <strong>{{ sermon.title }}</strong>
-                                    <p>설교 영상은 별도 화면에서 편하게 보실 수 있습니다.</p>
-                                    <a class="action-button" href="{% url 'core:watch_sermon' %}">설교 영상 보기</a>
-                                </div>
-                            </article>
-                        {% endif %}
+                <section class="home-tab-panel home-tab-panel-sermon">
+                    {% if sermon.hosted_video_url or sermon.youtube_embed_url or sermon.transcript %}
+                        <section class="panel media-panel" id="media-panel">
+                            <div class="panel-header">
+                                <h2>설교 다시 보기 · 읽기</h2>
+                            </div>
+                            <div class="media-grid">
+                                {% if sermon.hosted_video_url or sermon.youtube_embed_url %}
+                                    <article class="media-card">
+                                        <p class="section-label">영상으로 보기</p>
+                                        <div class="video-link-card">
+                                            <strong>{{ sermon.title }}</strong>
+                                            <p>설교 영상은 별도 화면에서 편하게 보실 수 있습니다.</p>
+                                            <a class="action-button" href="{% url 'core:watch_sermon' %}">설교 영상 보기</a>
+                                        </div>
+                                    </article>
+                                {% endif %}
 
-                        {% if sermon.transcript %}
-                            <article class="media-card">
-                                <p class="section-label">읽기로 보기</p>
-                                <div class="audio-card">
-                                    <strong>{{ sermon.title }}</strong>
-                                    <p>설교 전체 자막과 원문을 읽기 좋은 화면에서 차분하게 볼 수 있습니다.</p>
-                                    <a class="action-button" href="{% url 'core:read_sermon' %}">설교 읽기</a>
-                                </div>
-                            </article>
-                        {% endif %}
-                    </div>
+                                {% if sermon.transcript %}
+                                    <article class="media-card">
+                                        <p class="section-label">읽기로 보기</p>
+                                        <div class="audio-card">
+                                            <strong>{{ sermon.title }}</strong>
+                                            <p>설교 전체 자막과 원문을 읽기 좋은 화면에서 차분하게 볼 수 있습니다.</p>
+                                            <a class="action-button" href="{% url 'core:read_sermon' %}">설교 읽기</a>
+                                        </div>
+                                    </article>
+                                {% endif %}
+                            </div>
+                        </section>
+                    {% else %}
+                        <section class="panel">
+                            <div class="panel-header">
+                                <h2>이번 주 설교</h2>
+                            </div>
+                            <p class="empty">이번 설교의 영상 또는 읽기 자료가 아직 준비되지 않았습니다.</p>
+                        </section>
+                    {% endif %}
                 </section>
-            {% endif %}
 
-            <section class="panel" id="overview-panel">
-                <div class="panel-header">
-                    <h2>이번 주 한눈에 보기</h2>
-                </div>
-                {% if weekly_audio_clip and weekly_audio_clip.file %}
-                    <div class="listen-card">
-                        <div class="listen-card-copy">
-                            <p class="section-label">이번 주 요약 듣기</p>
-                            <strong>한눈에 보기, 마음에 남은 말씀, 5일 루틴을 음성으로 들어보세요.</strong>
+                <section class="home-tab-panel home-tab-panel-overview">
+                    <section class="panel" id="overview-panel">
+                        <div class="panel-header">
+                            <h2>이번 주 한눈에 보기</h2>
                         </div>
-                        <audio class="audio-player listen-audio-player" controls preload="none">
-                            <source src="{{ weekly_audio_clip.file.url }}" type="audio/mpeg">
-                        </audio>
-                    </div>
-                {% endif %}
-                {% if overview %}
-                    <p class="overview-text">{{ overview|linebreaksbr }}</p>
-                {% else %}
-                    <p class="empty">아직 확인된 설교 개요가 없습니다.</p>
-                {% endif %}
-            </section>
-
-            {% if highlight_choices %}
-                <section class="panel" id="highlight-panel">
-                    <div class="panel-header">
-                        <h2>이번 주 가장 마음에 남은 말씀</h2>
-                    </div>
-                    <div class="highlight-vote-grid">
-                        <article class="content-card">
-                            <h3>말씀 한 줄 고르기</h3>
-                            <p class="support-text">이번 설교 중 가장 마음에 남은 문장을 하나 골라 주세요.</p>
-                            {% if highlight_messages %}
-                                <div class="inline-messages">
-                                    {% for message in highlight_messages %}
-                                        <p class="message-row {{ message.tags }}">{{ message.text }}</p>
-                                    {% endfor %}
+                        {% if weekly_audio_clip and weekly_audio_clip.file %}
+                            <div class="listen-card">
+                                <div class="listen-card-copy">
+                                    <p class="section-label">이번 주 요약 듣기</p>
+                                    <strong>한눈에 보기, 마음에 남은 말씀, 5일 루틴을 음성으로 들어보세요.</strong>
                                 </div>
-                            {% endif %}
-                            {% if request.user.is_authenticated %}
-                                <form method="post" action="{% url 'core:submit_highlight_vote' %}" class="action-form">
-                                    {% csrf_token %}
-                                    <div class="choice-group highlight-choice-group">
-                                        {% for choice in highlight_choices %}
-                                            <label class="choice-option highlight-choice-option">
-                                                <input type="radio" name="choice_id" value="{{ choice.id }}" {% if highlight_vote and highlight_vote.choice_id == choice.id %}checked{% endif %}>
-                                                <span>{{ choice.text }}</span>
-                                            </label>
-                                        {% endfor %}
-                                    </div>
-                                    <button type="submit" class="action-button">말씀 선택하기</button>
-                                </form>
-                            {% else %}
-                                <ul class="mini-focus-list large">
-                                    {% for choice in highlight_choices %}
-                                        <li>{{ choice.text }}</li>
-                                    {% endfor %}
-                                </ul>
-                            {% endif %}
-                        </article>
-                        <article class="content-card highlight-card">
-                            <h3>가장 많이 공감한 말씀</h3>
-                            {% if top_highlight_choice %}
-                                <p class="focus-key-copy">“{{ top_highlight_choice.text }}”</p>
-                                <p class="support-text">
-                                    {% if top_highlight_choice.vote_count %}
-                                        현재 이 문장에 {{ top_highlight_choice.vote_count }}명이 공감했어요.
+                                <audio class="audio-player listen-audio-player" controls preload="none">
+                                    <source src="{{ weekly_audio_clip.file.url }}" type="audio/mpeg">
+                                </audio>
+                            </div>
+                        {% endif %}
+                        {% if overview %}
+                            <p class="overview-text">{{ overview|linebreaksbr }}</p>
+                        {% else %}
+                            <p class="empty">아직 확인된 설교 개요가 없습니다.</p>
+                        {% endif %}
+                    </section>
+
+                    {% if highlight_choices %}
+                        <section class="panel" id="highlight-panel">
+                            <div class="panel-header">
+                                <h2>이번 주 가장 마음에 남은 말씀</h2>
+                            </div>
+                            <div class="highlight-vote-grid">
+                                <article class="content-card">
+                                    <h3>말씀 한 줄 고르기</h3>
+                                    <p class="support-text">이번 설교 중 가장 마음에 남은 문장을 하나 골라 주세요.</p>
+                                    {% if highlight_messages %}
+                                        <div class="inline-messages">
+                                            {% for message in highlight_messages %}
+                                                <p class="message-row {{ message.tags }}">{{ message.text }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    {% if request.user.is_authenticated %}
+                                        <form method="post" action="{% url 'core:submit_highlight_vote' %}" class="action-form">
+                                            {% csrf_token %}
+                                            <div class="choice-group highlight-choice-group">
+                                                {% for choice in highlight_choices %}
+                                                    <label class="choice-option highlight-choice-option">
+                                                        <input type="radio" name="choice_id" value="{{ choice.id }}" {% if highlight_vote and highlight_vote.choice_id == choice.id %}checked{% endif %}>
+                                                        <span>{{ choice.text }}</span>
+                                                    </label>
+                                                {% endfor %}
+                                            </div>
+                                            <button type="submit" class="action-button">말씀 선택하기</button>
+                                        </form>
+                                    {% else %}
+                                        <ul class="mini-focus-list large">
+                                            {% for choice in highlight_choices %}
+                                                <li>{{ choice.text }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% endif %}
+                                </article>
+                                <article class="content-card highlight-card">
+                                    <h3>가장 많이 공감한 말씀</h3>
+                                    {% if top_highlight_choice %}
+                                        <p class="focus-key-copy">“{{ top_highlight_choice.text }}”</p>
+                                        <p class="support-text">
+                                            {% if top_highlight_choice.vote_count %}
+                                                현재 이 문장에 {{ top_highlight_choice.vote_count }}명이 공감했어요.
+                                                {% if total_highlight_voters %}
+                                                    총 {{ total_highlight_voters }}명이 참여했어요.
+                                                {% endif %}
+                                            {% else %}
+                                                첫 번째 공감을 기다리고 있어요.
+                                            {% endif %}
+                                        </p>
                                         {% if total_highlight_voters %}
-                                            총 {{ total_highlight_voters }}명이 참여했어요.
+                                            <div class="highlight-chart">
+                                                {% for choice in highlight_choices %}
+                                                    <div class="highlight-chart-row">
+                                                        <div class="highlight-chart-label">{{ choice.text }}</div>
+                                                        <div class="highlight-chart-bar">
+                                                            <span class="highlight-chart-fill" style="width:{% widthratio choice.vote_count total_highlight_voters 100 %}%"></span>
+                                                        </div>
+                                                        <strong class="highlight-chart-count">{{ choice.vote_count }}</strong>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
                                         {% endif %}
                                     {% else %}
-                                        첫 번째 공감을 기다리고 있어요.
+                                        <p class="empty">아직 준비된 문장이 없습니다.</p>
                                     {% endif %}
-                                </p>
-                                {% if total_highlight_voters %}
-                                    <div class="highlight-chart">
-                                        {% for choice in highlight_choices %}
-                                            <div class="highlight-chart-row">
-                                                <div class="highlight-chart-label">{{ choice.text }}</div>
-                                                <div class="highlight-chart-bar">
-                                                    <span class="highlight-chart-fill" style="width:{% widthratio choice.vote_count total_highlight_voters 100 %}%"></span>
-                                                </div>
-                                                <strong class="highlight-chart-count">{{ choice.vote_count }}</strong>
-                                            </div>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            {% else %}
-                                <p class="empty">아직 준비된 문장이 없습니다.</p>
-                            {% endif %}
-                        </article>
-                    </div>
+                                </article>
+                            </div>
+                        </section>
+                    {% endif %}
                 </section>
-            {% endif %}
 
+                <section class="home-tab-panel home-tab-panel-routine">
             <section class="panel" id="daily-routine-panel">
                 <div class="panel-header">
                     <h2>이번 주 5일 루틴</h2>
@@ -321,7 +299,9 @@
                     <p class="empty">아직 확인된 주간 참여 세트가 없습니다.</p>
                 {% endif %}
             </section>
+                </section>
 
+                <section class="home-tab-panel home-tab-panel-today">
             <section class="panel" id="today-set">
                 <div class="panel-header">
                     <h2>오늘 참여{% if current_day_number %} | Day {{ current_day_number }}{% endif %}</h2>
@@ -465,7 +445,37 @@
                 {% else %}
                     <p class="empty">오늘 공개된 일일 세트가 없습니다.</p>
                 {% endif %}
+
+                <section class="panel points-guide-panel">
+                    <details class="points-guide-details">
+                        <summary class="points-guide-summary">
+                            <span>달란트 안내</span>
+                            <small>달란트 구조 보기</small>
+                        </summary>
+                        <div class="points-guide-grid">
+                            <article class="points-guide-card">
+                                <strong>하루 1일 루틴</strong>
+                                <ul class="points-guide-list">
+                                    <li>퀴즈 정답 {{ quiz_points_value }}달란트</li>
+                                    <li>묵상 답변 저장 {{ reflection_points_value }}달란트</li>
+                                    <li>미션 완료 {{ mission_points_value }}달란트</li>
+                                    <li>하루 완료 보너스 {{ daily_bonus_points_value }}달란트</li>
+                                </ul>
+                            </article>
+                            <article class="points-guide-card">
+                                <strong>이번 주 최대 달란트</strong>
+                                <ul class="points-guide-list">
+                                    <li>5일치 기본 달란트 {{ weekly_base_max_points }}달란트</li>
+                                    <li>5일 완주 보너스 {{ weekly_bonus_points_value }}달란트</li>
+                                </ul>
+                                <p class="points-guide-total">총 최대 {{ weekly_total_max_points }}달란트</p>
+                            </article>
+                        </div>
+                    </details>
+                </section>
             </section>
+                </section>
+            </div>
         {% else %}
             <section class="panel empty-state">
                 <p class="section-label">No Published Sermon</p>
