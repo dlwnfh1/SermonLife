@@ -98,7 +98,7 @@
             <section class="home-tab-bar" aria-label="홈 탭">
                 <label class="home-tab-control" for="home-tab-sermon">설교</label>
                 <label class="home-tab-control" for="home-tab-overview">요약</label>
-                <label class="home-tab-control" for="home-tab-routine">루틴</label>
+                <label class="home-tab-control" for="home-tab-routine">말씀</label>
                 <label class="home-tab-control" for="home-tab-today">오늘</label>
             </section>
 
@@ -196,6 +196,9 @@
                         {% endif %}
                     </section>
 
+                </section>
+
+                <section class="home-tab-panel home-tab-panel-routine">
                     {% if highlight_choices %}
                         <section class="panel" id="highlight-panel">
                             <div class="panel-header">
@@ -266,39 +269,14 @@
                                 </article>
                             </div>
                         </section>
+                    {% else %}
+                        <section class="panel">
+                            <div class="panel-header">
+                                <h2>이번 주 가장 마음에 남은 말씀</h2>
+                            </div>
+                            <p class="empty">아직 준비된 문장이 없습니다.</p>
+                        </section>
                     {% endif %}
-                </section>
-
-                <section class="home-tab-panel home-tab-panel-routine">
-            <section class="panel" id="daily-routine-panel">
-                <div class="panel-header">
-                    <h2>이번 주 5일 루틴</h2>
-                </div>
-                <p class="mobile-routine-hint">모바일에서는 좌우로 넘겨보세요.</p>
-                {% if daily_engagements %}
-                    <div class="card-grid daily-routine-grid">
-                        {% for item in daily_engagements %}
-                            <article class="content-card {% if current_day_number == item.day_number %}highlight-card{% endif %}">
-                                <p class="section-label">Day {{ item.day_number }}</p>
-                                <h3>{{ item.title }}</h3>
-                                <p>{{ item.intro }}</p>
-                                {% if item.focus_outline_points %}
-                                    <ul class="mini-focus-list">
-                                        {% for point in item.focus_outline_points %}
-                                            <li>{{ point }}</li>
-                                        {% endfor %}
-                                    </ul>
-                                {% endif %}
-                                {% if item.focus_key_point %}
-                                    <p class="mini-key-point">{{ item.focus_key_point }}</p>
-                                {% endif %}
-                            </article>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <p class="empty">아직 확인된 주간 참여 세트가 없습니다.</p>
-                {% endif %}
-            </section>
                 </section>
 
                 <section class="home-tab-panel home-tab-panel-today">
