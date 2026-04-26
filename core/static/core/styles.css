@@ -1863,6 +1863,10 @@ a {
     line-height: 1.5;
 }
 
+#daily-routine-panel {
+    overflow-x: hidden;
+}
+
 .outline-list li {
     color: var(--ink);
     line-height: 1.9;
@@ -3041,9 +3045,11 @@ a {
         overflow-x: auto;
         overflow-y: hidden;
         gap: 14px;
-        margin-right: -6px;
+        margin-right: 0;
+        max-width: 100%;
         padding-bottom: 8px;
         scroll-snap-type: x proximity;
+        overscroll-behavior-x: contain;
         -webkit-overflow-scrolling: touch;
     }
 
