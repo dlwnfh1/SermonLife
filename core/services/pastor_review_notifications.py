@@ -21,7 +21,7 @@ def send_pastor_review_notification(sermon):
     if not recipient_emails:
         raise PastorReviewNotificationError("활성화된 목회자 공지 수신자 이메일이 없습니다.")
 
-    subject = f"[SERMON LIFE] 목회자 검토 요청: {sermon.title}"
+    subject = f"[WORD & LIFE] 목회자 검토 요청: {sermon.title}"
     message = "\n".join(
         [
             "지난주 설교 내용 정리가 완료되었습니다.",

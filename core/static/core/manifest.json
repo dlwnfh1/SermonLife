@@ -1,7 +1,7 @@
 {
-  "name": "SermonLife",
-  "short_name": "SermonLife",
-  "description": "주간 설교를 삶으로 이어가는 5일 루틴",
+  "name": "Word & Life",
+  "short_name": "Word & Life",
+  "description": "말씀과 삶을 이어가는 5일 루틴",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f7f1e7",

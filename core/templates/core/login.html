@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>로그인 | SermonLife</title>
+    <title>로그인 | Word &amp; Life</title>
     <link rel="stylesheet" href="{% static 'core/styles.css' %}">
     <link rel="manifest" href="{% static 'core/manifest.json' %}">
     <link rel="apple-touch-icon" href="{% static 'core/icons/apple-touch-icon.png' %}">
@@ -15,7 +15,7 @@
 <body>
     <main class="page-shell auth-shell">
         <section class="auth-card">
-            <p class="eyebrow">SERMONLIFE</p>
+            <p class="eyebrow">WORD &amp; LIFE</p>
             <h1>로그인</h1>
 
             {% if messages %}
@@ -41,7 +41,7 @@
                 <button type="submit" class="action-button wide-button">로그인</button>
             </form>
 
-            <p class="auth-helper">아직 계정이 없으면 <a href="{% url 'core:signup' %}">Create user</a></p>
+            <p class="auth-helper">아직 계정이 없으시면 <a href="{% url 'core:signup' %}">Create user</a></p>
         </section>
     </main>
 </body>
