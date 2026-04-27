@@ -136,3 +136,17 @@ SOURCE_MEDIA_ROOT = MEDIA_ROOT / SOURCE_MEDIA_UPLOAD_SUBDIR
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+EMAIL_BACKEND = os.environ.get("DJANGO_EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = os.environ.get("DJANGO_EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("DJANGO_EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("DJANGO_EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("DJANGO_EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("DJANGO_EMAIL_USE_TLS", "True").lower() in {"1", "true", "yes", "on"}
+EMAIL_USE_SSL = os.environ.get("DJANGO_EMAIL_USE_SSL", "False").lower() in {"1", "true", "yes", "on"}
+DEFAULT_FROM_EMAIL = os.environ.get("DJANGO_DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "noreply@sermonlife.local")
+SERMONLIFE_SITE_URL = os.environ.get("SERMONLIFE_SITE_URL", "")
+SERMONLIFE_ALLOW_PREVIEW_ANYDAY = os.environ.get(
+    "SERMONLIFE_ALLOW_PREVIEW_ANYDAY",
+    "False",
+).lower() in {"1", "true", "yes", "on"}

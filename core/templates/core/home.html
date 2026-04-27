@@ -11,6 +11,99 @@
     <meta name="theme-color" content="#2f6b84">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <style>
+        .home-tab-input,
+        .pastor-tab-input {
+            display: none !important;
+            position: fixed !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            width: 1px !important;
+            height: 1px !important;
+            inset: auto auto -100px -100px !important;
+        }
+
+        .home-tab-sticky {
+            position: sticky;
+            top: 12px;
+            z-index: 22;
+            align-self: start;
+            width: 100%;
+        }
+
+        .home-tab-bar {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 18px;
+            padding: 8px;
+            width: 100%;
+            border-radius: 24px;
+            background: rgba(255, 250, 242, 0.94);
+            border: 1px solid rgba(32, 25, 19, 0.08);
+            box-shadow: 0 18px 36px rgba(44, 32, 18, 0.12);
+        }
+
+        .home-tab-control {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            width: 100%;
+            padding: 0 10px;
+            border-radius: 16px;
+            background: rgba(236, 225, 209, 0.78);
+            border: 1px solid rgba(32, 25, 19, 0.08);
+            color: #201913;
+            font-size: 0.94rem;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .home-tab-panels {
+            margin-top: 18px;
+        }
+
+        .home-tab-panel {
+            display: none;
+        }
+
+        #home-tab-sermon:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-sermon"],
+        #home-tab-overview:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-overview"],
+        #home-tab-routine:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-routine"],
+        #home-tab-today:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-today"] {
+            background: #8b5c3b;
+            border-color: #8b5c3b;
+            color: #fffaf2;
+        }
+
+        #home-tab-sermon:checked ~ .home-tab-panels .home-tab-panel-sermon,
+        #home-tab-overview:checked ~ .home-tab-panels .home-tab-panel-overview,
+        #home-tab-routine:checked ~ .home-tab-panels .home-tab-panel-routine,
+        #home-tab-today:checked ~ .home-tab-panels .home-tab-panel-today {
+            display: grid;
+            gap: 18px;
+        }
+
+        @media (max-width: 900px) {
+            .home-tab-sticky {
+                width: 100%;
+            }
+
+            .home-tab-bar {
+                width: 100%;
+                gap: 8px;
+                padding: 6px;
+            }
+
+            .home-tab-control {
+                min-height: 44px;
+                padding: 0 10px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <main class="page-shell">
@@ -95,12 +188,14 @@
             <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-routine">
             <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-today">
 
-            <section class="home-tab-bar" aria-label="홈 탭">
-                <label class="home-tab-control" for="home-tab-sermon">설교</label>
-                <label class="home-tab-control" for="home-tab-overview">요약</label>
-                <label class="home-tab-control" for="home-tab-routine">말씀</label>
-                <label class="home-tab-control" for="home-tab-today">오늘</label>
-            </section>
+            <div class="home-tab-sticky">
+                <section class="home-tab-bar" aria-label="홈 탭">
+                    <label class="home-tab-control" for="home-tab-sermon">설교</label>
+                    <label class="home-tab-control" for="home-tab-overview">요약</label>
+                    <label class="home-tab-control" for="home-tab-routine">말씀</label>
+                    <label class="home-tab-control" for="home-tab-today">오늘</label>
+                </section>
+            </div>
 
             {% if sermon.bible_text %}
                 <div class="scripture-modal" id="scripture-modal">
@@ -458,7 +553,7 @@
             <section class="panel empty-state">
                 <p class="section-label">No Published Sermon</p>
                 <h2>이번 주 설교가 아직 공개되지 않았습니다.</h2>
-                <p class="empty">최신 설교를 불러오고 전사 및 AI 초안을 생성한 뒤 관리자 확인 후 주간 루틴이 시작됩니다.</p>
+                <p class="empty">새 설교와 주간 루틴은 매주 화요일에 공개됩니다.</p>
             </section>
         {% endif %}
     </main>

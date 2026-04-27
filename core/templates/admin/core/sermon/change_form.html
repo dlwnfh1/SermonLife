@@ -88,6 +88,90 @@
     @keyframes codex-spin {
         to { transform: rotate(360deg); }
     }
+
+    .sermon-admin-review-status {
+        margin: 14px 0 18px;
+        padding: 16px 18px;
+        border-radius: 14px;
+        background: #f8fafc;
+        border: 1px solid #dbe4f0;
+        display: grid;
+        gap: 12px;
+    }
+
+    .sermon-admin-review-status-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .sermon-admin-review-status-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .sermon-admin-review-status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    .sermon-admin-review-status-badge.is-ready {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .sermon-admin-review-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .sermon-admin-review-item {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 12px 14px;
+    }
+
+    .sermon-admin-review-label {
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 4px;
+    }
+
+    .sermon-admin-review-value {
+        color: #111827;
+        font-weight: 700;
+        line-height: 1.45;
+    }
+
+    .sermon-admin-review-help {
+        font-size: 13px;
+        color: #4b5563;
+        line-height: 1.5;
+    }
+
+    .sermon-admin-review-link {
+        color: #2563eb;
+        text-decoration: none;
+        font-weight: 700;
+    }
+
+    @media (max-width: 900px) {
+        .sermon-admin-review-grid {
+            grid-template-columns: 1fr;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -132,6 +216,15 @@
                     form="sermon_form"
                 >
             {% endif %}
+            {% if change and original and notify_pastor_review_url %}
+                <a
+                    class="sermon-secondary-button button js-admin-progress"
+                    href="{{ notify_pastor_review_url }}"
+                    data-confirm-message="어드민 검토를 마치고 목회자에게 검토 요청을 보내시겠습니까? 등록된 수신자 이메일로 공지가 발송됩니다."
+                    data-progress-title="목회자 검토 요청 전송 중.."
+                    data-progress-text="설교를 목회자 검토 가능 상태로 바꾸고 등록된 수신자에게 이메일을 보내고 있습니다."
+                >목회자에게 검토 요청</a>
+            {% endif %}
             {% if change and original and publish_url %}
                 <a
                     class="sermon-publish-button button default js-admin-progress"
@@ -162,6 +255,58 @@
             {% endif %}
         </div>
     </div>
+    {% if change %}
+        <div class="sermon-admin-review-status">
+            <div class="sermon-admin-review-status-top">
+                <div class="sermon-admin-review-status-title">목회자 검토 전달 상태</div>
+                <div class="sermon-admin-review-status-badge{% if original.pastor_review_requested %} is-ready{% endif %}">
+                    {{ pastor_review_status_label }}
+                </div>
+            </div>
+            <div class="sermon-admin-review-grid">
+                <div class="sermon-admin-review-item">
+                    <div class="sermon-admin-review-label">검토 요청 시각</div>
+                    <div class="sermon-admin-review-value">
+                        {% if pastor_review_requested_at_display %}
+                            {{ pastor_review_requested_at_display }}
+                        {% else %}
+                            아직 요청하지 않음
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="sermon-admin-review-item">
+                    <div class="sermon-admin-review-label">활성 수신자</div>
+                    <div class="sermon-admin-review-value">
+                        {{ pastor_review_recipient_count }}명
+                        {% if pastor_review_recipient_count %}
+                            <div class="sermon-admin-review-help">
+                                {{ pastor_review_recipient_preview|join:", " }}{% if pastor_review_recipient_overflow %} 외 {{ pastor_review_recipient_overflow }}명{% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="sermon-admin-review-item">
+                    <div class="sermon-admin-review-label">다음 단계</div>
+                    <div class="sermon-admin-review-value">
+                        {% if original.ai_generated %}
+                            오타 수정 후 검토 요청 버튼
+                        {% else %}
+                            먼저 AI 자동 정리 실행
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="sermon-admin-review-help">
+                {% if pastor_review_recipient_count %}
+                    검토 요청 버튼을 누르면 등록된 수신자에게 메일이 발송되고, 그 뒤부터 목회자 페이지에서 이 설교를 검토할 수 있습니다.
+                {% else %}
+                    아직 등록된 수신자가 없습니다.
+                    <a class="sermon-admin-review-link" href="{{ pastor_notification_recipient_url }}">목회자 공지 수신자</a>
+                    에서 이메일을 먼저 추가해 주세요.
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
     {% if change and original and delete_url %}
         <div class="sermon-admin-danger-zone">
             <details class="sermon-admin-danger-details">

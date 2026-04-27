@@ -81,23 +81,31 @@ a {
 }
 
 .home-tab-input {
-    position: fixed;
-    opacity: 0;
-    pointer-events: none;
-    width: 1px;
-    height: 1px;
-    inset: auto auto -100px -100px;
+    display: none !important;
+    position: fixed !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 1px !important;
+    height: 1px !important;
+    inset: auto auto -100px -100px !important;
 }
 
-.home-tab-bar {
+.home-tab-sticky {
+    position: -webkit-sticky;
     position: sticky;
     top: 12px;
     z-index: 22;
+    align-self: start;
+    width: 100%;
+}
+
+.home-tab-bar {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 10px;
     margin-top: 18px;
     padding: 8px;
+    width: 100%;
     border-radius: 24px;
     background: rgba(255, 250, 242, 0.94);
     border: 1px solid rgba(32, 25, 19, 0.08);
@@ -137,10 +145,10 @@ a {
     gap: 18px;
 }
 
-#home-tab-sermon:checked ~ .home-tab-bar label[for="home-tab-sermon"],
-#home-tab-overview:checked ~ .home-tab-bar label[for="home-tab-overview"],
-#home-tab-routine:checked ~ .home-tab-bar label[for="home-tab-routine"],
-#home-tab-today:checked ~ .home-tab-bar label[for="home-tab-today"] {
+#home-tab-sermon:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-sermon"],
+#home-tab-overview:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-overview"],
+#home-tab-routine:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-routine"],
+#home-tab-today:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-today"] {
     background: var(--accent);
     border-color: var(--accent);
     color: #fffaf2;
@@ -929,18 +937,21 @@ a {
 .pastor-tab-bar {
     display: grid;
     gap: 18px;
+    position: -webkit-sticky;
     position: sticky;
     top: 12px;
     z-index: 24;
+    align-self: start;
 }
 
 .pastor-tab-input {
-    position: fixed;
-    opacity: 0;
-    pointer-events: none;
-    width: 1px;
-    height: 1px;
-    inset: auto auto -100px -100px;
+    display: none !important;
+    position: fixed !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 1px !important;
+    height: 1px !important;
+    inset: auto auto -100px -100px !important;
 }
 
 .pastor-tab-controls {
@@ -2743,15 +2754,15 @@ a {
     }
 
     .home-tab-bar {
-        top: 8px;
         gap: 8px;
         padding: 6px;
+        width: 100%;
     }
 
     .home-tab-control {
-        min-height: 42px;
-        padding: 0 8px;
-        font-size: 0.88rem;
+        min-height: 44px;
+        padding: 0 10px;
+        font-size: 0.9rem;
     }
 
     .hero-card,

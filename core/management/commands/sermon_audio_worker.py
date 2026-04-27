@@ -41,6 +41,14 @@ class Command(BaseCommand):
             time.sleep(interval)
 
     def _process_current_public_sermon(self):
+        released_ids = Sermon.release_due_publications()
+        if released_ids:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"{timezone.now().isoformat()} Released scheduled sermons: {', '.join(str(pk) for pk in released_ids)}"
+                )
+            )
+
         sermon_id = get_current_public_sermon_id()
         if not sermon_id:
             self.stdout.write(f"{timezone.now().isoformat()} No current public sermon.")

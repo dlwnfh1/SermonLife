@@ -1,11 +1,12 @@
-import re
+﻿import re
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import AuthenticationForm
 from django.db import transaction
-from django.db.models import Count, Sum
+from django.db.models import Count, Q, Sum
 from django.forms import modelformset_factory
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -121,7 +122,7 @@ def _format_transcript_paragraphs(transcript, sentences_per_paragraph=3):
 
         sentences = [
             sentence.strip()
-            for sentence in re.split(r"(?<=[.!?。！？])\s+", compact)
+            for sentence in re.split(r"(?<=[.!??귨펯竊?)\s+", compact)
             if sentence.strip()
         ]
 
@@ -140,14 +141,22 @@ def _format_transcript_paragraphs(transcript, sentences_per_paragraph=3):
 
     return paragraphs
 
-
 def _get_active_challenge():
-    return (
-        WeeklyChallenge.objects.filter(
-            is_active=True,
-            sermon__status=SermonStatus.PUBLISHED,
-            sermon__is_published=True,
+    challenge = WeeklyChallenge.get_current_public_challenge()
+    if not challenge and getattr(settings, "SERMONLIFE_ALLOW_PREVIEW_ANYDAY", False):
+        challenge = (
+            WeeklyChallenge.objects.filter(
+                Q(sermon__is_published=True) | Q(sermon__scheduled_publish_at__isnull=False)
+            )
+            .select_related("sermon", "sermon__summary")
+            .prefetch_related("daily_engagements")
+            .order_by("-week_start", "-id")
+            .first()
         )
+    if not challenge:
+        return None
+    return (
+        WeeklyChallenge.objects.filter(pk=challenge.pk)
         .select_related("sermon", "sermon__summary")
         .prefetch_related("daily_engagements")
         .first()
@@ -155,19 +164,38 @@ def _get_active_challenge():
 
 
 def _get_default_pastor_sermon(available_sermons, active_challenge=None):
-    return available_sermons[0] if available_sermons else None
+    if not available_sermons:
+        return None
+
+    requested_unpublished = [
+        sermon for sermon in available_sermons
+        if sermon.pastor_review_requested and not sermon.is_published
+    ]
+    if requested_unpublished:
+        return requested_unpublished[0]
+
+    current_public_sermon_id = get_current_public_sermon_id()
+    current_public = next(
+        (sermon for sermon in available_sermons if sermon.pk == current_public_sermon_id),
+        None,
+    )
+    if current_public:
+        return current_public
+
+    return available_sermons[0]
 
 
 def _get_publication_state(sermon, current_public_sermon_id=None):
     if not sermon:
         return {"label": "미공개", "is_current": False}
+    if sermon.scheduled_publish_at and not sermon.is_published:
+        return {"label": "화요일 예약 공개", "is_current": False}
     current_public_sermon_id = current_public_sermon_id or get_current_public_sermon_id()
     if sermon.is_published and sermon.pk == current_public_sermon_id:
         return {"label": "현재 공개 중", "is_current": True}
     if sermon.is_published:
         return {"label": "이전 공개", "is_current": False}
     return {"label": "미공개", "is_current": False}
-
 
 def _get_summary(sermon):
     if not sermon:
@@ -177,6 +205,7 @@ def _get_summary(sermon):
     except SermonSummary.DoesNotExist:
         return None
     return candidate if candidate.approved else None
+
 
 
 def _get_daily_state(user, current_daily):
@@ -209,7 +238,7 @@ def _build_home_context(request):
     highlight_messages = []
     for message in list(messages.get_messages(request)):
         text = str(message)
-        if "마음에 남은 말씀" in text or "공감" in text:
+        if "留덉쓬???⑥? 留먯?" in text or "怨듦컧" in text:
             highlight_messages.append({"text": text, "tags": message.tags})
         else:
             if not hasattr(request, "_remaining_messages"):
@@ -420,7 +449,7 @@ def _build_pastor_publish_checklist(sermon):
     if approved_days:
         checklist.extend(
             {
-                "label": f"Day {daily.day_number}의 퀴즈/묵상/미션이 모두 입력되어 있습니다",
+                "label": f"Day {daily.day_number}의 퀴즈, 묵상, 미션이 모두 입력되어 있습니다",
                 "ok": bool(
                     daily.title.strip()
                     and daily.quiz_question.strip()
@@ -576,12 +605,12 @@ def signup_view(request):
                 defaults={"member_role": form.cleaned_data["member_role"]},
             )
             login(request, user)
-            messages.success(request, "회원가입이 완료되었습니다. 이번 주 설교 루틴을 시작해 보세요.")
+            messages.success(request, "?뚯썝媛?낆씠 ?꾨즺?섏뿀?듬땲?? ?대쾲 二??ㅺ탳 猷⑦떞???쒖옉??蹂댁꽭??")
             return redirect("core:home")
         if "username" in form.errors:
-            messages.error(request, "이미 사용 중인 아이디입니다.")
+            messages.error(request, "?대? ?ъ슜 以묒씤 ?꾩씠?붿엯?덈떎.")
         else:
-            messages.error(request, "입력한 내용을 다시 확인해 주세요.")
+            messages.error(request, "?낅젰???댁슜???ㅼ떆 ?뺤씤??二쇱꽭??")
     else:
         form = SermonLifeSignUpForm()
 
@@ -599,7 +628,7 @@ def login_view(request):
     form.fields["password"].widget.attrs.update({"placeholder": "비밀번호"})
     if request.method == "POST" and form.is_valid():
         login(request, form.get_user())
-        messages.success(request, "로그인되었습니다.")
+        messages.success(request, "濡쒓렇?몃릺?덉뒿?덈떎.")
         return redirect("core:home")
 
     return render(request, "core/login.html", {"form": form})
@@ -607,7 +636,7 @@ def login_view(request):
 
 def logout_view(request):
     logout(request)
-    messages.success(request, "로그아웃되었습니다.")
+    messages.success(request, "濡쒓렇?꾩썐?섏뿀?듬땲??")
     return redirect("core:login")
 
 
@@ -617,7 +646,7 @@ def submit_daily_quiz_view(request, pk):
     daily = _get_released_daily_or_404(pk)
     selected_answer = request.POST.get("selected_answer", "").strip()
     if selected_answer not in daily.choices:
-        messages.error(request, "퀴즈 보기를 선택한 뒤 제출해 주세요.")
+        messages.error(request, "?댁쫰 蹂닿린瑜??좏깮?????쒖텧??二쇱꽭??")
         return _redirect_to_today_set()
 
     result = submit_daily_quiz(
@@ -628,19 +657,19 @@ def submit_daily_quiz_view(request, pk):
     attempt = result["attempt"]
     bonus_suffix = ""
     if result["daily_bonus_awarded"]:
-        bonus_suffix += " 하루 완료 보너스 3점이 추가되었습니다."
+        bonus_suffix += " ?섎（ ?꾨즺 蹂대꼫??3?먯씠 異붽??섏뿀?듬땲??"
     if result["weekly_bonus_awarded"]:
-        bonus_suffix += " 5일 완주 보너스 20점이 추가되었습니다."
+        bonus_suffix += " 5???꾩＜ 蹂대꼫??20?먯씠 異붽??섏뿀?듬땲??"
 
     if result["is_update"]:
         if attempt.is_correct:
-            messages.warning(request, f"이미 제출한 퀴즈입니다. 점수는 1회만 적립됩니다.{bonus_suffix}")
+            messages.warning(request, f"?대? ?쒖텧???댁쫰?낅땲?? ?먯닔??1?뚮쭔 ?곷┰?⑸땲??{bonus_suffix}")
         else:
-            messages.warning(request, "이미 제출한 퀴즈입니다. 다시 설교 흐름을 확인해 보세요.")
+            messages.warning(request, "?대? ?쒖텧???댁쫰?낅땲?? ?ㅼ떆 ?ㅺ탳 ?먮쫫???뺤씤??蹂댁꽭??")
     elif attempt.is_correct:
-        messages.success(request, f"정답입니다. 퀴즈 5점을 받았습니다.{bonus_suffix}")
+        messages.success(request, f"?뺣떟?낅땲?? ?댁쫰 5?먯쓣 諛쏆븯?듬땲??{bonus_suffix}")
     else:
-        messages.warning(request, "정답이 아닙니다. 다시 설교 흐름을 확인해 보세요.")
+        messages.warning(request, "?뺣떟???꾨떃?덈떎. ?ㅼ떆 ?ㅺ탳 ?먮쫫???뺤씤??蹂댁꽭??")
     return _redirect_to_today_set()
 
 
@@ -661,14 +690,14 @@ def submit_reflection_view(request, pk):
 
     bonus_suffix = ""
     if result["daily_bonus_awarded"]:
-        bonus_suffix += " 하루 완료 보너스 3점이 추가되었습니다."
+        bonus_suffix += " ?섎（ ?꾨즺 蹂대꼫??3?먯씠 異붽??섏뿀?듬땲??"
     if result["weekly_bonus_awarded"]:
-        bonus_suffix += " 5일 완주 보너스 20점이 추가되었습니다."
+        bonus_suffix += " 5???꾩＜ 蹂대꼫??20?먯씠 異붽??섏뿀?듬땲??"
 
     if result["is_update"]:
-        messages.warning(request, f"이미 저장한 묵상입니다. 점수는 1회만 적립됩니다.{bonus_suffix}")
+        messages.warning(request, f"?대? ??ν븳 臾듭긽?낅땲?? ?먯닔??1?뚮쭔 ?곷┰?⑸땲??{bonus_suffix}")
     else:
-        messages.success(request, f"묵상 답변이 저장되었습니다. 5점을 받았습니다.{bonus_suffix}")
+        messages.success(request, f"臾듭긽 ?듬?????λ릺?덉뒿?덈떎. 5?먯쓣 諛쏆븯?듬땲??{bonus_suffix}")
     return _redirect_to_today_set()
 
 
@@ -685,14 +714,14 @@ def complete_mission_view(request, pk):
 
     bonus_suffix = ""
     if result["daily_bonus_awarded"]:
-        bonus_suffix += " 하루 완료 보너스 3점이 추가되었습니다."
+        bonus_suffix += " ?섎（ ?꾨즺 蹂대꼫??3?먯씠 異붽??섏뿀?듬땲??"
     if result["weekly_bonus_awarded"]:
-        bonus_suffix += " 5일 완주 보너스 20점이 추가되었습니다."
+        bonus_suffix += " 5???꾩＜ 蹂대꼫??20?먯씠 異붽??섏뿀?듬땲??"
 
     if result["is_update"]:
-        messages.warning(request, f"이미 완료한 미션입니다. 점수는 1회만 적립됩니다.{bonus_suffix}")
+        messages.warning(request, f"?대? ?꾨즺??誘몄뀡?낅땲?? ?먯닔??1?뚮쭔 ?곷┰?⑸땲??{bonus_suffix}")
     else:
-        messages.success(request, f"오늘의 미션이 완료되었습니다. 7점을 받았습니다.{bonus_suffix}")
+        messages.success(request, f"?ㅻ뒛??誘몄뀡???꾨즺?섏뿀?듬땲?? 7?먯쓣 諛쏆븯?듬땲??{bonus_suffix}")
     return _redirect_to_today_set()
 
 
@@ -701,7 +730,7 @@ def complete_mission_view(request, pk):
 def transcribe_voice_note_view(request):
     audio_file = request.FILES.get("audio")
     if not audio_file:
-        return JsonResponse({"ok": False, "error": "녹음 파일이 전달되지 않았습니다."}, status=400)
+        return JsonResponse({"ok": False, "error": "?뱀쓬 ?뚯씪???꾨떖?섏? ?딆븯?듬땲??"}, status=400)
 
     file_size = getattr(audio_file, "size", 0) or 0
     content_type = getattr(audio_file, "content_type", "") or "unknown"
@@ -713,15 +742,15 @@ def transcribe_voice_note_view(request):
         if "empty transcript" in message.lower():
             readable_size = f"{round(file_size / 1024, 1)}KB"
             message = (
-                f"전사 결과가 비어 있습니다. 녹음 파일은 {readable_size}, 형식은 {content_type}입니다. "
-                "조금 더 크게 또렷하게 말씀해 보시거나, 마이크를 입 가까이 두고 다시 시도해 주세요."
+                f"?꾩궗 寃곌낵媛 鍮꾩뼱 ?덉뒿?덈떎. ?뱀쓬 ?뚯씪? {readable_size}, ?뺤떇? {content_type}?낅땲?? "
+                "議곌툑 ???ш쾶 ?먮졆?섍쾶 留먯???蹂댁떆嫄곕굹, 留덉씠?щ? ??媛源뚯씠 ?먭퀬 ?ㅼ떆 ?쒕룄??二쇱꽭??"
             )
         return JsonResponse({"ok": False, "error": message, "size": file_size, "content_type": content_type}, status=400)
     except Exception:
         return JsonResponse(
             {
                 "ok": False,
-                "error": "음성 전사 중 오류가 발생했습니다. 다시 시도해 주세요.",
+                "error": "?뚯꽦 ?꾩궗 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎. ?ㅼ떆 ?쒕룄??二쇱꽭??",
                 "size": file_size,
                 "content_type": content_type,
             },
@@ -735,7 +764,7 @@ def submit_highlight_vote_view(request):
     challenge = _get_active_challenge()
     sermon = challenge.sermon if challenge else None
     if not sermon:
-        messages.error(request, "투표할 설교를 찾을 수 없습니다.")
+        messages.error(request, "?ы몴???ㅺ탳瑜?李얠쓣 ???놁뒿?덈떎.")
         return redirect("core:home")
 
     choice = get_object_or_404(
@@ -752,9 +781,9 @@ def submit_highlight_vote_view(request):
     )
 
     if existing_vote:
-        messages.success(request, "가장 마음에 남은 말씀 선택을 바꿨습니다.")
+        messages.success(request, "媛??留덉쓬???⑥? 留먯? ?좏깮??諛붽엥?듬땲??")
     else:
-        messages.success(request, "가장 마음에 남은 말씀에 투표했습니다.")
+        messages.success(request, "媛??留덉쓬???⑥? 留먯????ы몴?덉뒿?덈떎.")
 
     return redirect(f"{reverse('core:home')}#highlight-panel")
 
@@ -763,7 +792,8 @@ def submit_highlight_vote_view(request):
 def pastor_dashboard_view(request):
     active_challenge = _get_active_challenge()
     available_sermons = list(
-        Sermon.objects.select_related("summary")
+        Sermon.objects.filter(Q(pastor_review_requested=True) | Q(is_published=True))
+        .select_related("summary")
         .prefetch_related("daily_engagements", "weekly_challenges")
         .order_by("-created_at", "-id")
     )
@@ -801,8 +831,13 @@ def pastor_sermon_edit_view(request, pk):
         Sermon.objects.prefetch_related("daily_engagements", "highlight_choices", "weekly_challenges"),
         pk=pk,
     )
+    if not sermon.pastor_review_requested and not sermon.is_published:
+        messages.warning(request, "?꾩쭅 ?대뱶誘쇱뿉??紐⑺쉶??寃???붿껌??蹂대궡吏 ?딆? ?ㅺ탳?낅땲??")
+        return redirect("core:pastor_dashboard")
     available_sermons = list(
-        Sermon.objects.order_by("-created_at", "-id").only("id", "title", "sermon_date")
+        Sermon.objects.filter(Q(pastor_review_requested=True) | Q(is_published=True))
+        .order_by("-created_at", "-id")
+        .only("id", "title", "sermon_date")
     )
     current_public_sermon_id = get_current_public_sermon_id()
     publication_state = _get_publication_state(sermon, current_public_sermon_id)
@@ -821,27 +856,30 @@ def pastor_sermon_edit_view(request, pk):
 
         if action == "unpublish":
             if not publication_state["is_current"]:
-                messages.warning(request, "현재 공개 중인 설교만 공개 해제할 수 있습니다.")
+                messages.warning(request, "?꾩옱 怨듦컻 以묒씤 ?ㅺ탳留?怨듦컻 ?댁젣?????덉뒿?덈떎.")
                 return redirect("core:pastor_sermon_edit", pk=sermon.pk)
             sermon.unpublish()
-            messages.success(request, "설교 공개를 해제했습니다.")
+            messages.success(request, "?ㅺ탳 怨듦컻瑜??댁젣?덉뒿?덈떎.")
             return redirect("core:pastor_sermon_edit", pk=sermon.pk)
 
         if action == "regenerate":
             if sermon.is_published:
-                messages.warning(request, "이미 공개된 설교는 교역자 페이지에서 다시 정리하지 않도록 막아두었습니다. 직접 수정 후 저장해 주세요.")
+                messages.warning(request, "?대? 怨듦컻???ㅺ탳??援먯뿭???섏씠吏?먯꽌 ?ㅼ떆 ?뺣━?섏? ?딅룄濡?留됱븘?먯뿀?듬땲?? 吏곸젒 ?섏젙 ????ν빐 二쇱꽭??")
                 return redirect("core:pastor_sermon_edit", pk=sermon.pk)
             try:
                 generate_sermon_content(sermon)
             except AIContentGenerationError as exc:
-                messages.error(request, f"AI 내용 다시 정리 실패: {exc}")
+                messages.error(request, f"AI ?댁슜 ?ㅼ떆 ?뺣━ ?ㅽ뙣: {exc}")
             else:
-                messages.success(request, "AI가 저장된 자막을 기준으로 설교 내용을 다시 정리했습니다.")
+                messages.success(request, "AI媛 ??λ맂 ?먮쭑??湲곗??쇰줈 ?ㅺ탳 ?댁슜???ㅼ떆 ?뺣━?덉뒿?덈떎.")
             return redirect("core:pastor_sermon_edit", pk=sermon.pk)
 
         if sermon_form.is_valid() and summary_form.is_valid() and daily_formset.is_valid():
+            publish_result = None
+            publish_at = None
             with transaction.atomic():
                 sermon_form.save()
+                sermon.sync_weekly_challenge_schedule()
                 summary_obj = summary_form.save(commit=False)
                 summary_obj.sermon = sermon
                 summary_obj.approved = True
@@ -861,15 +899,22 @@ def pastor_sermon_edit_view(request, pk):
                         transaction.set_rollback(True)
                         messages.warning(request, "공개 전에 확인이 필요한 항목이 있습니다: " + ", ".join(incomplete_items[:4]))
                         return redirect("core:pastor_sermon_edit", pk=sermon.pk)
-                    sermon.publish()
+                    publish_result, publish_at = sermon.schedule_or_publish()
 
             if action == "publish":
-                messages.success(request, "설교를 공개했습니다. 교인 화면에 바로 반영됩니다.")
+                if publish_result == "scheduled":
+                    publish_at_text = timezone.localtime(publish_at).strftime("%Y-%m-%d %H:%M")
+                    messages.success(
+                        request,
+                        f"검토를 마쳤습니다. 실제 공개는 {publish_at_text}에 자동으로 진행되어 교인들에게 보여집니다.",
+                    )
+                else:
+                    messages.success(request, "설교를 공개했습니다. 교인 화면에 바로 반영됩니다.")
             else:
                 messages.success(request, "수정 내용을 저장했습니다.")
             return redirect("core:pastor_sermon_edit", pk=sermon.pk)
 
-        messages.error(request, "입력한 내용을 다시 확인해 주세요.")
+        messages.error(request, "?낅젰???댁슜???ㅼ떆 ?뺤씤??二쇱꽭??")
     else:
         sermon_form = PastorSermonEditForm(instance=sermon, prefix="sermon")
         summary_form = PastorSermonSummaryForm(instance=summary, prefix="summary")

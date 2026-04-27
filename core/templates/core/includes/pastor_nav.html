@@ -1,7 +1,7 @@
 <section class="panel pastor-nav-panel">
     <nav class="pastor-nav" aria-label="교역자 메뉴">
         <a class="pastor-nav-link {% if pastor_menu == 'sermon' %}pastor-nav-link-active{% endif %}" href="{% if sermon %}{% url 'core:pastor_sermon_edit' sermon.pk %}{% else %}{% url 'core:pastor_dashboard' %}{% endif %}">
-            설교 검토 및 공개
+            설교 검토
         </a>
         <a class="pastor-nav-link {% if pastor_menu == 'reports' %}pastor-nav-link-active{% endif %}" href="{% url 'core:pastor_reports' %}">
             리포트

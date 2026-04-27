@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -84,26 +84,10 @@ def get_source_media_root():
 
 
 def get_current_public_sermon_id():
-    active_challenge = (
-        WeeklyChallenge.objects.filter(
-            is_active=True,
-            sermon__is_published=True,
-            sermon__status=SermonStatus.PUBLISHED,
-        )
-        .select_related("sermon")
-        .order_by("-week_start", "-id")
-        .first()
-    )
+    active_challenge = WeeklyChallenge.get_current_public_challenge()
     if active_challenge and active_challenge.sermon_id:
         return active_challenge.sermon_id
-
-    latest_published = (
-        Sermon.objects.filter(is_published=True, status=SermonStatus.PUBLISHED)
-        .order_by("-published_at", "-sermon_date", "-id")
-        .only("id")
-        .first()
-    )
-    return latest_published.id if latest_published else None
+    return None
 
 
 def source_media_upload_to(instance, filename):
@@ -146,6 +130,9 @@ class Sermon(models.Model):
     import_error = models.TextField(blank=True)
     ai_error = models.TextField(blank=True)
     audio_error = models.TextField(blank=True)
+    pastor_review_requested = models.BooleanField(default=False)
+    pastor_review_requested_at = models.DateTimeField(null=True, blank=True)
+    scheduled_publish_at = models.DateTimeField(null=True, blank=True)
     last_imported_at = models.DateTimeField(null=True, blank=True)
     last_ai_generated_at = models.DateTimeField(null=True, blank=True)
     last_audio_generated_at = models.DateTimeField(null=True, blank=True)
@@ -232,12 +219,80 @@ class Sermon(models.Model):
             ".ogv": "video/ogg",
         }.get(suffix, "video/mp4")
 
-    def publish(self):
+    def _get_public_release_at(self):
+        self.sync_weekly_challenge_schedule()
+        latest_challenge = self.weekly_challenges.order_by("-week_start", "-id").first()
+        if latest_challenge is None:
+            return timezone.now()
+        release_date = latest_challenge.release_date_for_day(1)
+        return timezone.make_aware(
+            datetime.combine(release_date, time.min),
+            timezone.get_current_timezone(),
+        )
+
+    def sync_weekly_challenge_schedule(self):
+        week_start = self.sermon_date + timedelta(days=1)
+        week_end = week_start + timedelta(days=6)
+        title = f"{week_start.strftime('%m/%d')} Weekly Sermon Challenge"
+        challenge, _ = WeeklyChallenge.objects.update_or_create(
+            sermon=self,
+            defaults={
+                "title": title,
+                "week_start": week_start,
+                "week_end": week_end,
+            },
+        )
+        return challenge
+
+    def schedule_or_publish(self, now=None):
+        now = now or timezone.now()
+        release_at = self._get_public_release_at()
+        if now < release_at:
+            self.schedule_publication(release_at)
+            return "scheduled", release_at
+        self.publish(published_at=now)
+        return "published", now
+
+    def schedule_publication(self, scheduled_at):
+        self.approve_generated_content()
+        self.is_published = False
+        self.status = SermonStatus.APPROVED
+        self.scheduled_publish_at = scheduled_at
+        self.pastor_review_requested = True
+        if self.pastor_review_requested_at is None:
+            self.pastor_review_requested_at = timezone.now()
+        self.save(
+            update_fields=[
+                "is_published",
+                "status",
+                "scheduled_publish_at",
+                "pastor_review_requested",
+                "pastor_review_requested_at",
+                "updated_at",
+            ]
+        )
+        self.weekly_challenges.update(is_active=False)
+
+    def publish(self, published_at=None):
         self.approve_generated_content()
         self.is_published = True
         self.status = SermonStatus.PUBLISHED
-        self.published_at = timezone.now()
-        self.save(update_fields=["is_published", "status", "published_at", "updated_at"])
+        self.published_at = published_at or timezone.now()
+        self.scheduled_publish_at = None
+        self.pastor_review_requested = True
+        if self.pastor_review_requested_at is None:
+            self.pastor_review_requested_at = timezone.now()
+        self.save(
+            update_fields=[
+                "is_published",
+                "status",
+                "published_at",
+                "scheduled_publish_at",
+                "pastor_review_requested",
+                "pastor_review_requested_at",
+                "updated_at",
+            ]
+        )
         latest_challenge = self.weekly_challenges.order_by("-week_start", "-id").first()
         if latest_challenge:
             latest_challenge.activate()
@@ -245,7 +300,8 @@ class Sermon(models.Model):
     def unpublish(self):
         self.is_published = False
         self.status = SermonStatus.APPROVED
-        self.save(update_fields=["is_published", "status", "updated_at"])
+        self.scheduled_publish_at = None
+        self.save(update_fields=["is_published", "status", "scheduled_publish_at", "updated_at"])
         self.weekly_challenges.update(is_active=False)
 
     def approve_generated_content(self):
@@ -270,6 +326,30 @@ class Sermon(models.Model):
             except Exception:
                 return ""
         return self.source_media_path
+
+    def mark_ready_for_pastor_review(self):
+        type(self).objects.exclude(pk=self.pk).filter(pastor_review_requested=True).update(
+            pastor_review_requested=False
+        )
+        self.pastor_review_requested = True
+        self.pastor_review_requested_at = timezone.now()
+        self.save(update_fields=["pastor_review_requested", "pastor_review_requested_at", "updated_at"])
+
+    @classmethod
+    def release_due_publications(cls, now=None):
+        now = now or timezone.now()
+        due_sermons = list(
+            cls.objects.filter(
+                is_published=False,
+                scheduled_publish_at__isnull=False,
+                scheduled_publish_at__lte=now,
+            ).order_by("scheduled_publish_at", "id")
+        )
+        released_ids = []
+        for sermon in due_sermons:
+            sermon.publish(published_at=sermon.scheduled_publish_at or now)
+            released_ids.append(sermon.pk)
+        return released_ids
 
 
 class SermonSummary(models.Model):
@@ -406,6 +486,22 @@ class UserProfile(models.Model):
         return self.user.get_username()
 
 
+class PastorNotificationRecipient(models.Model):
+    name = models.CharField(max_length=100, blank=True)
+    email = models.EmailField(unique=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name", "email"]
+        verbose_name = "목회자 공지 수신자"
+        verbose_name_plural = "목회자 공지 수신자"
+
+    def __str__(self):
+        return self.name or self.email
+
+
 class QuizAttempt(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     sermon = models.ForeignKey(Sermon, on_delete=models.CASCADE)
@@ -450,6 +546,40 @@ class WeeklyChallenge(models.Model):
             if not self.is_active:
                 self.is_active = True
                 self.save(update_fields=["is_active"])
+
+    def public_start_date(self):
+        return self.release_date_for_day(1)
+
+    def public_end_date(self):
+        return self.release_date_for_day(5)
+
+    def is_public_window_open(self, today=None):
+        today = today or timezone.localdate()
+        return self.public_start_date() <= today <= self.public_end_date()
+
+    @classmethod
+    def get_current_public_challenge(cls, today=None):
+        Sermon.release_due_publications()
+        today = today or timezone.localdate()
+        candidates = list(
+            cls.objects.filter(
+                is_active=True,
+                sermon__is_published=True,
+                sermon__status=SermonStatus.PUBLISHED,
+            )
+            .select_related("sermon")
+            .order_by("-week_start", "-id")
+        )
+        stale_ids = []
+        for challenge in candidates:
+            if challenge.is_public_window_open(today):
+                if stale_ids:
+                    cls.objects.filter(pk__in=stale_ids).update(is_active=False)
+                return challenge
+            stale_ids.append(challenge.pk)
+        if stale_ids:
+            cls.objects.filter(pk__in=stale_ids).update(is_active=False)
+        return None
 
     def release_date_for_day(self, day_number):
         return self.week_start + timedelta(days=day_number)

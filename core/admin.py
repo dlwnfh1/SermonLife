@@ -17,6 +17,7 @@ from .models import (
     get_source_media_root,
     get_current_public_sermon_id,
     MediaStorageSetting,
+    PastorNotificationRecipient,
     PointLedger,
     SourceMediaAsset,
     Sermon,
@@ -26,6 +27,10 @@ from .models import (
     UserProfile,
 )
 from .services.ai_generation import AIContentGenerationError, generate_sermon_content
+from .services.pastor_review_notifications import (
+    PastorReviewNotificationError,
+    send_pastor_review_notification,
+)
 from .services.transcript_service import (
     TranscriptFetchError,
     transcribe_audio_file,
@@ -168,13 +173,14 @@ def publish_sermons(modeladmin, request, queryset):
     updated = 0
     latest_published = None
     for sermon in queryset.order_by("sermon_date", "id"):
-        sermon.publish()
+        publish_result, _ = sermon.schedule_or_publish()
         updated += 1
-        latest_published = sermon
+        if publish_result == "published":
+            latest_published = sermon
 
     modeladmin.message_user(
         request,
-        f"{updated} sermon(s) published.",
+        f"{updated} sermon(s) processed for publication.",
         level=messages.SUCCESS,
     )
     if latest_published and latest_published.weekly_challenges.exists():
@@ -365,6 +371,7 @@ class SermonAdmin(admin.ModelAdmin):
         "sermon_date",
         "preacher",
         "publication_state_display",
+        "pastor_review_requested",
         "status",
         "ai_generated",
         "last_imported_at",
@@ -379,6 +386,8 @@ class SermonAdmin(admin.ModelAdmin):
         "last_imported_at",
         "last_ai_generated_at",
         "last_audio_generated_at",
+        "pastor_review_requested",
+        "pastor_review_requested_at",
         "import_error",
         "ai_error",
         "audio_error",
@@ -412,6 +421,15 @@ class SermonAdmin(admin.ModelAdmin):
                 "fields": ("transcript",),
             },
         ),
+        (
+            "목회자 검토 요청 상태",
+            {
+                "fields": (
+                    "pastor_review_requested",
+                    "pastor_review_requested_at",
+                )
+            },
+        ),
     )
     formfield_overrides = {
         dj_models.TextField: {
@@ -431,6 +449,8 @@ class SermonAdmin(admin.ModelAdmin):
 
     def publication_state_display(self, obj):
         current_public_sermon_id = get_current_public_sermon_id()
+        if obj.scheduled_publish_at and not obj.is_published:
+            return "화요일 예약 공개"
         if obj.is_published and obj.pk == current_public_sermon_id:
             return "현재 공개 중"
         if obj.is_published:
@@ -482,6 +502,11 @@ class SermonAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.delete_source_media_view),
                 name="core_sermon_delete_source_media",
             ),
+            path(
+                "<path:object_id>/notify-pastor-review/",
+                self.admin_site.admin_view(self.notify_pastor_review_view),
+                name="core_sermon_notify_pastor_review",
+            ),
         ]
         return custom_urls + urls
 
@@ -490,11 +515,18 @@ class SermonAdmin(admin.ModelAdmin):
         extra_context["show_prepare_button"] = True
         if object_id:
             sermon = self.get_object(request, object_id)
+            active_recipients = list(
+                PastorNotificationRecipient.objects.filter(is_active=True)
+                .order_by("name", "email")
+                .values_list("email", flat=True)
+            )
             current_public_sermon_id = get_current_public_sermon_id()
             is_current_public_sermon = bool(
                 sermon and sermon.is_published and sermon.pk == current_public_sermon_id
             )
-            if sermon and sermon.is_published:
+            if sermon and sermon.scheduled_publish_at and not sermon.is_published:
+                publication_state_label = "화요일 예약 공개"
+            elif sermon and sermon.is_published:
                 publication_state_label = "현재 공개 중" if is_current_public_sermon else "이전 공개"
             else:
                 publication_state_label = "미공개"
@@ -509,9 +541,27 @@ class SermonAdmin(admin.ModelAdmin):
                 "admin:core_sermon_delete_source_media",
                 args=[object_id],
             )
+            extra_context["notify_pastor_review_url"] = reverse(
+                "admin:core_sermon_notify_pastor_review",
+                args=[object_id],
+            )
             extra_context["delete_url"] = reverse("admin:core_sermon_delete", args=[object_id])
             extra_context["publication_state_label"] = publication_state_label
             extra_context["is_current_public_sermon"] = is_current_public_sermon
+            extra_context["pastor_review_status_label"] = (
+                "목회자 검토 요청됨" if sermon and sermon.pastor_review_requested else "검토 요청 전"
+            )
+            extra_context["pastor_review_requested_at_display"] = (
+                timezone.localtime(sermon.pastor_review_requested_at).strftime("%Y-%m-%d %H:%M")
+                if sermon and sermon.pastor_review_requested_at
+                else ""
+            )
+            extra_context["pastor_review_recipient_count"] = len(active_recipients)
+            extra_context["pastor_review_recipient_preview"] = active_recipients[:3]
+            extra_context["pastor_review_recipient_overflow"] = max(len(active_recipients) - 3, 0)
+            extra_context["pastor_notification_recipient_url"] = reverse(
+                "admin:core_pastornotificationrecipient_changelist"
+            )
         return super().changeform_view(request, object_id, form_url, extra_context=extra_context)
 
     def response_add(self, request, obj, post_url_continue=None):
@@ -569,6 +619,11 @@ class SermonAdmin(admin.ModelAdmin):
                 reverse("admin:core_sermon_publish", args=[obj.pk])
             )
 
+        if "_save_and_notify_pastor" in request.POST:
+            return HttpResponseRedirect(
+                reverse("admin:core_sermon_notify_pastor_review", args=[obj.pk])
+            )
+
         return super().response_change(request, obj)
 
     def regenerate_ai_view(self, request, object_id):
@@ -582,6 +637,9 @@ class SermonAdmin(admin.ModelAdmin):
         except AIContentGenerationError as exc:
             self.message_user(request, f"AI 생성 실패: {exc}", level=messages.ERROR)
         else:
+            sermon.pastor_review_requested = False
+            sermon.pastor_review_requested_at = None
+            sermon.save(update_fields=["pastor_review_requested", "pastor_review_requested_at", "updated_at"])
             self.message_user(request, f"'{sermon.title}' 설교 내용을 AI로 다시 생성했습니다.", level=messages.SUCCESS)
         return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
 
@@ -616,6 +674,9 @@ class SermonAdmin(admin.ModelAdmin):
                 sermon.save(update_fields=["ai_error", "updated_at"])
                 self.message_user(request, f"AI 생성 실패: {exc}", level=messages.ERROR)
         else:
+            sermon.pastor_review_requested = False
+            sermon.pastor_review_requested_at = None
+            sermon.save(update_fields=["pastor_review_requested", "pastor_review_requested_at", "updated_at"])
             self.message_user(
                 request,
                 f"'{sermon.title}' 설교를 전사하고 AI 내용까지 정리했습니다.",
@@ -629,8 +690,16 @@ class SermonAdmin(admin.ModelAdmin):
             self.message_user(request, "설교를 찾을 수 없습니다.", level=messages.ERROR)
             return HttpResponseRedirect(reverse("admin:core_sermon_changelist"))
 
-        sermon.publish()
-        self.message_user(request, f"'{sermon.title}' 설교를 바로 공개했습니다.", level=messages.SUCCESS)
+        publish_result, publish_at = sermon.schedule_or_publish()
+        if publish_result == "scheduled":
+            publish_at_text = timezone.localtime(publish_at).strftime("%Y-%m-%d %H:%M")
+            self.message_user(
+                request,
+                f"'{sermon.title}' 설교는 {publish_at_text}에 자동 공개되도록 예약했습니다.",
+                level=messages.SUCCESS,
+            )
+        else:
+            self.message_user(request, f"'{sermon.title}' 설교를 바로 공개했습니다.", level=messages.SUCCESS)
         return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
 
     def unpublish_single_view(self, request, object_id):
@@ -653,6 +722,39 @@ class SermonAdmin(admin.ModelAdmin):
             f"'{sermon.title}' 설교 공개를 해제했습니다. 사용자 화면에는 공개 전 안내 화면이 다시 표시됩니다.",
             level=messages.SUCCESS,
         )
+        return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
+
+    def notify_pastor_review_view(self, request, object_id):
+        sermon = self.get_object(request, object_id)
+        if sermon is None:
+            self.message_user(request, "설교를 찾을 수 없습니다.", level=messages.ERROR)
+            return HttpResponseRedirect(reverse("admin:core_sermon_changelist"))
+
+        if not sermon.ai_generated:
+            self.message_user(
+                request,
+                "먼저 AI 자동 정리를 완료한 뒤 목회자 검토 요청을 보내 주세요.",
+                level=messages.WARNING,
+            )
+            return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
+
+        sermon.mark_ready_for_pastor_review()
+
+        try:
+            recipient_emails = send_pastor_review_notification(sermon)
+        except PastorReviewNotificationError as exc:
+            self.message_user(
+                request,
+                f"목회자 검토 요청 상태로 변경했지만 이메일 발송은 실패했습니다: {exc}",
+                level=messages.WARNING,
+            )
+        else:
+            self.message_user(
+                request,
+                f"목회자 검토 요청을 보냈습니다. 수신자: {', '.join(recipient_emails)}",
+                level=messages.SUCCESS,
+            )
+
         return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
 
     def delete_source_media_view(self, request, object_id):
@@ -712,14 +814,22 @@ class SermonAdmin(admin.ModelAdmin):
             if obj.published_at is None:
                 obj.published_at = timezone.now()
         super().save_model(request, obj, form, change)
+        obj.sync_weekly_challenge_schedule()
         if publish_requested:
-            obj.publish()
+            obj.schedule_or_publish()
         elif approve_requested:
             obj.approve_generated_content()
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = ("user", "member_role", "points", "streak_days")
     search_fields = ("user__username", "member_role")
+
+
+@admin.register(PastorNotificationRecipient)
+class PastorNotificationRecipientAdmin(admin.ModelAdmin):
+    list_display = ("name", "email", "is_active", "updated_at")
+    search_fields = ("name", "email")
+    list_filter = ("is_active",)
 
 
 @admin.register(PointLedger)
