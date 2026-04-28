@@ -1,4 +1,5 @@
 ﻿import re
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib import messages
@@ -122,7 +123,7 @@ def _format_transcript_paragraphs(transcript, sentences_per_paragraph=3):
 
         sentences = [
             sentence.strip()
-            for sentence in re.split(r"(?<=[.!??귨펯竊?)\s+", compact)
+            for sentence in re.split(r"(?<=[.!?])\s+", compact)
             if sentence.strip()
         ]
 
@@ -238,12 +239,16 @@ def _build_home_context(request):
     highlight_messages = []
     for message in list(messages.get_messages(request)):
         text = str(message)
-        if "留덉쓬???⑥? 留먯?" in text or "怨듦컧" in text:
+        if "공감" in text or "마음에 남은 말씀" in text or "말씀 선택" in text:
             highlight_messages.append({"text": text, "tags": message.tags})
         else:
             if not hasattr(request, "_remaining_messages"):
                 request._remaining_messages = []
             request._remaining_messages.append({"text": text, "tags": message.tags})
+
+    active_home_tab = request.GET.get("tab", "sermon")
+    if active_home_tab not in {"sermon", "overview", "routine", "today"}:
+        active_home_tab = "sermon"
 
     challenge = _get_active_challenge()
     sermon = challenge.sermon if challenge else None
@@ -395,6 +400,7 @@ def _build_home_context(request):
         "today_audio_clip": today_audio_clip,
         "highlight_messages": highlight_messages,
         "remaining_messages": getattr(request, "_remaining_messages", []),
+        "active_home_tab": active_home_tab,
     }
 
 
@@ -413,8 +419,17 @@ def _get_released_daily_or_404(pk):
     return daily
 
 
+def _redirect_home(tab="sermon", anchor=""):
+    query = urlencode({"tab": tab}) if tab else ""
+    url = reverse("core:home")
+    if query:
+        url = f"{url}?{query}"
+    if anchor:
+        url = f"{url}#{anchor}"
+    return redirect(url)
+
 def _redirect_to_today_set():
-    return redirect(f"{reverse('core:home')}#today-set")
+    return _redirect_home(tab="today", anchor="today-set")
 
 
 def _is_pastor_user(user):
@@ -628,7 +643,7 @@ def login_view(request):
     form.fields["password"].widget.attrs.update({"placeholder": "비밀번호"})
     if request.method == "POST" and form.is_valid():
         login(request, form.get_user())
-        messages.success(request, "濡쒓렇?몃릺?덉뒿?덈떎.")
+        messages.success(request, "로그인되었습니다.")
         return redirect("core:home")
 
     return render(request, "core/login.html", {"form": form})
@@ -636,7 +651,7 @@ def login_view(request):
 
 def logout_view(request):
     logout(request)
-    messages.success(request, "濡쒓렇?꾩썐?섏뿀?듬땲??")
+    messages.success(request, "로그아웃되었습니다.")
     return redirect("core:login")
 
 
@@ -646,7 +661,7 @@ def submit_daily_quiz_view(request, pk):
     daily = _get_released_daily_or_404(pk)
     selected_answer = request.POST.get("selected_answer", "").strip()
     if selected_answer not in daily.choices:
-        messages.error(request, "?댁쫰 蹂닿린瑜??좏깮?????쒖텧??二쇱꽭??")
+        messages.error(request, "퀴즈 보기를 선택한 뒤 제출해 주세요.")
         return _redirect_to_today_set()
 
     result = submit_daily_quiz(
@@ -657,19 +672,19 @@ def submit_daily_quiz_view(request, pk):
     attempt = result["attempt"]
     bonus_suffix = ""
     if result["daily_bonus_awarded"]:
-        bonus_suffix += " ?섎（ ?꾨즺 蹂대꼫??3?먯씠 異붽??섏뿀?듬땲??"
+        bonus_suffix += " 하루 완료 보너스 3달란트가 추가되었습니다."
     if result["weekly_bonus_awarded"]:
-        bonus_suffix += " 5???꾩＜ 蹂대꼫??20?먯씠 異붽??섏뿀?듬땲??"
+        bonus_suffix += " 5일 완주 보너스 20달란트가 추가되었습니다."
 
     if result["is_update"]:
         if attempt.is_correct:
-            messages.warning(request, f"?대? ?쒖텧???댁쫰?낅땲?? ?먯닔??1?뚮쭔 ?곷┰?⑸땲??{bonus_suffix}")
+            messages.warning(request, f"이미 제출한 퀴즈입니다. 달란트는 1회만 적립됩니다.{bonus_suffix}")
         else:
-            messages.warning(request, "?대? ?쒖텧???댁쫰?낅땲?? ?ㅼ떆 ?ㅺ탳 ?먮쫫???뺤씤??蹂댁꽭??")
+            messages.warning(request, "이미 제출한 퀴즈입니다. 다시 설교 내용을 확인해 보세요.")
     elif attempt.is_correct:
-        messages.success(request, f"?뺣떟?낅땲?? ?댁쫰 5?먯쓣 諛쏆븯?듬땲??{bonus_suffix}")
+        messages.success(request, f"정답입니다. 퀴즈 5달란트를 받았습니다.{bonus_suffix}")
     else:
-        messages.warning(request, "?뺣떟???꾨떃?덈떎. ?ㅼ떆 ?ㅺ탳 ?먮쫫???뺤씤??蹂댁꽭??")
+        messages.warning(request, "정답이 아닙니다. 다시 설교 내용을 확인해 보세요.")
     return _redirect_to_today_set()
 
 
@@ -690,14 +705,14 @@ def submit_reflection_view(request, pk):
 
     bonus_suffix = ""
     if result["daily_bonus_awarded"]:
-        bonus_suffix += " ?섎（ ?꾨즺 蹂대꼫??3?먯씠 異붽??섏뿀?듬땲??"
+        bonus_suffix += " 하루 완료 보너스 3달란트가 추가되었습니다."
     if result["weekly_bonus_awarded"]:
-        bonus_suffix += " 5???꾩＜ 蹂대꼫??20?먯씠 異붽??섏뿀?듬땲??"
+        bonus_suffix += " 5일 완주 보너스 20달란트가 추가되었습니다."
 
     if result["is_update"]:
-        messages.warning(request, f"?대? ??ν븳 臾듭긽?낅땲?? ?먯닔??1?뚮쭔 ?곷┰?⑸땲??{bonus_suffix}")
+        messages.warning(request, f"이미 저장한 묵상입니다. 달란트는 1회만 적립됩니다.{bonus_suffix}")
     else:
-        messages.success(request, f"臾듭긽 ?듬?????λ릺?덉뒿?덈떎. 5?먯쓣 諛쏆븯?듬땲??{bonus_suffix}")
+        messages.success(request, f"묵상 답변이 저장되었습니다. 5달란트를 받았습니다.{bonus_suffix}")
     return _redirect_to_today_set()
 
 
@@ -714,14 +729,14 @@ def complete_mission_view(request, pk):
 
     bonus_suffix = ""
     if result["daily_bonus_awarded"]:
-        bonus_suffix += " ?섎（ ?꾨즺 蹂대꼫??3?먯씠 異붽??섏뿀?듬땲??"
+        bonus_suffix += " 하루 완료 보너스 3달란트가 추가되었습니다."
     if result["weekly_bonus_awarded"]:
-        bonus_suffix += " 5???꾩＜ 蹂대꼫??20?먯씠 異붽??섏뿀?듬땲??"
+        bonus_suffix += " 5일 완주 보너스 20달란트가 추가되었습니다."
 
     if result["is_update"]:
-        messages.warning(request, f"?대? ?꾨즺??誘몄뀡?낅땲?? ?먯닔??1?뚮쭔 ?곷┰?⑸땲??{bonus_suffix}")
+        messages.warning(request, f"이미 완료한 미션입니다. 달란트는 1회만 적립됩니다.{bonus_suffix}")
     else:
-        messages.success(request, f"?ㅻ뒛??誘몄뀡???꾨즺?섏뿀?듬땲?? 7?먯쓣 諛쏆븯?듬땲??{bonus_suffix}")
+        messages.success(request, f"오늘의 미션을 완료했습니다. 7달란트를 받았습니다.{bonus_suffix}")
     return _redirect_to_today_set()
 
 
@@ -730,7 +745,7 @@ def complete_mission_view(request, pk):
 def transcribe_voice_note_view(request):
     audio_file = request.FILES.get("audio")
     if not audio_file:
-        return JsonResponse({"ok": False, "error": "?뱀쓬 ?뚯씪???꾨떖?섏? ?딆븯?듬땲??"}, status=400)
+        return JsonResponse({"ok": False, "error": "녹음 파일이 전달되지 않았습니다."}, status=400)
 
     file_size = getattr(audio_file, "size", 0) or 0
     content_type = getattr(audio_file, "content_type", "") or "unknown"
@@ -742,15 +757,15 @@ def transcribe_voice_note_view(request):
         if "empty transcript" in message.lower():
             readable_size = f"{round(file_size / 1024, 1)}KB"
             message = (
-                f"?꾩궗 寃곌낵媛 鍮꾩뼱 ?덉뒿?덈떎. ?뱀쓬 ?뚯씪? {readable_size}, ?뺤떇? {content_type}?낅땲?? "
-                "議곌툑 ???ш쾶 ?먮졆?섍쾶 留먯???蹂댁떆嫄곕굹, 留덉씠?щ? ??媛源뚯씠 ?먭퀬 ?ㅼ떆 ?쒕룄??二쇱꽭??"
+                f"전사 결과가 비어 있습니다. 녹음 파일은 {readable_size}, 형식은 {content_type}입니다. "
+                "조금 더 크게 또렷하게 말씀해 보시거나, 마이크를 입 가까이 두고 다시 시도해 주세요."
             )
         return JsonResponse({"ok": False, "error": message, "size": file_size, "content_type": content_type}, status=400)
     except Exception:
         return JsonResponse(
             {
                 "ok": False,
-                "error": "?뚯꽦 ?꾩궗 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎. ?ㅼ떆 ?쒕룄??二쇱꽭??",
+                "error": "음성 전사 중 오류가 발생했습니다. 다시 시도해 주세요.",
                 "size": file_size,
                 "content_type": content_type,
             },
@@ -764,7 +779,7 @@ def submit_highlight_vote_view(request):
     challenge = _get_active_challenge()
     sermon = challenge.sermon if challenge else None
     if not sermon:
-        messages.error(request, "?ы몴???ㅺ탳瑜?李얠쓣 ???놁뒿?덈떎.")
+        messages.error(request, "투표할 설교를 찾을 수 없습니다.")
         return redirect("core:home")
 
     choice = get_object_or_404(
@@ -781,11 +796,11 @@ def submit_highlight_vote_view(request):
     )
 
     if existing_vote:
-        messages.success(request, "媛??留덉쓬???⑥? 留먯? ?좏깮??諛붽엥?듬땲??")
+        messages.success(request, "가장 마음에 남은 말씀 선택이 변경되었습니다.")
     else:
-        messages.success(request, "媛??留덉쓬???⑥? 留먯????ы몴?덉뒿?덈떎.")
+        messages.success(request, "가장 마음에 남은 말씀에 투표했습니다.")
 
-    return redirect(f"{reverse('core:home')}#highlight-panel")
+    return _redirect_home(tab="routine", anchor="highlight-panel")
 
 
 @pastor_required
@@ -1055,3 +1070,4 @@ def pastor_members_view(request):
             "pastor_menu": "members",
         },
     )
+

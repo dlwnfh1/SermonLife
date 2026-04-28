@@ -183,10 +183,10 @@
         </section>
 
         {% if sermon %}
-            <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-sermon" checked>
-            <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-overview">
-            <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-routine">
-            <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-today">
+            <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-sermon" {% if active_home_tab == "sermon" %}checked{% endif %}>
+            <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-overview" {% if active_home_tab == "overview" %}checked{% endif %}>
+            <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-routine" {% if active_home_tab == "routine" %}checked{% endif %}>
+            <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-today" {% if active_home_tab == "today" %}checked{% endif %}>
 
             <div class="home-tab-sticky">
                 <section class="home-tab-bar" aria-label="홈 탭">
@@ -313,6 +313,7 @@
                                     {% if request.user.is_authenticated %}
                                         <form method="post" action="{% url 'core:submit_highlight_vote' %}" class="action-form">
                                             {% csrf_token %}
+                                            <input type="hidden" name="home_tab" value="routine">
                                             <div class="choice-group highlight-choice-group">
                                                 {% for choice in highlight_choices %}
                                                     <label class="choice-option highlight-choice-option">
@@ -445,6 +446,7 @@
                                 {% if request.user.is_authenticated %}
                                     <form method="post" action="{% url 'core:submit_daily_quiz' current_daily.id %}" class="action-form">
                                         {% csrf_token %}
+                                        <input type="hidden" name="home_tab" value="today">
                                         <div class="choice-group">
                                             {% for choice in current_daily.choices %}
                                                 <label class="choice-option">
@@ -479,6 +481,7 @@
                                 {% if request.user.is_authenticated %}
                                     <form method="post" action="{% url 'core:submit_reflection' current_daily.id %}" class="action-form">
                                         {% csrf_token %}
+                                        <input type="hidden" name="home_tab" value="today">
                                         <div class="voice-entry-toolbar voice-entry-toolbar-primary">
                                             <button type="button" class="voice-input-button voice-input-button-primary" data-voice-target="response_text" data-voice-label-id="reflection-voice-status" data-idle-label="🎤 말로 입력 시작" data-listening-label="■ 녹음 중">🎤 말로 입력 시작</button>
                                             <span id="reflection-voice-status" class="voice-entry-status" aria-live="polite"></span>
@@ -500,6 +503,7 @@
                                 {% if request.user.is_authenticated %}
                                     <form method="post" action="{% url 'core:complete_mission' current_daily.id %}" class="action-form">
                                         {% csrf_token %}
+                                        <input type="hidden" name="home_tab" value="today">
                                         <div class="voice-entry-toolbar voice-entry-toolbar-primary">
                                             <button type="button" class="voice-input-button voice-input-button-primary" data-voice-target="mission_note" data-voice-label-id="mission-voice-status" data-idle-label="🎤 말로 입력 시작" data-listening-label="■ 녹음 중">🎤 말로 입력 시작</button>
                                             <span id="mission-voice-status" class="voice-entry-status" aria-live="polite"></span>
