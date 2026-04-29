@@ -690,12 +690,37 @@ a {
 
 .confirm-dialog-card {
     display: grid;
-    gap: 14px;
-    padding: 26px 24px 22px;
-    border-radius: 28px;
-    background: linear-gradient(180deg, rgba(255, 250, 242, 0.99), rgba(243, 234, 223, 0.98));
+    gap: 16px;
+    padding: 28px 26px 24px;
+    border-radius: 30px;
+    background:
+        radial-gradient(circle at top right, rgba(139, 92, 59, 0.13), transparent 34%),
+        linear-gradient(180deg, rgba(255, 250, 242, 0.995), rgba(243, 234, 223, 0.985));
     border: 1px solid rgba(32, 25, 19, 0.08);
-    box-shadow: 0 28px 56px rgba(32, 25, 19, 0.22);
+    box-shadow: 0 30px 60px rgba(32, 25, 19, 0.24);
+}
+
+.confirm-dialog-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(139, 92, 59, 0.12);
+    color: var(--accent);
+    font-size: 0.84rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.confirm-dialog-badge-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #b77945 0%, #8b5c3b 100%);
+    box-shadow: 0 0 0 5px rgba(139, 92, 59, 0.12);
 }
 
 .confirm-dialog-card h2 {
@@ -708,13 +733,28 @@ a {
 
 .confirm-dialog-answer {
     margin: -2px 0 0;
-    padding: 12px 14px;
-    border-radius: 16px;
-    background: rgba(47, 107, 132, 0.08);
+    display: grid;
+    gap: 6px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(47, 107, 132, 0.08), rgba(47, 107, 132, 0.04));
+    border: 1px solid rgba(47, 107, 132, 0.12);
+}
+
+.confirm-dialog-answer-label {
+    color: var(--accent);
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.confirm-dialog-answer p {
+    margin: 0;
     color: var(--ink);
-    font-size: 1rem;
+    font-size: 1.02rem;
     font-weight: 700;
-    line-height: 1.6;
+    line-height: 1.65;
 }
 
 .confirm-dialog-copy {
@@ -727,8 +767,8 @@ a {
 .confirm-dialog-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    margin-top: 4px;
+    gap: 12px;
+    margin-top: 2px;
 }
 
 .hero-today-card strong,

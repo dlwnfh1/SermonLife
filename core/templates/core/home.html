@@ -227,9 +227,15 @@
 
             <dialog class="confirm-dialog" id="quiz-confirm-dialog" aria-labelledby="quiz-confirm-title">
                 <form method="dialog" class="confirm-dialog-card">
-                    <p class="section-label">퀴즈 제출 확인</p>
+                    <div class="confirm-dialog-badge">
+                        <span class="confirm-dialog-badge-dot" aria-hidden="true"></span>
+                        <span>퀴즈 제출 확인</span>
+                    </div>
                     <h2 id="quiz-confirm-title">선택한 답으로 제출할까요?</h2>
-                    <p class="confirm-dialog-answer" id="quiz-confirm-answer"></p>
+                    <div class="confirm-dialog-answer">
+                        <span class="confirm-dialog-answer-label">선택한 답</span>
+                        <p id="quiz-confirm-answer"></p>
+                    </div>
                     <p class="confirm-dialog-copy">제출 후에는 퀴즈 달란트가 다시 적립되지 않으니 한 번 더 확인해 주세요.</p>
                     <div class="confirm-dialog-actions">
                         <button type="button" class="action-button action-button-secondary" data-quiz-confirm-cancel>다시 보기</button>
