@@ -651,7 +651,7 @@
                     pendingQuizForm = form;
                     if (answerText) {
                         var selected = form.querySelector("input[name='selected_answer']:checked");
-                        answerText.textContent = selected ? ("선택한 답: " + selected.value) : "선택한 답이 없습니다.";
+                        answerText.textContent = selected ? selected.value : "선택한 답이 없습니다.";
                     }
 
                     if (typeof quizDialog.showModal === "function") {
