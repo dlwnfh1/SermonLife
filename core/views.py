@@ -249,6 +249,9 @@ def _build_home_context(request):
     active_home_tab = request.GET.get("tab", "sermon")
     if active_home_tab not in {"sermon", "overview", "routine", "today"}:
         active_home_tab = "sermon"
+    active_feedback = request.GET.get("feedback", "")
+    if active_feedback not in {"quiz", "reflection", "mission"}:
+        active_feedback = ""
 
     challenge = _get_active_challenge()
     sermon = challenge.sermon if challenge else None
@@ -401,6 +404,7 @@ def _build_home_context(request):
         "highlight_messages": highlight_messages,
         "remaining_messages": getattr(request, "_remaining_messages", []),
         "active_home_tab": active_home_tab,
+        "active_feedback": active_feedback,
     }
 
 
@@ -419,8 +423,13 @@ def _get_released_daily_or_404(pk):
     return daily
 
 
-def _redirect_home(tab="sermon", anchor=""):
-    query = urlencode({"tab": tab}) if tab else ""
+def _redirect_home(tab="sermon", anchor="", extra_params=None):
+    params = {}
+    if tab:
+        params["tab"] = tab
+    if extra_params:
+        params.update({key: value for key, value in extra_params.items() if value})
+    query = urlencode(params) if params else ""
     url = reverse("core:home")
     if query:
         url = f"{url}?{query}"
@@ -430,6 +439,11 @@ def _redirect_home(tab="sermon", anchor=""):
 
 def _redirect_to_today_set():
     return _redirect_home(tab="today", anchor="today-set")
+
+
+def _redirect_to_today_anchor(request, default_anchor="today-set"):
+    anchor = request.POST.get("return_anchor", "").strip() or default_anchor
+    return _redirect_home(tab="today", anchor=anchor)
 
 
 def _is_pastor_user(user):
@@ -662,7 +676,7 @@ def submit_daily_quiz_view(request, pk):
     selected_answer = request.POST.get("selected_answer", "").strip()
     if selected_answer not in daily.choices:
         messages.error(request, "퀴즈 보기를 선택한 뒤 제출해 주세요.")
-        return _redirect_to_today_set()
+        return _redirect_home(tab="today", anchor="today-quiz-card", extra_params={"feedback": "quiz"})
 
     result = submit_daily_quiz(
         user=request.user,
@@ -685,7 +699,7 @@ def submit_daily_quiz_view(request, pk):
         messages.success(request, f"정답입니다. 퀴즈 5달란트를 받았습니다.{bonus_suffix}")
     else:
         messages.warning(request, "정답이 아닙니다. 다시 설교 내용을 확인해 보세요.")
-    return _redirect_to_today_set()
+    return _redirect_home(tab="today", anchor="today-quiz-card", extra_params={"feedback": "quiz"})
 
 
 @login_required
@@ -701,7 +715,7 @@ def submit_reflection_view(request, pk):
         )
     except ValueError as exc:
         messages.error(request, str(exc))
-        return _redirect_to_today_set()
+        return _redirect_home(tab="today", anchor="today-reflection-card", extra_params={"feedback": "reflection"})
 
     bonus_suffix = ""
     if result["daily_bonus_awarded"]:
@@ -713,7 +727,7 @@ def submit_reflection_view(request, pk):
         messages.warning(request, f"이미 저장한 묵상입니다. 달란트는 1회만 적립됩니다.{bonus_suffix}")
     else:
         messages.success(request, f"묵상 답변이 저장되었습니다. 5달란트를 받았습니다.{bonus_suffix}")
-    return _redirect_to_today_set()
+    return _redirect_home(tab="today", anchor="today-reflection-card", extra_params={"feedback": "reflection"})
 
 
 @login_required
@@ -737,7 +751,7 @@ def complete_mission_view(request, pk):
         messages.warning(request, f"이미 완료한 미션입니다. 달란트는 1회만 적립됩니다.{bonus_suffix}")
     else:
         messages.success(request, f"오늘의 미션을 완료했습니다. 7달란트를 받았습니다.{bonus_suffix}")
-    return _redirect_to_today_set()
+    return _redirect_home(tab="today", anchor="today-mission-card", extra_params={"feedback": "mission"})
 
 
 @login_required

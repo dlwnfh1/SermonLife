@@ -106,6 +106,16 @@
     </style>
 </head>
 <body>
+    {% if highlight_messages or remaining_messages %}
+        <div id="toast-data" hidden aria-hidden="true">
+            {% for message in highlight_messages %}
+                <span class="toast-data-item" data-tags="{{ message.tags|default:'info' }}">{{ message.text }}</span>
+            {% endfor %}
+            {% for message in remaining_messages %}
+                <span class="toast-data-item" data-tags="{{ message.tags|default:'info' }}">{{ message.text }}</span>
+            {% endfor %}
+        </div>
+    {% endif %}
     <main class="page-shell">
         <section class="top-actions">
             {% if request.user.is_authenticated %}
@@ -215,6 +225,19 @@
                 </div>
             {% endif %}
 
+            <dialog class="confirm-dialog" id="quiz-confirm-dialog" aria-labelledby="quiz-confirm-title">
+                <form method="dialog" class="confirm-dialog-card">
+                    <p class="section-label">퀴즈 제출 확인</p>
+                    <h2 id="quiz-confirm-title">선택한 답으로 제출할까요?</h2>
+                    <p class="confirm-dialog-answer" id="quiz-confirm-answer"></p>
+                    <p class="confirm-dialog-copy">제출 후에는 퀴즈 달란트가 다시 적립되지 않으니 한 번 더 확인해 주세요.</p>
+                    <div class="confirm-dialog-actions">
+                        <button type="button" class="action-button action-button-secondary" data-quiz-confirm-cancel>다시 보기</button>
+                        <button type="button" class="action-button" data-quiz-confirm-submit>제출하기</button>
+                    </div>
+                </form>
+            </dialog>
+
             <section class="panel stat-panel">
                 <div class="stat-card">
                     <strong>이번 주 달란트</strong>
@@ -303,13 +326,6 @@
                                 <article class="content-card">
                                     <h3>말씀 한 줄 고르기</h3>
                                     <p class="support-text">이번 설교 중 가장 마음에 남은 문장을 하나 골라 주세요.</p>
-                                    {% if highlight_messages %}
-                                        <div class="inline-messages">
-                                            {% for message in highlight_messages %}
-                                                <p class="message-row {{ message.tags }}">{{ message.text }}</p>
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
                                     {% if request.user.is_authenticated %}
                                         <form method="post" action="{% url 'core:submit_highlight_vote' %}" class="action-form">
                                             {% csrf_token %}
@@ -380,13 +396,6 @@
                 <div class="panel-header">
                     <h2>오늘 참여{% if current_day_number %} | Day {{ current_day_number }}{% endif %}</h2>
                 </div>
-                {% if remaining_messages %}
-                    <div class="inline-messages">
-                        {% for message in remaining_messages %}
-                            <p class="message-row {{ message.tags }}">{{ message.text }}</p>
-                        {% endfor %}
-                    </div>
-                {% endif %}
                 {% if current_daily %}
                     {% if today_audio_clip and today_audio_clip.file %}
                         <div class="listen-card listen-card-compact">
@@ -440,13 +449,14 @@
                         {% endif %}
 
                         <div class="three-column">
-                            <article class="content-card">
+                            <article class="content-card" id="today-quiz-card">
                                 <h3>오늘의 퀴즈</h3>
                                 <strong>{{ current_daily.quiz_question }}</strong>
                                 {% if request.user.is_authenticated %}
-                                    <form method="post" action="{% url 'core:submit_daily_quiz' current_daily.id %}" class="action-form">
+                                    <form method="post" action="{% url 'core:submit_daily_quiz' current_daily.id %}" class="action-form" data-preserve-scroll="today" data-feedback-target="today-quiz-card" data-quiz-confirm="true">
                                         {% csrf_token %}
                                         <input type="hidden" name="home_tab" value="today">
+                                        <input type="hidden" name="return_anchor" value="today-quiz-card">
                                         <div class="choice-group">
                                             {% for choice in current_daily.choices %}
                                                 <label class="choice-option">
@@ -475,13 +485,14 @@
                                 {% endif %}
                             </article>
 
-                            <article class="content-card">
+                            <article class="content-card" id="today-reflection-card">
                                 <h3>오늘의 묵상 질문</h3>
                                 <p>{{ current_daily.reflection_question }}</p>
                                 {% if request.user.is_authenticated %}
-                                    <form method="post" action="{% url 'core:submit_reflection' current_daily.id %}" class="action-form">
+                                    <form method="post" action="{% url 'core:submit_reflection' current_daily.id %}" class="action-form" data-preserve-scroll="today" data-feedback-target="today-reflection-card">
                                         {% csrf_token %}
                                         <input type="hidden" name="home_tab" value="today">
+                                        <input type="hidden" name="return_anchor" value="today-reflection-card">
                                         <div class="voice-entry-toolbar voice-entry-toolbar-primary">
                                             <button type="button" class="voice-input-button voice-input-button-primary" data-voice-target="response_text" data-voice-label-id="reflection-voice-status" data-idle-label="🎤 말로 입력 시작" data-listening-label="■ 녹음 중">🎤 말로 입력 시작</button>
                                             <span id="reflection-voice-status" class="voice-entry-status" aria-live="polite"></span>
@@ -496,14 +507,15 @@
                                 {% endif %}
                             </article>
 
-                            <article class="content-card">
+                            <article class="content-card" id="today-mission-card">
                                 <h3>오늘의 미션</h3>
                                 <strong>{{ current_daily.mission_title }}</strong>
                                 <p>{{ current_daily.mission_description }}</p>
                                 {% if request.user.is_authenticated %}
-                                    <form method="post" action="{% url 'core:complete_mission' current_daily.id %}" class="action-form">
+                                    <form method="post" action="{% url 'core:complete_mission' current_daily.id %}" class="action-form" data-preserve-scroll="today" data-feedback-target="today-mission-card">
                                         {% csrf_token %}
                                         <input type="hidden" name="home_tab" value="today">
+                                        <input type="hidden" name="return_anchor" value="today-mission-card">
                                         <div class="voice-entry-toolbar voice-entry-toolbar-primary">
                                             <button type="button" class="voice-input-button voice-input-button-primary" data-voice-target="mission_note" data-voice-label-id="mission-voice-status" data-idle-label="🎤 말로 입력 시작" data-listening-label="■ 녹음 중">🎤 말로 입력 시작</button>
                                             <span id="mission-voice-status" class="voice-entry-status" aria-live="polite"></span>
@@ -562,6 +574,195 @@
         {% endif %}
     </main>
     <script>
+        (function () {
+            var scrollStorageKey = "sermonlife-home-scroll-restore";
+
+            function restoreSavedScroll() {
+                var saved = window.sessionStorage.getItem(scrollStorageKey);
+                if (!saved) {
+                    return;
+                }
+
+                var targetY = parseInt(saved, 10);
+                if (Number.isNaN(targetY)) {
+                    window.sessionStorage.removeItem(scrollStorageKey);
+                    return;
+                }
+
+                var attempts = 0;
+
+                function applyScroll() {
+                    window.scrollTo(0, targetY);
+                    attempts += 1;
+                    if (attempts < 6) {
+                        window.requestAnimationFrame(applyScroll);
+                    } else {
+                        window.sessionStorage.removeItem(scrollStorageKey);
+                    }
+                }
+
+                window.requestAnimationFrame(applyScroll);
+            }
+
+            Array.prototype.slice.call(document.querySelectorAll("form[data-preserve-scroll='today']")).forEach(function (form) {
+                form.addEventListener("submit", function () {
+                    window.sessionStorage.setItem(scrollStorageKey, String(window.scrollY || window.pageYOffset || 0));
+                });
+            });
+
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", function () {
+                    restoreSavedScroll();
+                }, { once: true });
+            } else {
+                restoreSavedScroll();
+            }
+
+            window.addEventListener("pageshow", function () {
+                restoreSavedScroll();
+            });
+        })();
+
+        (function () {
+            var quizDialog = document.getElementById("quiz-confirm-dialog");
+            if (!quizDialog) {
+                return;
+            }
+
+            var pendingQuizForm = null;
+            var cancelButton = quizDialog.querySelector("[data-quiz-confirm-cancel]");
+            var submitButton = quizDialog.querySelector("[data-quiz-confirm-submit]");
+            var answerText = quizDialog.querySelector("#quiz-confirm-answer");
+
+            Array.prototype.slice.call(document.querySelectorAll("form[data-quiz-confirm='true']")).forEach(function (form) {
+                form.addEventListener("submit", function (event) {
+                    if (form.dataset.quizConfirmed === "true") {
+                        form.dataset.quizConfirmed = "false";
+                        return;
+                    }
+
+                    event.preventDefault();
+                    pendingQuizForm = form;
+                    if (answerText) {
+                        var selected = form.querySelector("input[name='selected_answer']:checked");
+                        answerText.textContent = selected ? ("선택한 답: " + selected.value) : "선택한 답이 없습니다.";
+                    }
+
+                    if (typeof quizDialog.showModal === "function") {
+                        quizDialog.showModal();
+                    } else {
+                        var selectedAnswer = form.querySelector("input[name='selected_answer']:checked");
+                        var answerLabel = selectedAnswer ? selectedAnswer.value : "선택한 답이 없습니다.";
+                        var confirmed = window.confirm("선택한 답: " + answerLabel + "\n\n이 답으로 제출할까요?");
+                        if (confirmed) {
+                            form.dataset.quizConfirmed = "true";
+                            form.requestSubmit();
+                        }
+                    }
+                });
+            });
+
+            if (cancelButton) {
+                cancelButton.addEventListener("click", function () {
+                    pendingQuizForm = null;
+                    quizDialog.close("cancel");
+                });
+            }
+
+            if (submitButton) {
+                submitButton.addEventListener("click", function () {
+                    if (!pendingQuizForm) {
+                        quizDialog.close("cancel");
+                        return;
+                    }
+
+                    var form = pendingQuizForm;
+                    pendingQuizForm = null;
+                    quizDialog.close("confirm");
+                    form.dataset.quizConfirmed = "true";
+                    form.requestSubmit();
+                });
+            }
+
+            quizDialog.addEventListener("cancel", function () {
+                pendingQuizForm = null;
+            });
+        })();
+
+        (function () {
+            var toastData = document.getElementById("toast-data");
+            if (!toastData) {
+                return;
+            }
+
+            var items = Array.prototype.slice.call(toastData.querySelectorAll(".toast-data-item"));
+            if (!items.length) {
+                return;
+            }
+
+            var isMobile = window.innerWidth < 900;
+            var stack = document.createElement("div");
+            stack.setAttribute("aria-live", "polite");
+            stack.setAttribute("aria-atomic", "true");
+            stack.style.position = "fixed";
+            stack.style.left = "50%";
+            stack.style.top = isMobile ? "92px" : "24px";
+            stack.style.transform = "translateX(-50%)";
+            stack.style.width = "min(680px, calc(100vw - 24px))";
+            stack.style.display = "grid";
+            stack.style.gap = "12px";
+            stack.style.zIndex = "1200";
+            stack.style.pointerEvents = "none";
+
+            function palette(tags) {
+                if ((tags || "").indexOf("success") !== -1) {
+                    return ["rgba(228, 243, 232, 0.98)", "#185b2b"];
+                }
+                if ((tags || "").indexOf("warning") !== -1) {
+                    return ["rgba(255, 241, 217, 0.98)", "#7b4d00"];
+                }
+                if ((tags || "").indexOf("error") !== -1) {
+                    return ["rgba(250, 226, 223, 0.98)", "#8a2e24"];
+                }
+                return ["rgba(238, 244, 248, 0.98)", "#244a5b"];
+            }
+
+            items.forEach(function (item) {
+                var toast = document.createElement("div");
+                var colors = palette(item.dataset.tags || "");
+                toast.textContent = item.textContent || "";
+                toast.style.padding = isMobile ? "14px 16px" : "18px 24px";
+                toast.style.borderRadius = "20px";
+                toast.style.boxShadow = "0 24px 48px rgba(32, 25, 19, 0.22)";
+                toast.style.background = colors[0];
+                toast.style.color = colors[1];
+                toast.style.border = "1px solid rgba(255, 255, 255, 0.28)";
+                toast.style.fontSize = isMobile ? "0.98rem" : "1.06rem";
+                toast.style.fontWeight = "700";
+                toast.style.lineHeight = "1.55";
+                toast.style.textAlign = "center";
+                toast.style.opacity = "1";
+                toast.style.transition = "opacity 220ms ease, transform 220ms ease";
+                stack.appendChild(toast);
+            });
+
+            document.body.appendChild(stack);
+
+            window.setTimeout(function () {
+                Array.prototype.slice.call(stack.children).forEach(function (toast, index) {
+                    window.setTimeout(function () {
+                        toast.style.opacity = "0";
+                        toast.style.transform = "translateY(-12px)";
+                    }, index * 120);
+                });
+                window.setTimeout(function () {
+                    if (stack.parentNode) {
+                        stack.parentNode.removeChild(stack);
+                    }
+                }, 520);
+            }, 4200);
+        })();
+
         (function () {
             var dockLinks = Array.prototype.slice.call(document.querySelectorAll(".mobile-dock-link"));
             var refreshStorageKey = "sermonlife-last-home-date";
