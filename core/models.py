@@ -132,6 +132,14 @@ class Sermon(models.Model):
     audio_error = models.TextField(blank=True)
     pastor_review_requested = models.BooleanField(default=False)
     pastor_review_requested_at = models.DateTimeField(null=True, blank=True)
+    pastor_publication_requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="publication_requested_sermons",
+    )
+    pastor_publication_requested_at = models.DateTimeField(null=True, blank=True)
     scheduled_publish_at = models.DateTimeField(null=True, blank=True)
     last_imported_at = models.DateTimeField(null=True, blank=True)
     last_ai_generated_at = models.DateTimeField(null=True, blank=True)
@@ -334,6 +342,17 @@ class Sermon(models.Model):
         self.pastor_review_requested = True
         self.pastor_review_requested_at = timezone.now()
         self.save(update_fields=["pastor_review_requested", "pastor_review_requested_at", "updated_at"])
+
+    def mark_pastor_publication_requested(self, user, requested_at=None):
+        self.pastor_publication_requested_by = user
+        self.pastor_publication_requested_at = requested_at or timezone.now()
+        self.save(
+            update_fields=[
+                "pastor_publication_requested_by",
+                "pastor_publication_requested_at",
+                "updated_at",
+            ]
+        )
 
     @classmethod
     def release_due_publications(cls, now=None):

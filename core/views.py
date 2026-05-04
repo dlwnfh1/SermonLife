@@ -928,6 +928,7 @@ def pastor_sermon_edit_view(request, pk):
                         transaction.set_rollback(True)
                         messages.warning(request, "공개 전에 확인이 필요한 항목이 있습니다: " + ", ".join(incomplete_items[:4]))
                         return redirect("core:pastor_sermon_edit", pk=sermon.pk)
+                    sermon.mark_pastor_publication_requested(request.user)
                     publish_result, publish_at = sermon.schedule_or_publish()
 
             if action == "publish":

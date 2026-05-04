@@ -275,6 +275,26 @@
                     </div>
                 </div>
                 <div class="sermon-admin-review-item">
+                    <div class="sermon-admin-review-label">예약/공개 요청 교역자</div>
+                    <div class="sermon-admin-review-value">
+                        {% if pastor_publication_requested_by_display %}
+                            {{ pastor_publication_requested_by_display }}
+                        {% else %}
+                            아직 기록 없음
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="sermon-admin-review-item">
+                    <div class="sermon-admin-review-label">예약/공개 요청 시각</div>
+                    <div class="sermon-admin-review-value">
+                        {% if pastor_publication_requested_at_display %}
+                            {{ pastor_publication_requested_at_display }}
+                        {% else %}
+                            아직 기록 없음
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="sermon-admin-review-item">
                     <div class="sermon-admin-review-label">활성 수신자</div>
                     <div class="sermon-admin-review-value">
                         {{ pastor_review_recipient_count }}명

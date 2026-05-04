@@ -388,6 +388,8 @@ class SermonAdmin(admin.ModelAdmin):
         "last_audio_generated_at",
         "pastor_review_requested",
         "pastor_review_requested_at",
+        "pastor_publication_requested_by",
+        "pastor_publication_requested_at",
         "import_error",
         "ai_error",
         "audio_error",
@@ -427,6 +429,8 @@ class SermonAdmin(admin.ModelAdmin):
                 "fields": (
                     "pastor_review_requested",
                     "pastor_review_requested_at",
+                    "pastor_publication_requested_by",
+                    "pastor_publication_requested_at",
                 )
             },
         ),
@@ -554,6 +558,16 @@ class SermonAdmin(admin.ModelAdmin):
             extra_context["pastor_review_requested_at_display"] = (
                 timezone.localtime(sermon.pastor_review_requested_at).strftime("%Y-%m-%d %H:%M")
                 if sermon and sermon.pastor_review_requested_at
+                else ""
+            )
+            extra_context["pastor_publication_requested_by_display"] = (
+                sermon.pastor_publication_requested_by.get_full_name() or sermon.pastor_publication_requested_by.username
+                if sermon and sermon.pastor_publication_requested_by
+                else ""
+            )
+            extra_context["pastor_publication_requested_at_display"] = (
+                timezone.localtime(sermon.pastor_publication_requested_at).strftime("%Y-%m-%d %H:%M")
+                if sermon and sermon.pastor_publication_requested_at
                 else ""
             )
             extra_context["pastor_review_recipient_count"] = len(active_recipients)
