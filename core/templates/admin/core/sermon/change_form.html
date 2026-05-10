@@ -234,6 +234,24 @@
                     data-progress-text="설교를 공개하고 사용자 화면에 반영하고 있습니다."
                 >검토 완료 및 공개</a>
             {% endif %}
+            {% if change and original and force_publish_url and not is_force_public %}
+                <a
+                    class="sermon-secondary-button button js-admin-progress"
+                    href="{{ force_publish_url }}"
+                    data-confirm-message="일요일이나 월요일에도 이 설교를 교인 화면에 강제로 보여주겠습니까?"
+                    data-progress-title="강제 공개 적용 중.."
+                    data-progress-text="기본 화요일~토요일 공개 규칙을 잠시 우회해서 지금 바로 교인 화면에 보이도록 적용하고 있습니다."
+                >강제 공개</a>
+            {% endif %}
+            {% if change and original and clear_force_publish_url and is_force_public %}
+                <a
+                    class="sermon-secondary-button button js-admin-progress"
+                    href="{{ clear_force_publish_url }}"
+                    data-confirm-message="강제 공개를 해제하고 기본 화요일~토요일 공개 규칙으로 되돌리겠습니까?"
+                    data-progress-title="강제 공개 해제 중.."
+                    data-progress-text="강제 공개 상태를 해제하고 기본 공개 일정 규칙으로 되돌리고 있습니다."
+                >강제 공개 해제</a>
+            {% endif %}
             {% if change and original and unpublish_url and is_current_public_sermon %}
                 <a
                     class="sermon-secondary-button button js-admin-progress"

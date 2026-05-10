@@ -390,6 +390,7 @@ class SermonAdmin(admin.ModelAdmin):
         "pastor_review_requested_at",
         "pastor_publication_requested_by",
         "pastor_publication_requested_at",
+        "force_public_visibility",
         "import_error",
         "ai_error",
         "audio_error",
@@ -431,6 +432,7 @@ class SermonAdmin(admin.ModelAdmin):
                     "pastor_review_requested_at",
                     "pastor_publication_requested_by",
                     "pastor_publication_requested_at",
+                    "force_public_visibility",
                 )
             },
         ),
@@ -453,6 +455,8 @@ class SermonAdmin(admin.ModelAdmin):
 
     def publication_state_display(self, obj):
         current_public_sermon_id = get_current_public_sermon_id()
+        if obj.force_public_visibility and obj.is_published:
+            return "강제 공개 중"
         if obj.scheduled_publish_at and not obj.is_published:
             return "화요일 예약 공개"
         if obj.is_published and obj.pk == current_public_sermon_id:
@@ -511,6 +515,16 @@ class SermonAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.notify_pastor_review_view),
                 name="core_sermon_notify_pastor_review",
             ),
+            path(
+                "<path:object_id>/force-publish/",
+                self.admin_site.admin_view(self.force_publish_view),
+                name="core_sermon_force_publish",
+            ),
+            path(
+                "<path:object_id>/clear-force-publish/",
+                self.admin_site.admin_view(self.clear_force_publish_view),
+                name="core_sermon_clear_force_publish",
+            ),
         ]
         return custom_urls + urls
 
@@ -528,7 +542,9 @@ class SermonAdmin(admin.ModelAdmin):
             is_current_public_sermon = bool(
                 sermon and sermon.is_published and sermon.pk == current_public_sermon_id
             )
-            if sermon and sermon.scheduled_publish_at and not sermon.is_published:
+            if sermon and sermon.force_public_visibility and sermon.is_published:
+                publication_state_label = "강제 공개 중"
+            elif sermon and sermon.scheduled_publish_at and not sermon.is_published:
                 publication_state_label = "화요일 예약 공개"
             elif sermon and sermon.is_published:
                 publication_state_label = "현재 공개 중" if is_current_public_sermon else "이전 공개"
@@ -549,9 +565,18 @@ class SermonAdmin(admin.ModelAdmin):
                 "admin:core_sermon_notify_pastor_review",
                 args=[object_id],
             )
+            extra_context["force_publish_url"] = reverse(
+                "admin:core_sermon_force_publish",
+                args=[object_id],
+            )
+            extra_context["clear_force_publish_url"] = reverse(
+                "admin:core_sermon_clear_force_publish",
+                args=[object_id],
+            )
             extra_context["delete_url"] = reverse("admin:core_sermon_delete", args=[object_id])
             extra_context["publication_state_label"] = publication_state_label
             extra_context["is_current_public_sermon"] = is_current_public_sermon
+            extra_context["is_force_public"] = bool(sermon and sermon.force_public_visibility)
             extra_context["pastor_review_status_label"] = (
                 "목회자 검토 요청됨" if sermon and sermon.pastor_review_requested else "검토 요청 전"
             )
@@ -734,6 +759,34 @@ class SermonAdmin(admin.ModelAdmin):
         self.message_user(
             request,
             f"'{sermon.title}' 설교 공개를 해제했습니다. 사용자 화면에는 공개 전 안내 화면이 다시 표시됩니다.",
+            level=messages.SUCCESS,
+        )
+        return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
+
+    def force_publish_view(self, request, object_id):
+        sermon = self.get_object(request, object_id)
+        if sermon is None:
+            self.message_user(request, "설교를 찾을 수 없습니다.", level=messages.ERROR)
+            return HttpResponseRedirect(reverse("admin:core_sermon_changelist"))
+
+        sermon.force_publish()
+        self.message_user(
+            request,
+            f"'{sermon.title}' 설교를 강제 공개했습니다. 일요일/월요일에도 교인 화면에서 바로 보입니다.",
+            level=messages.SUCCESS,
+        )
+        return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
+
+    def clear_force_publish_view(self, request, object_id):
+        sermon = self.get_object(request, object_id)
+        if sermon is None:
+            self.message_user(request, "설교를 찾을 수 없습니다.", level=messages.ERROR)
+            return HttpResponseRedirect(reverse("admin:core_sermon_changelist"))
+
+        sermon.clear_force_publish()
+        self.message_user(
+            request,
+            f"'{sermon.title}' 설교의 강제 공개를 해제했습니다. 다시 기본 공개 일정(화요일~토요일) 규칙으로 돌아갑니다.",
             level=messages.SUCCESS,
         )
         return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))

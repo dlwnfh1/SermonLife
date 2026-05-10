@@ -140,6 +140,7 @@ class Sermon(models.Model):
         related_name="publication_requested_sermons",
     )
     pastor_publication_requested_at = models.DateTimeField(null=True, blank=True)
+    force_public_visibility = models.BooleanField(default=False)
     scheduled_publish_at = models.DateTimeField(null=True, blank=True)
     last_imported_at = models.DateTimeField(null=True, blank=True)
     last_ai_generated_at = models.DateTimeField(null=True, blank=True)
@@ -287,6 +288,7 @@ class Sermon(models.Model):
         self.status = SermonStatus.PUBLISHED
         self.published_at = published_at or timezone.now()
         self.scheduled_publish_at = None
+        self.force_public_visibility = False
         self.pastor_review_requested = True
         if self.pastor_review_requested_at is None:
             self.pastor_review_requested_at = timezone.now()
@@ -296,6 +298,7 @@ class Sermon(models.Model):
                 "status",
                 "published_at",
                 "scheduled_publish_at",
+                "force_public_visibility",
                 "pastor_review_requested",
                 "pastor_review_requested_at",
                 "updated_at",
@@ -309,7 +312,8 @@ class Sermon(models.Model):
         self.is_published = False
         self.status = SermonStatus.APPROVED
         self.scheduled_publish_at = None
-        self.save(update_fields=["is_published", "status", "scheduled_publish_at", "updated_at"])
+        self.force_public_visibility = False
+        self.save(update_fields=["is_published", "status", "scheduled_publish_at", "force_public_visibility", "updated_at"])
         self.weekly_challenges.update(is_active=False)
 
     def approve_generated_content(self):
@@ -353,6 +357,35 @@ class Sermon(models.Model):
                 "updated_at",
             ]
         )
+
+    def force_publish(self, published_at=None):
+        self.approve_generated_content()
+        self.is_published = True
+        self.status = SermonStatus.PUBLISHED
+        self.published_at = published_at or self.published_at or timezone.now()
+        self.scheduled_publish_at = None
+        self.force_public_visibility = True
+        self.save(
+            update_fields=[
+                "is_published",
+                "status",
+                "published_at",
+                "scheduled_publish_at",
+                "force_public_visibility",
+                "updated_at",
+            ]
+        )
+        latest_challenge = self.weekly_challenges.order_by("-week_start", "-id").first()
+        if latest_challenge:
+            latest_challenge.activate()
+
+    def clear_force_publish(self):
+        self.force_public_visibility = False
+        self.save(update_fields=["force_public_visibility", "updated_at"])
+        latest_challenge = self.weekly_challenges.order_by("-week_start", "-id").first()
+        if latest_challenge and not latest_challenge.is_public_window_open():
+            latest_challenge.is_active = False
+            latest_challenge.save(update_fields=["is_active"])
 
     @classmethod
     def release_due_publications(cls, now=None):
@@ -591,6 +624,10 @@ class WeeklyChallenge(models.Model):
         )
         stale_ids = []
         for challenge in candidates:
+            if challenge.sermon.force_public_visibility:
+                if stale_ids:
+                    cls.objects.filter(pk__in=stale_ids).update(is_active=False)
+                return challenge
             if challenge.is_public_window_open(today):
                 if stale_ids:
                     cls.objects.filter(pk__in=stale_ids).update(is_active=False)
