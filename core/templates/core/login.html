@@ -39,11 +39,8 @@
                                     type="button"
                                     class="password-visibility-button"
                                     data-password-toggle
-                                    data-show-icon="{% static 'core/icons/eye.svg' %}"
-                                    data-hide-icon="{% static 'core/icons/eye-off.svg' %}"
                                     aria-label="비밀번호 보기"
                                     aria-pressed="false"
-                                    style="background-image: url('{% static 'core/icons/eye.svg' %}');"
                                 ></button>
                             </div>
                         {% else %}
@@ -73,9 +70,6 @@
                     input.type = showing ? "password" : "text";
                     button.setAttribute("aria-label", showing ? "비밀번호 보기" : "비밀번호 숨기기");
                     button.setAttribute("aria-pressed", showing ? "false" : "true");
-                    button.style.backgroundImage = showing
-                        ? "url('" + button.dataset.showIcon + "')"
-                        : "url('" + button.dataset.hideIcon + "')";
                 });
             });
         })();
