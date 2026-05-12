@@ -271,7 +271,6 @@ a {
     cursor: pointer;
     overflow: hidden;
     isolation: isolate;
-    background-image: url("icons/eye.svg");
     background-repeat: no-repeat;
     background-position: center;
     background-size: 20px 20px;
@@ -282,10 +281,6 @@ a {
 .password-visibility-button:focus-visible {
     background: rgba(236, 225, 209, 0.92);
     border-color: rgba(47, 107, 132, 0.2);
-}
-
-.password-visibility-button[aria-pressed="true"] {
-    background-image: url("icons/eye-off.svg");
 }
 
 .sr-only {
