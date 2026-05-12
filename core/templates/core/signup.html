@@ -42,7 +42,6 @@
                             <div class="password-visibility-wrap">
                                 {{ field }}
                                 <button type="button" class="password-visibility-button" data-password-toggle aria-label="비밀번호 보기" aria-pressed="false">
-                                    <span class="sr-only">비밀번호 보기</span>
                                     <span class="password-visibility-glyph" aria-hidden="true"></span>
                                 </button>
                             </div>
@@ -73,10 +72,6 @@
                     input.type = showing ? "password" : "text";
                     button.setAttribute("aria-label", showing ? "비밀번호 보기" : "비밀번호 숨기기");
                     button.setAttribute("aria-pressed", showing ? "false" : "true");
-                    var srOnly = button.querySelector(".sr-only");
-                    if (srOnly) {
-                        srOnly.textContent = showing ? "비밀번호 보기" : "비밀번호 숨기기";
-                    }
                 });
             });
         })();
