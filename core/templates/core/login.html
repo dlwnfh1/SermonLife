@@ -30,8 +30,10 @@
                 {% csrf_token %}
                 {{ form.non_field_errors }}
                 {% for field in form %}
-                    <label class="auth-label">
-                        <span>{{ field.label }}</span>
+                    <div class="auth-field">
+                        <label class="auth-label" for="{{ field.id_for_label }}">
+                            <span>{{ field.label }}</span>
+                        </label>
                         {% if field.field.widget.input_type == "password" %}
                             <div class="password-visibility-wrap">
                                 {{ field }}
@@ -49,12 +51,12 @@
                         {% if field.errors %}
                             <small class="field-error">{{ field.errors|striptags }}</small>
                         {% endif %}
-                    </label>
+                    </div>
                 {% endfor %}
                 <button type="submit" class="action-button wide-button">로그인</button>
             </form>
 
-            <p class="auth-helper">아직 계정이 없으시면 <a href="{% url 'core:signup' %}">Create user</a></p>
+            <p class="auth-helper">아직 계정이 없으시면 <a href="{% url 'core:signup' %}">회원가입</a></p>
         </section>
     </main>
     <script>

@@ -216,20 +216,24 @@ a {
     margin-top: 18px;
 }
 
+.auth-field {
+    margin-bottom: 16px;
+}
+
 .auth-label {
     display: block;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
 }
 
 .auth-label > span {
     display: block;
-    margin-bottom: 8px;
     color: var(--ink);
     font-weight: 700;
 }
 
-.auth-label input {
+.auth-field input {
     width: 100%;
+    min-height: 56px;
     padding: 13px 14px;
     border: 1px solid rgba(32, 25, 19, 0.14);
     border-radius: 16px;
@@ -239,12 +243,17 @@ a {
 
 .password-visibility-wrap {
     position: relative;
-    display: block;
+    display: flex;
+    align-items: center;
     width: 100%;
+    min-width: 0;
 }
 
 .password-visibility-wrap input {
-    padding-right: 104px;
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding-right: 88px;
     box-sizing: border-box;
 }
 
@@ -256,13 +265,13 @@ a {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 64px;
-    min-width: 64px;
-    max-width: 64px;
-    height: 34px;
-    min-height: 34px;
-    max-height: 34px;
-    padding: 0 8px;
+    width: 56px;
+    min-width: 56px;
+    max-width: 56px;
+    height: 30px;
+    min-height: 30px;
+    max-height: 30px;
+    padding: 0 6px;
     margin: 0;
     border: 1px solid rgba(32, 25, 19, 0.1);
     border-radius: 14px;
@@ -272,7 +281,7 @@ a {
     appearance: none;
     -webkit-appearance: none;
     font: inherit;
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     font-weight: 700;
     line-height: 1;
     cursor: pointer;
@@ -280,6 +289,8 @@ a {
     isolation: isolate;
     white-space: nowrap;
     word-break: keep-all;
+    word-wrap: normal;
+    flex-wrap: nowrap;
     writing-mode: horizontal-tb;
     text-orientation: mixed;
     z-index: 2;
