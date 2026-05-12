@@ -41,9 +41,7 @@
                         {% elif field.field.widget.input_type == "password" %}
                             <div class="password-visibility-wrap">
                                 {{ field }}
-                                <button type="button" class="password-visibility-button" data-password-toggle aria-label="비밀번호 보기" aria-pressed="false">
-                                    <span class="password-visibility-glyph" aria-hidden="true"></span>
-                                </button>
+                                <button type="button" class="password-visibility-button" data-password-toggle aria-label="비밀번호 보기" aria-pressed="false"></button>
                             </div>
                         {% else %}
                             {{ field }}
