@@ -239,10 +239,12 @@ a {
 
 .password-visibility-wrap {
     position: relative;
+    width: 100%;
 }
 
 .password-visibility-wrap input {
     padding-right: 86px;
+    box-sizing: border-box;
 }
 
 .password-visibility-button {
@@ -256,12 +258,18 @@ a {
     width: 42px;
     height: 42px;
     padding: 0;
+    margin: 0;
     border: 1px solid rgba(32, 25, 19, 0.1);
     border-radius: 14px;
     background: rgba(255, 250, 242, 0.96);
     color: var(--accent);
+    box-sizing: border-box;
+    appearance: none;
+    -webkit-appearance: none;
     font: inherit;
+    line-height: 1;
     cursor: pointer;
+    overflow: hidden;
     transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
 
@@ -272,8 +280,11 @@ a {
 }
 
 .password-visibility-icon {
+    display: block;
     width: 20px;
     height: 20px;
+    min-width: 20px;
+    min-height: 20px;
     flex: 0 0 auto;
 }
 
