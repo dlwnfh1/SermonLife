@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>회원가입 | Word &amp; Life</title>
+    <title>&#xD68C;&#xC6D0;&#xAC00;&#xC785; | Word &amp; Life</title>
     <link rel="stylesheet" href="{% static 'core/styles.css' %}">
     <link rel="manifest" href="{% static 'core/manifest.json' %}">
     <link rel="apple-touch-icon" href="{% static 'core/icons/apple-touch-icon.png' %}">
@@ -16,7 +16,7 @@
     <main class="page-shell auth-shell">
         <section class="auth-card">
             <p class="eyebrow">WORD &amp; LIFE</p>
-            <h1>회원가입</h1>
+            <h1>&#xD68C;&#xC6D0;&#xAC00;&#xC785;</h1>
 
             {% if messages %}
                 <div class="auth-messages">
@@ -47,9 +47,9 @@
                                     type="button"
                                     class="password-visibility-button"
                                     data-password-toggle
-                                    aria-label="비밀번호 보기"
+                                    aria-label="&#xBE44;&#xBC00;&#xBC88;&#xD638; &#xBCF4;&#xAE30;"
                                     aria-pressed="false"
-                                >표시</button>
+                                >&#xD45C;&#xC2DC;</button>
                             </div>
                         {% else %}
                             {{ field }}
@@ -59,10 +59,10 @@
                         {% endif %}
                     </div>
                 {% endfor %}
-                <button type="submit" class="action-button wide-button">계정 만들기</button>
+                <button type="submit" class="action-button wide-button">&#xACC4;&#xC815; &#xB9CC;&#xB4E4;&#xAE30;</button>
             </form>
 
-            <p class="auth-helper">이미 계정이 있으시면 <a href="{% url 'core:login' %}">로그인</a></p>
+            <p class="auth-helper">&#xC774;&#xBBF8; &#xACC4;&#xC815;&#xC774; &#xC788;&#xC73C;&#xC2DC;&#xBA74; <a href="{% url 'core:login' %}">&#xB85C;&#xADF8;&#xC778;</a></p>
         </section>
     </main>
     <script>
@@ -76,9 +76,9 @@
                     }
                     var showing = input.type === "text";
                     input.type = showing ? "password" : "text";
-                    button.setAttribute("aria-label", showing ? "비밀번호 보기" : "비밀번호 숨기기");
+                    button.setAttribute("aria-label", showing ? "\uBE44\uBC00\uBC88\uD638 \uBCF4\uAE30" : "\uBE44\uBC00\uBC88\uD638 \uC228\uAE30\uAE30");
                     button.setAttribute("aria-pressed", showing ? "false" : "true");
-                    button.textContent = showing ? "표시" : "숨김";
+                    button.textContent = showing ? "\uD45C\uC2DC" : "\uC228\uAE40";
                 });
             });
         })();
