@@ -47,7 +47,7 @@
                                     data-password-toggle
                                     aria-label="비밀번호 보기"
                                     aria-pressed="false"
-                                ></button>
+                                >표시</button>
                             </div>
                         {% else %}
                             {{ field }}
@@ -76,6 +76,7 @@
                     input.type = showing ? "password" : "text";
                     button.setAttribute("aria-label", showing ? "비밀번호 보기" : "비밀번호 숨기기");
                     button.setAttribute("aria-pressed", showing ? "false" : "true");
+                    button.textContent = showing ? "표시" : "숨김";
                 });
             });
         })();

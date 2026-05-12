@@ -267,6 +267,8 @@ a {
     appearance: none;
     -webkit-appearance: none;
     font: inherit;
+    font-size: 0.84rem;
+    font-weight: 700;
     line-height: 1;
     cursor: pointer;
     overflow: hidden;
@@ -280,16 +282,6 @@ a {
     border-color: rgba(47, 107, 132, 0.2);
 }
 
-.password-visibility-button::before {
-    content: "👁";
-    display: block;
-    font-size: 18px;
-    line-height: 1;
-}
-
-.password-visibility-button[aria-pressed="true"]::before {
-    content: "🙈";
-}
 
 .auth-role-select {
     width: 100%;
