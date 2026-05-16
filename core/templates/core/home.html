@@ -199,7 +199,9 @@
             <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-overview" {% if active_home_tab == "overview" %}checked{% endif %}>
             <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-routine" {% if active_home_tab == "routine" %}checked{% endif %}>
             <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-today" {% if active_home_tab == "today" %}checked{% endif %}>
-            <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-prayer" {% if active_home_tab == "prayer" %}checked{% endif %}>
+            {% if prayer_tab_enabled %}
+                <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-prayer" {% if active_home_tab == "prayer" %}checked{% endif %}>
+            {% endif %}
 
             <div class="home-tab-sticky">
                 <section class="home-tab-bar" aria-label="홈 탭">
@@ -207,7 +209,9 @@
                     <label class="home-tab-control" for="home-tab-overview">요약</label>
                     <label class="home-tab-control" for="home-tab-routine">말씀</label>
                     <label class="home-tab-control" for="home-tab-today">오늘</label>
-                    <label class="home-tab-control" for="home-tab-prayer">기도</label>
+                    {% if prayer_tab_enabled %}
+                        <label class="home-tab-control" for="home-tab-prayer">기도</label>
+                    {% endif %}
                 </section>
             </div>
 
@@ -575,6 +579,7 @@
             </section>
                 </section>
 
+                {% if prayer_tab_enabled %}
                 <section class="home-tab-panel home-tab-panel-prayer">
                     <section class="panel" id="prayer-create-card">
                         <div class="panel-header">
@@ -588,9 +593,9 @@
                                     <p>개인적으로 붙잡고 있는 기도제목과 상태를 정리할 수 있습니다.</p>
                                 </article>
                                 <article class="content-card prayer-overview-card">
-                                    <h3>기도 부탁</h3>
+                                    <h3>다 함께 기도해요</h3>
                                     <strong>{{ public_prayer_requests|length }}개</strong>
-                                    <p>다른 성도가 공개해서 함께 기도를 부탁한 기도제목입니다.</p>
+                                    <p>다른 성도가 함께 기도해 주시길 바라며 공개한 기도제목입니다.</p>
                                 </article>
                                 <article class="content-card prayer-overview-card">
                                     <h3>응답 간증</h3>
@@ -769,7 +774,7 @@
 
                         <section class="panel" id="public-prayer-list">
                             <div class="panel-header">
-                                <h2>기도 부탁</h2>
+                                <h2>다 함께 기도해요</h2>
                             </div>
                             {% if public_prayer_requests %}
                                 <div class="three-column prayer-public-grid">
@@ -804,7 +809,7 @@
                                     {% endfor %}
                                 </div>
                             {% else %}
-                                <p class="empty">지금은 공개된 기도 부탁이 없습니다.</p>
+                                <p class="empty">지금은 함께 나눌 공개 기도제목이 없습니다.</p>
                             {% endif %}
                         </section>
 
@@ -840,6 +845,7 @@
                         </section>
                     {% endif %}
                 </section>
+                {% endif %}
             </div>
         {% else %}
             <section class="panel empty-state">

@@ -150,3 +150,7 @@ SERMONLIFE_ALLOW_PREVIEW_ANYDAY = os.environ.get(
     "SERMONLIFE_ALLOW_PREVIEW_ANYDAY",
     "False",
 ).lower() in {"1", "true", "yes", "on"}
+SERMONLIFE_PRAYER_TAB_PUBLIC = os.environ.get(
+    "SERMONLIFE_PRAYER_TAB_PUBLIC",
+    "False",
+).lower() in {"1", "true", "yes", "on"}

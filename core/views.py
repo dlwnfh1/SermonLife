@@ -258,8 +258,13 @@ def _build_home_context(request):
                 request._remaining_messages = []
             request._remaining_messages.append({"text": text, "tags": message.tags})
 
+    prayer_tab_enabled = _can_access_prayer_tab(request.user)
+    allowed_tabs = {"sermon", "overview", "routine", "today"}
+    if prayer_tab_enabled:
+        allowed_tabs.add("prayer")
+
     active_home_tab = request.GET.get("tab", "sermon")
-    if active_home_tab not in {"sermon", "overview", "routine", "today", "prayer"}:
+    if active_home_tab not in allowed_tabs:
         active_home_tab = "sermon"
     active_feedback = request.GET.get("feedback", "")
     if active_feedback not in {"quiz", "reflection", "mission"}:
@@ -484,6 +489,7 @@ def _build_home_context(request):
         "active_home_tab": active_home_tab,
         "active_feedback": active_feedback,
         "open_prayer_id": open_prayer_id,
+        "prayer_tab_enabled": prayer_tab_enabled,
         "my_prayer_requests": my_prayer_requests,
         "public_prayer_requests": public_prayer_requests,
         "testimony_prayer_requests": testimony_prayer_requests,
@@ -553,6 +559,12 @@ def _is_pastor_user(user):
         return True
     profile = UserProfile.objects.filter(user=user).first()
     return bool(profile and profile.member_role == "pastor")
+
+
+def _can_access_prayer_tab(user):
+    if getattr(settings, "SERMONLIFE_PRAYER_TAB_PUBLIC", False):
+        return True
+    return _is_pastor_user(user)
 
 
 pastor_required = user_passes_test(_is_pastor_user, login_url="core:login")
@@ -857,6 +869,9 @@ def complete_mission_view(request, pk):
 @login_required
 @require_POST
 def create_prayer_request_view(request):
+    if not _can_access_prayer_tab(request.user):
+        messages.error(request, "기도 기능은 아직 전체 공개 전입니다.")
+        return _redirect_home()
     content = (request.POST.get("content") or "").strip()
     visibility = (request.POST.get("visibility") or PrayerRequestVisibility.PRIVATE).strip()
     valid_visibilities = {choice[0] for choice in PrayerRequestVisibility.choices}
@@ -900,6 +915,9 @@ def create_prayer_request_view(request):
 @login_required
 @require_POST
 def update_prayer_request_view(request, pk):
+    if not _can_access_prayer_tab(request.user):
+        messages.error(request, "기도 기능은 아직 전체 공개 전입니다.")
+        return _redirect_home()
     prayer_request = get_object_or_404(PrayerRequest, pk=pk, user=request.user)
     previous_content = prayer_request.content
     content = (request.POST.get("content") or "").strip()
@@ -953,6 +971,9 @@ def update_prayer_request_view(request, pk):
 @login_required
 @require_POST
 def join_prayer_request_view(request, pk):
+    if not _can_access_prayer_tab(request.user):
+        messages.error(request, "기도 기능은 아직 전체 공개 전입니다.")
+        return _redirect_home()
     prayer_request = get_object_or_404(
         PrayerRequest.objects.exclude(user=request.user),
         pk=pk,
