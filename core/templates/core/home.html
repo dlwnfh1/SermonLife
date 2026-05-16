@@ -33,7 +33,7 @@
 
         .home-tab-bar {
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: 10px;
             margin-top: 18px;
             padding: 8px;
@@ -72,7 +72,8 @@
         #home-tab-sermon:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-sermon"],
         #home-tab-overview:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-overview"],
         #home-tab-routine:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-routine"],
-        #home-tab-today:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-today"] {
+        #home-tab-today:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-today"],
+        #home-tab-prayer:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-prayer"] {
             background: #8b5c3b;
             border-color: #8b5c3b;
             color: #fffaf2;
@@ -81,7 +82,8 @@
         #home-tab-sermon:checked ~ .home-tab-panels .home-tab-panel-sermon,
         #home-tab-overview:checked ~ .home-tab-panels .home-tab-panel-overview,
         #home-tab-routine:checked ~ .home-tab-panels .home-tab-panel-routine,
-        #home-tab-today:checked ~ .home-tab-panels .home-tab-panel-today {
+        #home-tab-today:checked ~ .home-tab-panels .home-tab-panel-today,
+        #home-tab-prayer:checked ~ .home-tab-panels .home-tab-panel-prayer {
             display: grid;
             gap: 18px;
         }
@@ -197,6 +199,7 @@
             <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-overview" {% if active_home_tab == "overview" %}checked{% endif %}>
             <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-routine" {% if active_home_tab == "routine" %}checked{% endif %}>
             <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-today" {% if active_home_tab == "today" %}checked{% endif %}>
+            <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-prayer" {% if active_home_tab == "prayer" %}checked{% endif %}>
 
             <div class="home-tab-sticky">
                 <section class="home-tab-bar" aria-label="홈 탭">
@@ -204,6 +207,7 @@
                     <label class="home-tab-control" for="home-tab-overview">요약</label>
                     <label class="home-tab-control" for="home-tab-routine">말씀</label>
                     <label class="home-tab-control" for="home-tab-today">오늘</label>
+                    <label class="home-tab-control" for="home-tab-prayer">기도</label>
                 </section>
             </div>
 
@@ -569,6 +573,272 @@
                     </details>
                 </section>
             </section>
+                </section>
+
+                <section class="home-tab-panel home-tab-panel-prayer">
+                    <section class="panel" id="prayer-create-card">
+                        <div class="panel-header">
+                            <h2>기도</h2>
+                        </div>
+                        {% if request.user.is_authenticated %}
+                            <div class="three-column prayer-overview-grid">
+                                <article class="content-card prayer-overview-card">
+                                    <h3>내 기도</h3>
+                                    <strong>{{ my_prayer_requests|length }}개</strong>
+                                    <p>개인적으로 붙잡고 있는 기도제목과 상태를 정리할 수 있습니다.</p>
+                                </article>
+                                <article class="content-card prayer-overview-card">
+                                    <h3>기도 부탁</h3>
+                                    <strong>{{ public_prayer_requests|length }}개</strong>
+                                    <p>다른 성도가 공개해서 함께 기도를 부탁한 기도제목입니다.</p>
+                                </article>
+                                <article class="content-card prayer-overview-card">
+                                    <h3>응답 간증</h3>
+                                    <strong>{{ testimony_prayer_requests|length }}개</strong>
+                                    <p>응답받은 기도는 간증과 결과 메모로 남길 수 있습니다.</p>
+                                </article>
+                            </div>
+
+                            <details class="content-card prayer-create-card prayer-create-details">
+                                <summary class="prayer-create-summary">
+                                    <div class="prayer-create-summary-copy">
+                                        <span class="prayer-create-summary-badge">+</span>
+                                        <span>
+                                            <strong>새 기도 등록</strong>
+                                            <small>기도제목이 생기면 여기에서 바로 적어 보세요.</small>
+                                        </span>
+                                    </div>
+                                    <small class="prayer-create-summary-hint">열어서 작성하기</small>
+                                </summary>
+                                <form method="post" action="{% url 'core:create_prayer_request' %}" class="action-form prayer-create-form">
+                                    {% csrf_token %}
+                                    <textarea id="prayer-create-content" name="content" rows="3" placeholder="기도제목을 바로 적어 주세요. 예: 아버지 수술 회복을 위해 기도 부탁드립니다."></textarea>
+                                    <div class="voice-entry-toolbar prayer-voice-toolbar">
+                                        <button
+                                            type="button"
+                                            class="voice-input-button voice-input-button-secondary prayer-voice-button"
+                                            data-voice-selector="#prayer-create-content"
+                                            data-voice-label-id="prayer-create-voice-status"
+                                            data-idle-label="🎤 말로 입력"
+                                            data-listening-label="■ 녹음 중"
+                                        >🎤 말로 입력</button>
+                                        <span id="prayer-create-voice-status" class="voice-entry-status" aria-live="polite"></span>
+                                    </div>
+                                    <div class="choice-group prayer-visibility-group">
+                                        {% for option in prayer_visibility_choices %}
+                                            <label class="choice-option prayer-privacy-option">
+                                                <input type="radio" name="visibility" value="{{ option.value }}" {% if option.value == "private" %}checked{% endif %}>
+                                                <span>
+                                                    <strong>{{ option.label }}</strong>
+                                                    <small>{{ option.description }}</small>
+                                                </span>
+                                            </label>
+                                        {% endfor %}
+                                    </div>
+                                    <button type="submit" class="action-button">저장</button>
+                                </form>
+                            </details>
+                        {% else %}
+                            <p class="empty">기도제목 등록과 기도 상태 관리는 로그인 후 이용할 수 있습니다. <a href="{% url 'core:login' %}">로그인하기</a></p>
+                        {% endif %}
+                    </section>
+
+                    {% if request.user.is_authenticated %}
+                        <section class="panel" id="my-prayer-list">
+                            <div class="panel-header">
+                                <h2>내 기도</h2>
+                            </div>
+                            {% if my_prayer_requests %}
+                                <div class="prayer-stack">
+                                    {% for prayer in my_prayer_requests %}
+                                        <details class="content-card prayer-request-card" id="prayer-request-{{ prayer.id }}" {% if open_prayer_id == prayer.id %}open{% endif %}>
+                                            <summary class="prayer-request-summary">
+                                                <div>
+                                                    <strong>{{ prayer.title }}</strong>
+                                                    <p>{{ prayer.created_at|date:"Y-m-d" }} 등록</p>
+                                                </div>
+                                                <div class="prayer-request-summary-meta">
+                                                    <span class="prayer-meta-chip prayer-meta-chip-status">
+                                                        <small>상태</small>
+                                                        <strong class="prayer-status prayer-status-{{ prayer.status }}">{{ prayer.get_status_display }}</strong>
+                                                    </span>
+                                                    {% if prayer.is_public %}
+                                                        <span class="prayer-meta-chip prayer-meta-chip-visibility">
+                                                            <small>공개</small>
+                                                            <strong class="prayer-visibility">
+                                                                {% if prayer.is_anonymous_public %}
+                                                                    익명으로 함께 기도
+                                                                {% else %}
+                                                                    함께 기도 공개
+                                                                {% endif %}
+                                                            </strong>
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="prayer-meta-chip prayer-meta-chip-visibility">
+                                                            <small>공개</small>
+                                                            <strong class="prayer-visibility prayer-visibility-private">혼자 기도</strong>
+                                                        </span>
+                                                    {% endif %}
+                                                    {% if prayer.is_publicly_shared %}
+                                                        <span class="prayer-meta-chip prayer-meta-chip-support">
+                                                            <small>함께 기도</small>
+                                                            <strong class="prayer-visibility">
+                                                                {% if prayer.support_count %}
+                                                                    {{ prayer.support_count }}명 기도 중
+                                                                {% else %}
+                                                                    아직 없음
+                                                                {% endif %}
+                                                            </strong>
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </summary>
+                                            <form method="post" action="{% url 'core:update_prayer_request' prayer.id %}" class="action-form prayer-edit-form">
+                                                {% csrf_token %}
+                                                <textarea id="prayer-content-{{ prayer.id }}" name="content" rows="4">{{ prayer.content }}</textarea>
+                                                <div class="voice-entry-toolbar prayer-voice-toolbar">
+                                                    <button
+                                                        type="button"
+                                                        class="voice-input-button voice-input-button-secondary prayer-voice-button"
+                                                        data-voice-selector="#prayer-content-{{ prayer.id }}"
+                                                        data-voice-label-id="prayer-voice-status-{{ prayer.id }}"
+                                                        data-idle-label="🎤 말로 입력"
+                                                        data-listening-label="■ 녹음 중"
+                                                    >🎤 말로 입력</button>
+                                                    <span id="prayer-voice-status-{{ prayer.id }}" class="voice-entry-status" aria-live="polite"></span>
+                                                </div>
+                                                {% if prayer.scripture_recommendations %}
+                                                    <section class="prayer-scripture-card">
+                                                        <strong>함께 읽어보면 좋은 말씀</strong>
+                                                        <div class="prayer-scripture-list">
+                                                            {% for item in prayer.scripture_recommendations %}
+                                                                <article class="prayer-scripture-item">
+                                                                    <span class="prayer-scripture-reference">{{ item.reference }}</span>
+                                                                    <p>{{ item.reason }}</p>
+                                                                </article>
+                                                            {% endfor %}
+                                                        </div>
+                                                    </section>
+                                                {% endif %}
+                                                <div class="prayer-edit-grid">
+                                                    <label>
+                                                        <span class="field-help">상태</span>
+                                                        <select name="status" class="auth-role-select">
+                                                            {% for value, label in prayer_status_choices %}
+                                                                <option value="{{ value }}" {% if prayer.status == value %}selected{% endif %}>{{ label }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </label>
+                                                    <label>
+                                                        <span class="field-help">간증 / 결과 메모</span>
+                                                        <textarea name="testimony_note" rows="4" placeholder="응답받은 경우 간증이나 결과를 적어 주세요.">{{ prayer.testimony_note }}</textarea>
+                                                    </label>
+                                                </div>
+                                                <div class="choice-group prayer-visibility-group">
+                                                    {% for option in prayer_visibility_choices %}
+                                                        <label class="choice-option prayer-privacy-option">
+                                                            <input type="radio" name="visibility" value="{{ option.value }}" {% if prayer.visibility == option.value %}checked{% endif %}>
+                                                            <span>
+                                                                <strong>{{ option.label }}</strong>
+                                                                <small>{{ option.description }}</small>
+                                                            </span>
+                                                        </label>
+                                                    {% endfor %}
+                                                </div>
+                                                {% if prayer.answered_at %}
+                                                    <p class="support-text">응답 기록: {{ prayer.answered_at|date:"Y-m-d H:i" }}</p>
+                                                {% endif %}
+                                                {% if prayer.is_publicly_shared %}
+                                                    <p class="support-text">
+                                                        {% if prayer.support_count %}
+                                                            {{ prayer.support_count }}명이 함께 기도 중입니다.
+                                                        {% else %}
+                                                            아직 함께 기도 중인 교인은 없습니다.
+                                                        {% endif %}
+                                                    </p>
+                                                {% endif %}
+                                                <button type="submit" class="action-button">저장</button>
+                                            </form>
+                                        </details>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="empty">아직 등록한 기도제목이 없습니다.</p>
+                            {% endif %}
+                        </section>
+
+                        <section class="panel" id="public-prayer-list">
+                            <div class="panel-header">
+                                <h2>기도 부탁</h2>
+                            </div>
+                            {% if public_prayer_requests %}
+                                <div class="three-column prayer-public-grid">
+                                    {% for prayer in public_prayer_requests %}
+                                        <article class="content-card prayer-public-card">
+                                            <div class="prayer-public-head">
+                                                {% if prayer.title != prayer.content %}
+                                                    <strong>{{ prayer.title }}</strong>
+                                                {% endif %}
+                                                <span class="prayer-status prayer-status-{{ prayer.status }}">{{ prayer.get_status_display }}</span>
+                                            </div>
+                                            <p class="support-text">
+                                                {% if prayer.is_anonymous_public %}
+                                                    익명 ·
+                                                {% else %}
+                                                    {{ prayer.user.first_name|default:prayer.user.username }} ·
+                                                {% endif %}
+                                                {{ prayer.updated_at|date:"Y-m-d" }}
+                                            </p>
+                                            <p>{{ prayer.content|linebreaksbr }}</p>
+                                            <form method="post" action="{% url 'core:join_prayer_request' prayer.id %}" class="action-form">
+                                                {% csrf_token %}
+                                                <button type="submit" class="action-button" {% if prayer.supported_by_me %}disabled{% endif %}>
+                                                    {% if prayer.supported_by_me %}
+                                                        함께 기도 중
+                                                    {% else %}
+                                                        함께 기도할게요
+                                                    {% endif %}
+                                                </button>
+                                            </form>
+                                        </article>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="empty">지금은 공개된 기도 부탁이 없습니다.</p>
+                            {% endif %}
+                        </section>
+
+                        <section class="panel" id="prayer-testimony-list">
+                            <div class="panel-header">
+                                <h2>응답 간증</h2>
+                            </div>
+                            {% if testimony_prayer_requests %}
+                                <div class="three-column prayer-public-grid">
+                                    {% for prayer in testimony_prayer_requests %}
+                                        <article class="content-card prayer-testimony-card">
+                                            <div class="prayer-public-head">
+                                                {% if prayer.title != prayer.testimony_note %}
+                                                    <strong>{{ prayer.title }}</strong>
+                                                {% endif %}
+                                                <span class="prayer-status prayer-status-answered">응답받음</span>
+                                            </div>
+                                            <p class="support-text">
+                                                {% if prayer.is_anonymous_public %}
+                                                    익명 ·
+                                                {% else %}
+                                                    {{ prayer.user.first_name|default:prayer.user.username }} ·
+                                                {% endif %}
+                                                {{ prayer.answered_at|date:"Y-m-d" }}
+                                            </p>
+                                            <p>{{ prayer.testimony_note|linebreaksbr }}</p>
+                                        </article>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="empty">아직 공개된 응답 간증이 없습니다.</p>
+                            {% endif %}
+                        </section>
+                    {% endif %}
                 </section>
             </div>
         {% else %}
@@ -1101,8 +1371,21 @@
                         activeRecorder.stop();
                     }
 
+                    var selector = button.getAttribute("data-voice-selector");
                     var fieldName = button.getAttribute("data-voice-target");
-                    var target = document.querySelector('textarea[name="' + fieldName + '"]');
+                    var target = null;
+                    if (selector) {
+                        target = document.querySelector(selector);
+                    }
+                    if (!target && fieldName) {
+                        var ownerForm = button.closest("form");
+                        if (ownerForm) {
+                            target = ownerForm.querySelector('textarea[name="' + fieldName + '"]');
+                        }
+                    }
+                    if (!target && fieldName) {
+                        target = document.querySelector('textarea[name="' + fieldName + '"]');
+                    }
                     if (!target) {
                         setVoiceStatus(button, "입력칸을 찾지 못했습니다.", "error");
                         return;

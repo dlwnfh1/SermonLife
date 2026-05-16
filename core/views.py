@@ -1,4 +1,5 @@
 ﻿import re
+import logging
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -7,7 +8,7 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import AuthenticationForm
 from django.db import transaction
-from django.db.models import Count, Q, Sum
+from django.db.models import Case, Count, IntegerField, Q, Sum, Value, When
 from django.forms import modelformset_factory
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -28,6 +29,10 @@ from .models import (
     DailyReflectionResponse,
     PointLedger,
     PointSource,
+    PrayerCompanion,
+    PrayerRequest,
+    PrayerRequestStatus,
+    PrayerRequestVisibility,
     SermonAudioClip,
     SermonAudioClipKind,
     Sermon,
@@ -51,6 +56,10 @@ from .services.engagement import (
     submit_daily_quiz,
     submit_reflection,
 )
+from .services.prayer_scripture_recommendations import (
+    PrayerScriptureRecommendationError,
+    request_prayer_scripture_recommendations,
+)
 from reports.models import (
     ContentQualityReport,
     DailyActionReport,
@@ -65,6 +74,9 @@ from reports.services import (
     sync_user_participation_report,
     sync_weekly_participation_report,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 def _get_or_create_profile(user):
@@ -247,11 +259,16 @@ def _build_home_context(request):
             request._remaining_messages.append({"text": text, "tags": message.tags})
 
     active_home_tab = request.GET.get("tab", "sermon")
-    if active_home_tab not in {"sermon", "overview", "routine", "today"}:
+    if active_home_tab not in {"sermon", "overview", "routine", "today", "prayer"}:
         active_home_tab = "sermon"
     active_feedback = request.GET.get("feedback", "")
     if active_feedback not in {"quiz", "reflection", "mission"}:
         active_feedback = ""
+    open_prayer_id = request.GET.get("open_prayer")
+    try:
+        open_prayer_id = int(open_prayer_id) if open_prayer_id else None
+    except (TypeError, ValueError):
+        open_prayer_id = None
 
     challenge = _get_active_challenge()
     sermon = challenge.sermon if challenge else None
@@ -327,6 +344,9 @@ def _build_home_context(request):
     total_highlight_voters = 0
     weekly_audio_clip = None
     today_audio_clip = None
+    my_prayer_requests = []
+    public_prayer_requests = []
+    testimony_prayer_requests = []
     if sermon:
         highlight_choices = list(sermon.highlight_choices.all())
         if request.user.is_authenticated:
@@ -370,6 +390,64 @@ def _build_home_context(request):
                 .exclude(file="")
                 .first()
             )
+    if request.user.is_authenticated:
+        my_prayer_support_counts = {
+            row["prayer_request_id"]: row["total"]
+            for row in (
+                PrayerCompanion.objects.filter(prayer_request__user=request.user)
+                .exclude(user=request.user)
+                .values("prayer_request_id")
+                .annotate(total=Count("id"))
+            )
+        }
+        my_prayer_support_me = {
+            row["prayer_request_id"]
+            for row in (
+                PrayerCompanion.objects.filter(prayer_request__user=request.user, user=request.user)
+                .values("prayer_request_id")
+            )
+        }
+        my_prayer_requests = list(
+            PrayerRequest.objects.filter(user=request.user).order_by("-updated_at", "-created_at", "-id")
+        )
+        for prayer in my_prayer_requests:
+            prayer.support_count = my_prayer_support_counts.get(prayer.id, 0)
+            prayer.supported_by_me = prayer.id in my_prayer_support_me
+
+        supported_public_ids = {
+            row["prayer_request_id"]
+            for row in (
+                PrayerCompanion.objects.filter(user=request.user)
+                .values("prayer_request_id")
+            )
+        }
+        public_prayer_requests = list(
+            PrayerRequest.objects.filter(is_public=True)
+            .exclude(user=request.user)
+            .annotate(support_count=Count("companions", distinct=True))
+            .select_related("user")
+            .order_by(
+                Case(
+                    When(status=PrayerRequestStatus.PRAYING, then=Value(0)),
+                    When(status=PrayerRequestStatus.ON_HOLD, then=Value(1)),
+                    default=Value(2),
+                    output_field=IntegerField(),
+                ),
+                "-updated_at",
+                "-created_at",
+            )[:8]
+        )
+        for prayer in public_prayer_requests:
+            prayer.supported_by_me = prayer.id in supported_public_ids
+        testimony_prayer_requests = list(
+            PrayerRequest.objects.filter(
+                is_public=True,
+                status=PrayerRequestStatus.ANSWERED,
+            )
+            .exclude(testimony_note="")
+            .select_related("user")
+            .order_by("-answered_at", "-updated_at", "-created_at")[:6]
+        )
     weekly_base_max_points = (QUIZ_POINTS + REFLECTION_POINTS + MISSION_POINTS + DAILY_COMPLETION_POINTS) * 5
     weekly_total_max_points = weekly_base_max_points + WEEKLY_COMPLETION_POINTS
 
@@ -405,6 +483,12 @@ def _build_home_context(request):
         "remaining_messages": getattr(request, "_remaining_messages", []),
         "active_home_tab": active_home_tab,
         "active_feedback": active_feedback,
+        "open_prayer_id": open_prayer_id,
+        "my_prayer_requests": my_prayer_requests,
+        "public_prayer_requests": public_prayer_requests,
+        "testimony_prayer_requests": testimony_prayer_requests,
+        "prayer_status_choices": PrayerRequestStatus.choices,
+        "prayer_visibility_choices": _build_prayer_visibility_options(),
     }
 
 
@@ -444,6 +528,22 @@ def _redirect_to_today_set():
 def _redirect_to_today_anchor(request, default_anchor="today-set"):
     anchor = request.POST.get("return_anchor", "").strip() or default_anchor
     return _redirect_home(tab="today", anchor=anchor)
+
+
+def _build_prayer_visibility_options():
+    descriptions = {
+        PrayerRequestVisibility.PRIVATE: "이 기도제목은 나만 보고 조용히 기도합니다.",
+        PrayerRequestVisibility.PUBLIC: "교인들에게 공개해서 함께 기도해 주시길 부탁합니다.",
+        PrayerRequestVisibility.ANONYMOUS: "교인들에게 공개해서 함께 기도를 부탁하지만, 내 이름은 보이지 않습니다.",
+    }
+    return [
+        {
+            "value": value,
+            "label": label,
+            "description": descriptions.get(value, ""),
+        }
+        for value, label in PrayerRequestVisibility.choices
+    ]
 
 
 def _is_pastor_user(user):
@@ -752,6 +852,121 @@ def complete_mission_view(request, pk):
     else:
         messages.success(request, f"오늘의 미션을 완료했습니다. 7달란트를 받았습니다.{bonus_suffix}")
     return _redirect_home(tab="today", anchor="today-mission-card", extra_params={"feedback": "mission"})
+
+
+@login_required
+@require_POST
+def create_prayer_request_view(request):
+    content = (request.POST.get("content") or "").strip()
+    visibility = (request.POST.get("visibility") or PrayerRequestVisibility.PRIVATE).strip()
+    valid_visibilities = {choice[0] for choice in PrayerRequestVisibility.choices}
+
+    if len(content) < 5:
+        messages.error(request, "기도제목 내용을 조금 더 적어 주세요.")
+        return _redirect_home(tab="prayer", anchor="prayer-create-card")
+    if visibility not in valid_visibilities:
+        messages.error(request, "공개 방식을 다시 선택해 주세요.")
+        return _redirect_home(tab="prayer", anchor="prayer-create-card")
+
+    prayer_request = PrayerRequest.objects.create(
+        user=request.user,
+        title="",
+        content=content,
+        visibility=visibility,
+    )
+    recommendation_ready = False
+    try:
+        prayer_request.scripture_recommendations = request_prayer_scripture_recommendations(prayer_request)
+        prayer_request.save(update_fields=["scripture_recommendations", "updated_at"])
+        recommendation_ready = True
+    except PrayerScriptureRecommendationError:
+        logger.exception("Failed to generate prayer scripture recommendations for prayer_request=%s", prayer_request.pk)
+    if visibility == PrayerRequestVisibility.PUBLIC:
+        message = "기도제목을 등록했고 교인들과 함께 기도할 수 있도록 공개했습니다."
+    elif visibility == PrayerRequestVisibility.ANONYMOUS:
+        message = "기도제목을 등록했고 익명으로 함께 기도할 수 있도록 공개했습니다."
+    else:
+        message = "기도제목을 등록했습니다."
+    if recommendation_ready:
+        message = f"{message} 함께 읽어보면 좋은 말씀도 추천해 드렸습니다."
+    messages.success(request, message)
+    return _redirect_home(
+        tab="prayer",
+        anchor=f"prayer-request-{prayer_request.pk}",
+        extra_params={"open_prayer": prayer_request.pk},
+    )
+
+
+@login_required
+@require_POST
+def update_prayer_request_view(request, pk):
+    prayer_request = get_object_or_404(PrayerRequest, pk=pk, user=request.user)
+    previous_content = prayer_request.content
+    content = (request.POST.get("content") or "").strip()
+    status = (request.POST.get("status") or PrayerRequestStatus.PRAYING).strip()
+    testimony_note = (request.POST.get("testimony_note") or "").strip()
+    visibility = (request.POST.get("visibility") or PrayerRequestVisibility.PRIVATE).strip()
+
+    valid_statuses = {choice[0] for choice in PrayerRequestStatus.choices}
+    valid_visibilities = {choice[0] for choice in PrayerRequestVisibility.choices}
+    if status not in valid_statuses:
+        messages.error(request, "기도 상태를 다시 선택해 주세요.")
+        return _redirect_home(tab="prayer", anchor=f"prayer-request-{prayer_request.pk}")
+    if len(content) < 5:
+        messages.error(request, "기도제목 내용을 조금 더 적어 주세요.")
+        return _redirect_home(tab="prayer", anchor=f"prayer-request-{prayer_request.pk}")
+    if visibility not in valid_visibilities:
+        messages.error(request, "공개 방식을 다시 선택해 주세요.")
+        return _redirect_home(tab="prayer", anchor=f"prayer-request-{prayer_request.pk}")
+    if status == PrayerRequestStatus.ANSWERED and not testimony_note:
+        messages.error(request, "응답받음으로 표시할 때는 간증이나 결과 메모를 함께 적어 주세요.")
+        return _redirect_home(tab="prayer", anchor=f"prayer-request-{prayer_request.pk}")
+
+    prayer_request.content = content
+    prayer_request.status = status
+    prayer_request.visibility = visibility
+    prayer_request.testimony_note = testimony_note
+    prayer_request.save()
+    recommendation_ready = False
+    if content != previous_content or not prayer_request.scripture_recommendations:
+        try:
+            prayer_request.scripture_recommendations = request_prayer_scripture_recommendations(prayer_request)
+            prayer_request.save(update_fields=["scripture_recommendations", "updated_at"])
+            recommendation_ready = True
+        except PrayerScriptureRecommendationError:
+            logger.exception("Failed to generate prayer scripture recommendations for prayer_request=%s", prayer_request.pk)
+
+    if status == PrayerRequestStatus.ANSWERED:
+        message = "기도제목을 응답받음으로 저장했고 간증 메모도 반영했습니다."
+    else:
+        message = "기도제목을 저장했습니다."
+    if recommendation_ready:
+        message = f"{message} 함께 읽어보면 좋은 말씀도 새로 추천해 드렸습니다."
+    messages.success(request, message)
+    return _redirect_home(
+        tab="prayer",
+        anchor=f"prayer-request-{prayer_request.pk}",
+        extra_params={"open_prayer": prayer_request.pk},
+    )
+
+
+@login_required
+@require_POST
+def join_prayer_request_view(request, pk):
+    prayer_request = get_object_or_404(
+        PrayerRequest.objects.exclude(user=request.user),
+        pk=pk,
+        is_public=True,
+    )
+    companion, created = PrayerCompanion.objects.get_or_create(
+        prayer_request=prayer_request,
+        user=request.user,
+    )
+    if created:
+        messages.success(request, "함께 기도하기로 표시했습니다.")
+    else:
+        messages.success(request, "이미 함께 기도 중으로 표시되어 있습니다.")
+    return _redirect_home(tab="prayer", anchor="public-prayer-list")
 
 
 @login_required

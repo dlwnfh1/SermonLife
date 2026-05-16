@@ -538,6 +538,96 @@ class UserProfile(models.Model):
         return self.user.get_username()
 
 
+class PrayerRequestStatus(models.TextChoices):
+    PRAYING = "praying", "기도중"
+    ANSWERED = "answered", "응답받음"
+    ON_HOLD = "on_hold", "보류"
+
+
+class PrayerRequestVisibility(models.TextChoices):
+    PRIVATE = "private", "혼자 기도할게요"
+    PUBLIC = "public", "함께 기도 부탁드려요"
+    ANONYMOUS = "anonymous", "이름은 숨기고 함께 기도 부탁드려요"
+
+
+class PrayerRequest(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="prayer_requests")
+    title = models.CharField(max_length=120)
+    content = models.TextField()
+    status = models.CharField(max_length=20, choices=PrayerRequestStatus.choices, default=PrayerRequestStatus.PRAYING)
+    is_public = models.BooleanField(default=False)
+    visibility = models.CharField(
+        max_length=20,
+        choices=PrayerRequestVisibility.choices,
+        default=PrayerRequestVisibility.PRIVATE,
+    )
+    testimony_note = models.TextField(blank=True)
+    scripture_recommendations = models.JSONField(default=list, blank=True)
+    answered_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-created_at", "-id"]
+
+    def __str__(self):
+        return f"{self.user.get_username()} - {self.title}"
+
+    def save(self, *args, **kwargs):
+        self.title = self._build_title_from_content()
+        self.is_public = self.visibility in {
+            PrayerRequestVisibility.PUBLIC,
+            PrayerRequestVisibility.ANONYMOUS,
+        }
+        if self.status == PrayerRequestStatus.ANSWERED and self.answered_at is None:
+            self.answered_at = timezone.now()
+        elif self.status != PrayerRequestStatus.ANSWERED:
+            self.answered_at = None
+        super().save(*args, **kwargs)
+
+    def _build_title_from_content(self):
+        source = (self.content or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+        if not source:
+            return self.title or "기도제목"
+        first_line = next((line.strip() for line in source.split("\n") if line.strip()), "")
+        compact = first_line or source
+        return compact[:40]
+
+    @property
+    def is_publicly_shared(self):
+        return self.visibility in {PrayerRequestVisibility.PUBLIC, PrayerRequestVisibility.ANONYMOUS}
+
+    @property
+    def is_anonymous_public(self):
+        return self.visibility == PrayerRequestVisibility.ANONYMOUS
+
+
+class PrayerCompanion(models.Model):
+    prayer_request = models.ForeignKey(
+        PrayerRequest,
+        on_delete=models.CASCADE,
+        related_name="companions",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="prayer_companions",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["prayer_request", "user"],
+                name="unique_prayer_companion_per_user",
+            )
+        ]
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"{self.user.get_username()} -> {self.prayer_request.title}"
+
+
 class PastorNotificationRecipient(models.Model):
     name = models.CharField(max_length=100, blank=True)
     email = models.EmailField(unique=True)
