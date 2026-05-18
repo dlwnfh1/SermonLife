@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if active_church %}{{ active_church.name }} | {% endif %}&#xB85C;&#xADF8;&#xC778; | Word &amp; Life</title>
+    <title>{% if active_church %}{{ active_church.name }} | {% endif %}로그인 | Word &amp; Life</title>
     <link rel="stylesheet" href="{% static 'core/styles.css' %}">
     <style>
         .auth-form {
@@ -95,7 +95,7 @@
             {% if active_church %}
                 <p class="auth-church-note">{{ active_church.name }} 페이지</p>
             {% endif %}
-            <h1>&#xB85C;&#xADF8;&#xC778;</h1>
+            <h1>로그인</h1>
 
             {% if messages %}
                 <div class="auth-messages">
@@ -107,7 +107,13 @@
 
             <form method="post" class="auth-form">
                 {% csrf_token %}
-                {{ form.non_field_errors }}
+                {% if form.non_field_errors %}
+                    <div class="auth-messages">
+                        {% for error in form.non_field_errors %}
+                            <p class="message-row error">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
                 {% for field in form %}
                     <div class="auth-field">
                         <label class="auth-label" for="{{ field.id_for_label }}">
@@ -120,9 +126,9 @@
                                     type="button"
                                     class="password-visibility-button"
                                     data-password-toggle
-                                    aria-label="&#xBE44;&#xBC00;&#xBC88;&#xD638; &#xBCF4;&#xAE30;"
+                                    aria-label="비밀번호 보기"
                                     aria-pressed="false"
-                                >&#xD45C;&#xC2DC;</button>
+                                >표시</button>
                             </div>
                         {% else %}
                             {{ field }}
@@ -132,10 +138,10 @@
                         {% endif %}
                     </div>
                 {% endfor %}
-                <button type="submit" class="action-button wide-button">&#xB85C;&#xADF8;&#xC778;</button>
+                <button type="submit" class="action-button wide-button">로그인</button>
             </form>
 
-            <p class="auth-helper">&#xC544;&#xC9C1; &#xACC4;&#xC815;&#xC774; &#xC5C6;&#xC73C;&#xC2DC;&#xBA74; <a href="{{ signup_url }}">&#xD68C;&#xC6D0;&#xAC00;&#xC785;</a></p>
+            <p class="auth-helper">아직 계정이 없으시면 <a href="{{ signup_url }}">회원가입</a></p>
         </section>
     </main>
     <script>
@@ -149,9 +155,9 @@
                     }
                     var showing = input.type === "text";
                     input.type = showing ? "password" : "text";
-                    button.setAttribute("aria-label", showing ? "\uBE44\uBC00\uBC88\uD638 \uBCF4\uAE30" : "\uBE44\uBC00\uBC88\uD638 \uC228\uAE30\uAE30");
+                    button.setAttribute("aria-label", showing ? "비밀번호 보기" : "비밀번호 숨기기");
                     button.setAttribute("aria-pressed", showing ? "false" : "true");
-                    button.textContent = showing ? "\uD45C\uC2DC" : "\uC228\uAE40";
+                    button.textContent = showing ? "표시" : "숨김";
                 });
             });
         })();

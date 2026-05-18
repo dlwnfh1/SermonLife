@@ -894,12 +894,8 @@ def signup_view(request, church_slug=None):
             )
             _set_active_church_session(request, active_church)
             login(request, user)
-            messages.success(request, "?뚯썝媛?낆씠 ?꾨즺?섏뿀?듬땲?? ?대쾲 二??ㅺ탳 猷⑦떞???쒖옉??蹂댁꽭??")
+            messages.success(request, "회원가입이 완료되었습니다. 이번 주 설교 루틴을 시작해 보세요.")
             return redirect(_church_home_url(active_church))
-        if "username" in form.errors:
-            messages.error(request, "?대? ?ъ슜 以묒씤 ?꾩씠?붿엯?덈떎.")
-        else:
-            messages.error(request, "?낅젰???댁슜???ㅼ떆 ?뺤씤??二쇱꽭??")
     else:
         form = SermonLifeSignUpForm()
 
