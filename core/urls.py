@@ -4,6 +4,7 @@ from django.contrib.auth.views import PasswordChangeDoneView, PasswordChangeView
 from .views import (
     complete_mission_view,
     create_prayer_request_view,
+    delete_prayer_request_view,
     home_view,
     join_prayer_request_view,
     login_view,
@@ -56,6 +57,14 @@ urlpatterns = [
     path("prayers/create/", create_prayer_request_view, name="create_prayer_request"),
     path("prayers/<int:pk>/join/", join_prayer_request_view, name="join_prayer_request"),
     path("prayers/<int:pk>/update/", update_prayer_request_view, name="update_prayer_request"),
+    path("prayers/<int:pk>/delete/", delete_prayer_request_view, name="delete_prayer_request"),
     path("voice/transcribe/", transcribe_voice_note_view, name="transcribe_voice_note"),
     path("highlight/vote/", submit_highlight_vote_view, name="submit_highlight_vote"),
+    path("<slug:church_slug>/", home_view, name="church_home"),
+    path("<slug:church_slug>/history/", my_history_view, name="church_my_history"),
+    path("<slug:church_slug>/watch/", watch_sermon_view, name="church_watch_sermon"),
+    path("<slug:church_slug>/read/", read_sermon_view, name="church_read_sermon"),
+    path("<slug:church_slug>/login/", login_view, name="church_login"),
+    path("<slug:church_slug>/signup/", signup_view, name="church_signup"),
+    path("<slug:church_slug>/logout/", logout_view, name="church_logout"),
 ]

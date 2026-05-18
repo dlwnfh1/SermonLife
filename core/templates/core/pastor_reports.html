@@ -6,6 +6,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>교역자 리포트 | Word &amp; Life</title>
     <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+    <style>
+        .church-context-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            padding: 8px 12px !important;
+            border-radius: 999px !important;
+            background: rgba(47, 107, 132, 0.1) !important;
+            border: 1px solid rgba(47, 107, 132, 0.14) !important;
+            color: #2f6b84 !important;
+            font-size: 0.88rem !important;
+            font-weight: 800 !important;
+            letter-spacing: 0.02em !important;
+            width: fit-content !important;
+        }
+
+        .auth-church-note {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            margin: 6px 0 0 !important;
+            padding: 8px 12px !important;
+            border-radius: 999px !important;
+            background: rgba(47, 107, 132, 0.09) !important;
+            border: 1px solid rgba(47, 107, 132, 0.14) !important;
+            color: #2f6b84 !important;
+            font-size: 0.92rem !important;
+            font-weight: 700 !important;
+            width: fit-content !important;
+        }
+    </style>
     <link rel="manifest" href="{% static 'core/manifest.json' %}">
     <link rel="apple-touch-icon" href="{% static 'core/icons/apple-touch-icon.png' %}">
     <meta name="theme-color" content="#2f6b84">
@@ -13,15 +43,21 @@
 <body>
     <main class="page-shell pastor-shell">
         <section class="top-actions">
+            {% if active_church %}
+                <span class="church-context-badge">{{ active_church.name }} 공동체</span>
+            {% endif %}
             <a class="text-link" href="{% url 'core:pastor_dashboard' %}">교역자 홈</a>
-            <a class="text-link" href="{% url 'core:home' %}">사용자 화면</a>
-            <a class="text-link" href="{% url 'core:logout' %}">로그아웃</a>
+            <a class="text-link" href="{{ home_url }}">사용자 화면</a>
+            <a class="text-link" href="{{ logout_url }}">로그아웃</a>
         </section>
 
         <section class="panel pastor-hero">
             <p class="eyebrow">REPORTS</p>
+            {% if active_church %}
+                <p class="auth-church-note">{{ active_church.name }} 교역자 페이지</p>
+            {% endif %}
             <h1>교역자 리포트</h1>
-            <p class="lede">기본적으로 전주 설교 리포트를 먼저 보여주고, 필요하면 이전 설교 리포트도 선택해 볼 수 있습니다.</p>
+            <p class="lede">기본적으로 전주 설교 리포트를 먼저 보여주고, 필요하면 이전 설교 리포트도 선택해서 볼 수 있습니다.</p>
         </section>
 
         {% include "core/includes/pastor_nav.html" %}
@@ -33,7 +69,7 @@
             {% if available_challenges %}
                 <form method="get" class="pastor-report-filter">
                     <label class="auth-label pastor-field pastor-report-select">
-                        <span>설교 주차</span>
+                        <span>설교 주간</span>
                         <select name="challenge" onchange="this.form.submit()">
                             {% for challenge in available_challenges %}
                                 <option value="{{ challenge.id }}" {% if active_challenge and active_challenge.id == challenge.id %}selected{% endif %}>
@@ -44,7 +80,7 @@
                     </label>
                 </form>
             {% else %}
-                <p>아직 공개된 설교 리포트가 없습니다.</p>
+                <p>아직 설교 리포트가 없습니다.</p>
             {% endif %}
         </section>
 
@@ -52,7 +88,7 @@
             <section class="panel pastor-report-hero-panel">
                 <div class="pastor-report-hero-grid">
                     <article class="pastor-report-hero-copy">
-                        <p class="section-label">선택된 설교</p>
+                        <p class="section-label">선택한 설교</p>
                         <h2>{{ active_challenge.sermon.title }}</h2>
                         <p class="pastor-report-hero-meta">
                             {{ active_challenge.week_start }} ~ {{ active_challenge.week_end }}
@@ -144,7 +180,7 @@
         <section class="pastor-report-grid">
             <section class="panel">
                 <div class="panel-header">
-                    <h2>가장 마음에 남은 한마디</h2>
+                    <h2>가장 마음에 남은 말씀</h2>
                 </div>
                 {% if highlight_summary %}
                     <article class="pastor-quote-card">
@@ -212,7 +248,7 @@
 
         <section class="panel">
             <div class="panel-header">
-                <h2>Day별 행동 리포트</h2>
+                <h2>Day별 활동 리포트</h2>
             </div>
             {% if daily_report and daily_report.day_rows %}
                 <div class="pastor-report-day-grid">
@@ -242,7 +278,7 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <p>Day별 행동 데이터가 없습니다.</p>
+                <p>Day별 활동 데이터가 없습니다.</p>
             {% endif %}
         </section>
 
@@ -293,7 +329,7 @@
                             <p class="section-label">설교 상세</p>
                             <h3>설교별 참여 상세</h3>
                         </div>
-                        <p>퀴즈, 묵상, 미션, 완주 등 참여 항목을 한 표에서 비교합니다.</p>
+                        <p>퀴즈, 묵상, 미션, 완주 참여를 한 표에서 비교합니다.</p>
                     </div>
                     {% if sermon_report and sermon_report.action_rows %}
                         <div class="pastor-member-table-wrap pastor-report-table-shell">
@@ -327,7 +363,7 @@
                             <p class="section-label">콘텐츠 점검</p>
                             <h3>콘텐츠 점검 상세</h3>
                         </div>
-                        <p>반응이 낮은 Day와 주의할 항목을 표로 확인합니다.</p>
+                        <p>반응이 낮은 Day와 주의할 항목을 한눈에 확인합니다.</p>
                     </div>
                     {% if quality_report and quality_report.quality_rows %}
                         <div class="pastor-member-table-wrap pastor-report-table-shell">

@@ -8,16 +8,17 @@ class PastorReviewNotificationError(Exception):
     pass
 
 
-def _get_active_recipient_emails():
+def _get_active_recipient_emails(church=None):
+    queryset = PastorNotificationRecipient.objects.filter(is_active=True)
+    if church is not None:
+        queryset = queryset.filter(church=church)
     return list(
-        PastorNotificationRecipient.objects.filter(is_active=True)
-        .order_by("name", "email")
-        .values_list("email", flat=True)
+        queryset.order_by("name", "email").values_list("email", flat=True)
     )
 
 
 def send_pastor_review_notification(sermon):
-    recipient_emails = _get_active_recipient_emails()
+    recipient_emails = _get_active_recipient_emails(sermon.church)
     if not recipient_emails:
         raise PastorReviewNotificationError("활성화된 목회자 공지 수신자 이메일이 없습니다.")
 

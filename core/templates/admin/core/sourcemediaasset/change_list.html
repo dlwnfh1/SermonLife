@@ -1,10 +1,30 @@
 {% extends "admin/change_list.html" %}
 
+{% block extrahead %}
+  {{ block.super }}
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+{% endblock %}
+
 {% block content %}
   <div class="sermon-source-media-panel" style="margin-bottom: 18px;">
     <h2>원본 파일 폴더</h2>
     <p>{{ source_media_root }}</p>
-    <p>여기에 있는 파일들만 새 설교 작성 시 선택할 수 있습니다.</p>
+    <p>여기에 있는 파일들만 설교 작성 시 AI 작업용 원본 파일로 선택할 수 있습니다.</p>
   </div>
   {{ block.super }}
+  <script>
+    (function () {
+      var hasRows = document.querySelector("#result_list tbody tr");
+      var hasFilter = document.querySelector("#changelist-filter") || document.querySelector(".actions");
+      var refreshKey = "wordandlife-source-media-list-refresh";
+      if (!hasRows && hasFilter && !window.sessionStorage.getItem(refreshKey)) {
+        window.sessionStorage.setItem(refreshKey, "1");
+        window.location.reload();
+        return;
+      }
+      window.sessionStorage.removeItem(refreshKey);
+    }());
+  </script>
 {% endblock %}

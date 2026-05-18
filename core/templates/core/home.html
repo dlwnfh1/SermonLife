@@ -69,6 +69,20 @@
             display: none;
         }
 
+        .church-context-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            padding: 8px 12px !important;
+            border-radius: 999px !important;
+            background: rgba(47, 107, 132, 0.1) !important;
+            border: 1px solid rgba(47, 107, 132, 0.14) !important;
+            color: #2f6b84 !important;
+            font-size: 0.88rem !important;
+            font-weight: 800 !important;
+            letter-spacing: 0.02em !important;
+            width: fit-content !important;
+        }
+
         #home-tab-sermon:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-sermon"],
         #home-tab-overview:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-overview"],
         #home-tab-routine:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-routine"],
@@ -88,6 +102,125 @@
             gap: 18px;
         }
 
+        .prayer-stack {
+            display: grid;
+            gap: 16px;
+        }
+
+        .prayer-request-card {
+            padding: 0;
+            overflow: hidden;
+            border-radius: 28px;
+        }
+
+        .prayer-request-summary {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 26px 28px;
+            list-style: none;
+            cursor: pointer;
+        }
+
+        .prayer-request-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .prayer-request-summary strong {
+            display: block;
+            color: #201913;
+        }
+
+        .prayer-request-summary-main {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .prayer-request-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            background: rgba(255, 250, 242, 0.82);
+            color: #8b5c3b;
+            font-size: 0.95rem;
+            font-weight: 900;
+            flex-shrink: 0;
+            transition: transform 160ms ease, background-color 160ms ease;
+        }
+
+        .prayer-request-card[open] .prayer-request-toggle {
+            transform: rotate(90deg);
+            background: rgba(139, 92, 59, 0.14);
+        }
+
+        .prayer-request-summary p {
+            margin: 10px 0 0;
+            color: #7f6b58;
+            font-size: 0.92rem;
+        }
+
+        .prayer-request-summary-meta {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .prayer-meta-chip {
+            display: grid;
+            gap: 4px;
+            padding: 10px 14px;
+            min-width: 118px;
+            border-radius: 20px;
+            background: rgba(255, 250, 242, 0.82);
+        }
+
+        .prayer-meta-chip small {
+            color: #7f6b58;
+            font-size: 0.74rem;
+            font-weight: 700;
+        }
+
+        .prayer-status,
+        .prayer-visibility {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: fit-content;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-weight: 800;
+            line-height: 1;
+            background: rgba(139, 92, 59, 0.12);
+            color: #8b5c3b;
+        }
+
+        .prayer-status-praying {
+            background: rgba(47, 107, 132, 0.12);
+            color: #1f5a6d;
+        }
+
+        .prayer-status-answered {
+            background: rgba(31, 135, 76, 0.12);
+            color: #1f6e3f;
+        }
+
+        .prayer-status-on_hold {
+            background: rgba(123, 77, 0, 0.12);
+            color: #7b4d00;
+        }
+
+        .prayer-visibility-private {
+            background: rgba(32, 25, 19, 0.08);
+            color: #7f6b58;
+        }
+
         @media (max-width: 900px) {
             .home-tab-sticky {
                 width: 100%;
@@ -103,6 +236,19 @@
                 min-height: 44px;
                 padding: 0 10px;
                 font-size: 0.9rem;
+            }
+
+            .prayer-request-summary {
+                flex-direction: column;
+                padding: 22px 20px;
+            }
+
+            .prayer-request-summary-main {
+                width: 100%;
+            }
+
+            .prayer-request-summary-meta {
+                justify-content: flex-start;
             }
         }
     </style>
@@ -120,17 +266,20 @@
     {% endif %}
     <main class="page-shell">
         <section class="top-actions">
+            {% if active_church %}
+                <span class="church-context-badge">{{ active_church.name }} 공동체</span>
+            {% endif %}
             {% if request.user.is_authenticated %}
                 <span class="auth-chip">{{ request.user.first_name|default:request.user.username }}</span>
                 {% if request.user.is_staff or profile.member_role == "pastor" %}
                     <a class="text-link" href="{% url 'core:pastor_dashboard' %}">교역자 페이지</a>
                 {% endif %}
-                <a class="text-link" href="{% url 'core:my_history' %}">내 기록</a>
+                <a class="text-link" href="{{ history_url }}">내 기록</a>
                 <a class="text-link" href="{% url 'core:password_change' %}">비밀번호 변경</a>
-                <a class="text-link" href="{% url 'core:logout' %}">로그아웃</a>
+                <a class="text-link" href="{{ logout_url }}">로그아웃</a>
             {% else %}
-                <a class="text-link" href="{% url 'core:login' %}">로그인</a>
-                <a class="text-link strong" href="{% url 'core:signup' %}">회원가입</a>
+                <a class="text-link" href="{{ login_url }}">로그인</a>
+                <a class="text-link strong" href="{{ signup_url }}">회원가입</a>
             {% endif %}
         </section>
 
@@ -144,7 +293,7 @@
                         </div>
                         <div class="hero-mark-copy">
                             <strong>Word &amp; Life</strong>
-                            <span>말씀을 삶으로 이어가는 루틴</span>
+                            <span>{% if active_church %}{{ active_church.name }} · {% endif %}말씀을 삶으로 이어가는 루틴</span>
                         </div>
                     </div>
                     <p class="eyebrow">WORD &amp; LIFE</p>
@@ -278,7 +427,7 @@
                                         <div class="video-link-card">
                                             <strong>{{ sermon.title }}</strong>
                                             <p>설교 영상은 별도 화면에서 편하게 보실 수 있습니다.</p>
-                                            <a class="action-button" href="{% url 'core:watch_sermon' %}">설교 영상 보기</a>
+                                            <a class="action-button" href="{{ watch_sermon_url }}">설교 영상 보기</a>
                                         </div>
                                     </article>
                                 {% endif %}
@@ -289,7 +438,7 @@
                                         <div class="audio-card">
                                             <strong>{{ sermon.title }}</strong>
                                             <p>설교 전체 자막과 원문을 읽기 좋은 화면에서 차분하게 볼 수 있습니다.</p>
-                                            <a class="action-button" href="{% url 'core:read_sermon' %}">설교 읽기</a>
+                                            <a class="action-button" href="{{ read_sermon_url }}">설교 읽기</a>
                                         </div>
                                     </article>
                                 {% endif %}
@@ -459,7 +608,7 @@
                                 <span>하루 보너스 {{ current_daily_state.daily_bonus_points|default:0 }}달란트</span>
                             </div>
                         {% else %}
-                            <p class="empty">달란트 적립과 기록 저장은 로그인 후 이용할 수 있습니다. <a href="{% url 'core:login' %}">로그인하기</a></p>
+                            <p class="empty">달란트 적립과 기록 저장은 로그인 후 이용할 수 있습니다. <a href="{{ login_url }}">로그인하기</a></p>
                         {% endif %}
 
                         <div class="three-column">
@@ -644,7 +793,7 @@
                                 </form>
                             </details>
                         {% else %}
-                            <p class="empty">기도제목 등록과 기도 상태 관리는 로그인 후 이용할 수 있습니다. <a href="{% url 'core:login' %}">로그인하기</a></p>
+                            <p class="empty">기도제목 등록과 기도 상태 관리는 로그인 후 이용할 수 있습니다. <a href="{{ login_url }}">로그인하기</a></p>
                         {% endif %}
                     </section>
 
@@ -658,9 +807,12 @@
                                     {% for prayer in my_prayer_requests %}
                                         <details class="content-card prayer-request-card" id="prayer-request-{{ prayer.id }}" {% if open_prayer_id == prayer.id %}open{% endif %}>
                                             <summary class="prayer-request-summary">
-                                                <div>
-                                                    <strong>{{ prayer.title }}</strong>
-                                                    <p>{{ prayer.created_at|date:"Y-m-d" }} 등록</p>
+                                                <div class="prayer-request-summary-main">
+                                                    <span class="prayer-request-toggle" aria-hidden="true">▶</span>
+                                                    <div>
+                                                        <strong>{{ prayer.title }}</strong>
+                                                        <p>{{ prayer.created_at|date:"Y-m-d" }} 등록</p>
+                                                    </div>
                                                 </div>
                                                 <div class="prayer-request-summary-meta">
                                                     <span class="prayer-meta-chip prayer-meta-chip-status">
@@ -762,7 +914,17 @@
                                                         {% endif %}
                                                     </p>
                                                 {% endif %}
-                                                <button type="submit" class="action-button">저장</button>
+                                                <div class="prayer-edit-actions">
+                                                    <button type="submit" class="action-button">저장</button>
+                                                    <button
+                                                        type="submit"
+                                                        class="action-button action-button-danger"
+                                                        formaction="{% url 'core:delete_prayer_request' prayer.id %}"
+                                                        formnovalidate
+                                                        data-confirm-delete="true"
+                                                        data-delete-label="{{ prayer.title|default:'이 기도제목' }}"
+                                                    >삭제</button>
+                                                </div>
                                             </form>
                                         </details>
                                     {% endfor %}
@@ -1446,7 +1608,16 @@
                             setVoiceButtonState(button, false, false);
                             setVoiceStatus(button, message, "error");
                             resetActiveState();
-                        });
+                    });
+                });
+            });
+
+            document.querySelectorAll('[data-confirm-delete="true"]').forEach(function (button) {
+                button.addEventListener("click", function (event) {
+                    var label = button.getAttribute("data-delete-label") || "이 기도제목";
+                    if (!window.confirm("'" + label + "' 기도제목을 정말 삭제할까요?")) {
+                        event.preventDefault();
+                    }
                 });
             });
         })();

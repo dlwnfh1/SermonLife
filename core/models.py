@@ -35,6 +35,37 @@ class MemberRole(models.TextChoices):
     OTHER = "other", "기타"
 
 
+class Church(models.Model):
+    name = models.CharField(max_length=120, unique=True)
+    slug = models.SlugField(max_length=40, unique=True)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name", "id"]
+        verbose_name = "교회"
+        verbose_name_plural = "교회"
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.is_default:
+            type(self).objects.exclude(pk=self.pk).filter(is_default=True).update(is_default=False)
+
+    @classmethod
+    def get_default(cls):
+        return cls.objects.order_by("-is_default", "id").first()
+
+    @classmethod
+    def get_by_slug(cls, slug):
+        if not slug:
+            return cls.get_default()
+        return cls.objects.filter(slug=slug).first()
+
+
 class MediaStorageSetting(models.Model):
     source_media_subdir = models.CharField(
         max_length=255,
@@ -83,8 +114,8 @@ def get_source_media_root():
     return Path(settings.MEDIA_ROOT) / get_source_media_subdir()
 
 
-def get_current_public_sermon_id():
-    active_challenge = WeeklyChallenge.get_current_public_challenge()
+def get_current_public_sermon_id(church=None):
+    active_challenge = WeeklyChallenge.get_current_public_challenge(church=church)
     if active_challenge and active_challenge.sermon_id:
         return active_challenge.sermon_id
     return None
@@ -92,10 +123,26 @@ def get_current_public_sermon_id():
 
 def source_media_upload_to(instance, filename):
     subdir = get_source_media_subdir()
+    church_slug = ""
+    if getattr(instance, "church_id", None) and getattr(instance, "church", None):
+        church_slug = instance.church.slug
+    elif getattr(instance, "church_id", None):
+        church_model = django_apps.get_model("core", "Church")
+        church = church_model.objects.filter(pk=instance.church_id).first()
+        church_slug = church.slug if church else ""
+    if church_slug:
+        return f"{subdir}/{church_slug}/{filename}"
     return f"{subdir}/{filename}"
 
 
 class SourceMediaAsset(models.Model):
+    church = models.ForeignKey(
+        Church,
+        on_delete=models.PROTECT,
+        related_name="source_media_assets",
+        null=True,
+        blank=True,
+    )
     file = models.FileField(upload_to=source_media_upload_to)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -107,8 +154,22 @@ class SourceMediaAsset(models.Model):
     def __str__(self):
         return Path(self.file.name).stem or self.file.name
 
+    def save(self, *args, **kwargs):
+        if self.church_id is None:
+            default_church = Church.get_default()
+            if default_church:
+                self.church = default_church
+        super().save(*args, **kwargs)
+
 
 class Sermon(models.Model):
+    church = models.ForeignKey(
+        Church,
+        on_delete=models.PROTECT,
+        related_name="sermons",
+        null=True,
+        blank=True,
+    )
     title = models.CharField(max_length=255)
     preacher = models.CharField(max_length=100, blank=True)
     sermon_date = models.DateField()
@@ -160,6 +221,13 @@ class Sermon(models.Model):
 
     def __str__(self):
         return f"{self.sermon_date} - {self.title}"
+
+    def save(self, *args, **kwargs):
+        if self.church_id is None:
+            default_church = Church.get_default()
+            if default_church:
+                self.church = default_church
+        super().save(*args, **kwargs)
 
     @property
     def youtube_embed_url(self):
@@ -283,27 +351,35 @@ class Sermon(models.Model):
         self.weekly_challenges.update(is_active=False)
 
     def publish(self, published_at=None):
-        self.approve_generated_content()
-        self.is_published = True
-        self.status = SermonStatus.PUBLISHED
-        self.published_at = published_at or timezone.now()
-        self.scheduled_publish_at = None
-        self.force_public_visibility = False
-        self.pastor_review_requested = True
-        if self.pastor_review_requested_at is None:
-            self.pastor_review_requested_at = timezone.now()
-        self.save(
-            update_fields=[
-                "is_published",
-                "status",
-                "published_at",
-                "scheduled_publish_at",
-                "force_public_visibility",
-                "pastor_review_requested",
-                "pastor_review_requested_at",
-                "updated_at",
-            ]
-        )
+        with transaction.atomic():
+            same_church_queryset = type(self).objects.exclude(pk=self.pk).filter(force_public_visibility=True)
+            if self.church_id:
+                same_church_queryset = same_church_queryset.filter(church_id=self.church_id)
+            else:
+                same_church_queryset = same_church_queryset.filter(church__isnull=True)
+            same_church_queryset.update(force_public_visibility=False)
+
+            self.approve_generated_content()
+            self.is_published = True
+            self.status = SermonStatus.PUBLISHED
+            self.published_at = published_at or timezone.now()
+            self.scheduled_publish_at = None
+            self.force_public_visibility = False
+            self.pastor_review_requested = True
+            if self.pastor_review_requested_at is None:
+                self.pastor_review_requested_at = timezone.now()
+            self.save(
+                update_fields=[
+                    "is_published",
+                    "status",
+                    "published_at",
+                    "scheduled_publish_at",
+                    "force_public_visibility",
+                    "pastor_review_requested",
+                    "pastor_review_requested_at",
+                    "updated_at",
+                ]
+            )
         latest_challenge = self.weekly_challenges.order_by("-week_start", "-id").first()
         if latest_challenge:
             latest_challenge.activate()
@@ -340,9 +416,10 @@ class Sermon(models.Model):
         return self.source_media_path
 
     def mark_ready_for_pastor_review(self):
-        type(self).objects.exclude(pk=self.pk).filter(pastor_review_requested=True).update(
-            pastor_review_requested=False
-        )
+        same_church_queryset = type(self).objects.exclude(pk=self.pk).filter(pastor_review_requested=True)
+        if self.church_id:
+            same_church_queryset = same_church_queryset.filter(church_id=self.church_id)
+        same_church_queryset.update(pastor_review_requested=False)
         self.pastor_review_requested = True
         self.pastor_review_requested_at = timezone.now()
         self.save(update_fields=["pastor_review_requested", "pastor_review_requested_at", "updated_at"])
@@ -359,22 +436,30 @@ class Sermon(models.Model):
         )
 
     def force_publish(self, published_at=None):
-        self.approve_generated_content()
-        self.is_published = True
-        self.status = SermonStatus.PUBLISHED
-        self.published_at = published_at or self.published_at or timezone.now()
-        self.scheduled_publish_at = None
-        self.force_public_visibility = True
-        self.save(
-            update_fields=[
-                "is_published",
-                "status",
-                "published_at",
-                "scheduled_publish_at",
-                "force_public_visibility",
-                "updated_at",
-            ]
-        )
+        with transaction.atomic():
+            same_church_queryset = type(self).objects.exclude(pk=self.pk).filter(force_public_visibility=True)
+            if self.church_id:
+                same_church_queryset = same_church_queryset.filter(church_id=self.church_id)
+            else:
+                same_church_queryset = same_church_queryset.filter(church__isnull=True)
+            same_church_queryset.update(force_public_visibility=False)
+
+            self.approve_generated_content()
+            self.is_published = True
+            self.status = SermonStatus.PUBLISHED
+            self.published_at = published_at or self.published_at or timezone.now()
+            self.scheduled_publish_at = None
+            self.force_public_visibility = True
+            self.save(
+                update_fields=[
+                    "is_published",
+                    "status",
+                    "published_at",
+                    "scheduled_publish_at",
+                    "force_public_visibility",
+                    "updated_at",
+                ]
+            )
         latest_challenge = self.weekly_challenges.order_by("-week_start", "-id").first()
         if latest_challenge:
             latest_challenge.activate()
@@ -526,6 +611,13 @@ class SermonMission(models.Model):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    church = models.ForeignKey(
+        Church,
+        on_delete=models.PROTECT,
+        related_name="user_profiles",
+        null=True,
+        blank=True,
+    )
     member_role = models.CharField(
         max_length=20,
         choices=MemberRole.choices,
@@ -536,6 +628,13 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return self.user.get_username()
+
+    def save(self, *args, **kwargs):
+        if self.church_id is None:
+            default_church = Church.get_default()
+            if default_church:
+                self.church = default_church
+        super().save(*args, **kwargs)
 
 
 class PrayerRequestStatus(models.TextChoices):
@@ -629,19 +728,39 @@ class PrayerCompanion(models.Model):
 
 
 class PastorNotificationRecipient(models.Model):
+    church = models.ForeignKey(
+        Church,
+        on_delete=models.PROTECT,
+        related_name="pastor_notification_recipients",
+        null=True,
+        blank=True,
+    )
     name = models.CharField(max_length=100, blank=True)
-    email = models.EmailField(unique=True)
+    email = models.EmailField()
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["name", "email"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["church", "email"],
+                name="unique_pastor_notification_email_per_church",
+            )
+        ]
         verbose_name = "목회자 공지 수신자"
         verbose_name_plural = "목회자 공지 수신자"
 
     def __str__(self):
         return self.name or self.email
+
+    def save(self, *args, **kwargs):
+        if self.church_id is None:
+            default_church = Church.get_default()
+            if default_church:
+                self.church = default_church
+        super().save(*args, **kwargs)
 
 
 class QuizAttempt(models.Model):
@@ -684,7 +803,10 @@ class WeeklyChallenge(models.Model):
 
     def activate(self):
         with transaction.atomic():
-            WeeklyChallenge.objects.exclude(pk=self.pk).update(is_active=False)
+            same_church_queryset = WeeklyChallenge.objects.exclude(pk=self.pk)
+            if self.sermon and self.sermon.church_id:
+                same_church_queryset = same_church_queryset.filter(sermon__church_id=self.sermon.church_id)
+            same_church_queryset.update(is_active=False)
             if not self.is_active:
                 self.is_active = True
                 self.save(update_fields=["is_active"])
@@ -700,18 +822,18 @@ class WeeklyChallenge(models.Model):
         return self.public_start_date() <= today <= self.public_end_date()
 
     @classmethod
-    def get_current_public_challenge(cls, today=None):
+    def get_current_public_challenge(cls, today=None, church=None):
         Sermon.release_due_publications()
         today = today or timezone.localdate()
-        candidates = list(
-            cls.objects.filter(
-                is_active=True,
-                sermon__is_published=True,
-                sermon__status=SermonStatus.PUBLISHED,
-            )
-            .select_related("sermon")
-            .order_by("-week_start", "-id")
+        church = church or Church.get_default()
+        queryset = cls.objects.filter(
+            is_active=True,
+            sermon__is_published=True,
+            sermon__status=SermonStatus.PUBLISHED,
         )
+        if church is not None:
+            queryset = queryset.filter(sermon__church=church)
+        candidates = list(queryset.select_related("sermon").order_by("-week_start", "-id"))
         stale_ids = []
         for challenge in candidates:
             if challenge.sermon.force_public_visibility:

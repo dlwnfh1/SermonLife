@@ -210,6 +210,20 @@ a {
     font-size: 2.4rem;
 }
 
+.auth-church-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0 0;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(47, 107, 132, 0.09);
+    border: 1px solid rgba(47, 107, 132, 0.14);
+    color: #2f6b84;
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
 .auth-form {
     margin-top: 24px;
     width: 100%;
@@ -352,6 +366,19 @@ a {
     margin-top: 8px;
     color: var(--muted);
     line-height: 1.6;
+}
+
+.church-context-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(47, 107, 132, 0.1);
+    border: 1px solid rgba(47, 107, 132, 0.14);
+    color: #2f6b84;
+    font-size: 0.88rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
 }
 
 .field-error {
@@ -2940,6 +2967,26 @@ a {
 
 .prayer-edit-form {
     padding: 0 20px 20px;
+}
+
+.prayer-edit-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.action-button-danger {
+    background: rgba(128, 46, 46, 0.12);
+    color: #8c2f2f;
+    border: 1px solid rgba(140, 47, 47, 0.18);
+    box-shadow: none;
+}
+
+.action-button-danger:hover,
+.action-button-danger:focus-visible {
+    background: rgba(128, 46, 46, 0.18);
+    color: #7a2727;
 }
 
 .prayer-edit-form input[type="text"],

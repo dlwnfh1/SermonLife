@@ -503,6 +503,35 @@
                 showProcessing(button.dataset.progressTitle, button.dataset.progressText);
             });
         });
+
+        var churchField = document.getElementById("id_church");
+        var sourceMediaSelect = document.getElementById("id_source_media_asset");
+        var isAddPage = !document.getElementById("id");
+        if (churchField && sourceMediaSelect && isAddPage) {
+            function navigateForChurchSelection() {
+                var currentUrl = new URL(window.location.href);
+                var churchFromUrl = currentUrl.searchParams.get("church") || "";
+                var selectedChurch = churchField.value || "";
+
+                if (!selectedChurch) {
+                    sourceMediaSelect.value = "";
+                    return false;
+                }
+
+                if (selectedChurch !== churchFromUrl) {
+                    currentUrl.searchParams.set("church", selectedChurch);
+                    window.location.replace(currentUrl.toString());
+                    return true;
+                }
+
+                return false;
+            }
+
+            churchField.addEventListener("change", navigateForChurchSelection);
+            window.setTimeout(navigateForChurchSelection, 120);
+            window.setTimeout(navigateForChurchSelection, 500);
+        }
+
     }());
 </script>
 {% endblock %}

@@ -6,13 +6,16 @@ from time import perf_counter
 from django import forms
 from django.contrib import admin, messages
 from django.db import models as dj_models
+from django.db.models import Q
 from django.http import HttpResponseRedirect
+from django.utils.cache import add_never_cache_headers
 from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
 from django.conf import settings
 
 from .models import (
+    Church,
     DailyEngagement,
     get_source_media_root,
     get_current_public_sermon_id,
@@ -198,7 +201,12 @@ class SourceMediaAssetAdminForm(forms.ModelForm):
 
     def clean_file(self):
         uploaded = self.cleaned_data["file"]
-        relative_name = f"{get_source_media_root().name}/{uploaded.name}"
+        church = self.cleaned_data.get("church") or self.instance.church or Church.get_default()
+        relative_prefix = get_source_media_root().relative_to(Path(settings.MEDIA_ROOT)).as_posix()
+        if church and church.slug:
+            relative_name = f"{relative_prefix}/{church.slug}/{uploaded.name}"
+        else:
+            relative_name = f"{relative_prefix}/{uploaded.name}"
         if SourceMediaAsset.objects.exclude(pk=self.instance.pk).filter(file=relative_name).exists():
             raise forms.ValidationError("같은 이름의 원본 파일이 이미 있습니다. 기존 파일을 선택하거나 먼저 삭제해 주세요.")
         if (Path(settings.MEDIA_ROOT) / relative_name).exists() and not self.instance.pk:
@@ -220,6 +228,7 @@ class MediaStorageSettingAdminForm(forms.ModelForm):
 
 
 class SermonAdminForm(forms.ModelForm):
+    request = None
     transcript = forms.CharField(
         required=False,
         widget=forms.Textarea(
@@ -244,10 +253,36 @@ class SermonAdminForm(forms.ModelForm):
         )
         self.fields["source_media_asset"].label = "AI 작업용 원본 파일"
         self.fields["source_media_asset"].help_text = (
-            "'원본 파일' 메뉴 또는 uploads/sermons 폴더에 있는 설교 영상/음성 파일입니다."
+            "교회를 먼저 선택하면 해당 교회의 원본 파일만 표시됩니다."
         )
+        church = None
+        request = getattr(self, "request", None)
+        if request is not None:
+            church_id = request.GET.get("church") or request.POST.get("church")
+            if church_id:
+                church = Church.objects.filter(pk=church_id).first()
+        if church is None and getattr(self.instance, "church_id", None):
+            church = self.instance.church
+
+        source_media_queryset = SourceMediaAsset.objects.select_related("church")
+        if church is not None:
+            if church.is_default:
+                source_media_queryset = source_media_queryset.filter(Q(church=church) | Q(church__isnull=True))
+            else:
+                source_media_queryset = source_media_queryset.filter(church=church)
+        elif not getattr(self.instance, "pk", None):
+            source_media_queryset = source_media_queryset.none()
+
+        self.fields["source_media_asset"].queryset = source_media_queryset.order_by("-created_at", "-id")
         if not self.is_bound and getattr(self.instance, "pk", None):
             self.initial["transcript"] = _format_transcript_for_editing(self.instance.transcript)
+
+    def clean_source_media_asset(self):
+        asset = self.cleaned_data.get("source_media_asset")
+        church = self.cleaned_data.get("church") or getattr(self.instance, "church", None)
+        if asset and church and asset.church_id and asset.church_id != church.pk:
+            raise forms.ValidationError("선택한 교회의 원본 파일만 연결할 수 있습니다.")
+        return asset
 
 
 def sync_source_media_assets():
@@ -256,31 +291,41 @@ def sync_source_media_assets():
     relative_prefix = root.relative_to(Path(settings.MEDIA_ROOT)).as_posix()
     allowed_suffixes = {".mp4", ".mov", ".m4v", ".webm", ".ogv", ".mp3", ".m4a", ".wav"}
 
-    disk_relative_paths = set()
+    disk_relative_paths = {}
     for path in root.rglob("*"):
         if not path.is_file() or path.suffix.lower() not in allowed_suffixes:
             continue
         relative_to_root = path.relative_to(root).as_posix()
         if relative_to_root.startswith("audio/generated/"):
             continue
-        disk_relative_paths.add(f"{relative_prefix}/{relative_to_root}")
+        disk_relative_paths[f"{relative_prefix}/{relative_to_root}"] = relative_to_root
 
-    existing_assets = {asset.file.name: asset for asset in SourceMediaAsset.objects.all()}
+    existing_assets = {asset.file.name: asset for asset in SourceMediaAsset.objects.select_related("church")}
 
-    for relative_path in sorted(disk_relative_paths):
+    church_by_slug = {church.slug: church for church in Church.objects.all()}
+
+    for relative_path, relative_to_root in sorted(disk_relative_paths.items()):
+        church = Church.get_default()
+        if "/" in relative_to_root:
+            possible_slug = relative_to_root.split("/", 1)[0]
+            church = church_by_slug.get(possible_slug, church)
         if relative_path not in existing_assets:
-            SourceMediaAsset.objects.create(file=relative_path)
+            SourceMediaAsset.objects.create(file=relative_path, church=church)
+        elif existing_assets[relative_path].church_id is None and church is not None:
+            existing_assets[relative_path].church = church
+            existing_assets[relative_path].save(update_fields=["church"])
 
     for relative_path, asset in existing_assets.items():
-        if relative_path not in disk_relative_paths:
+        if relative_path not in disk_relative_paths.keys():
             asset.delete()
 
 
 @admin.register(SourceMediaAsset)
 class SourceMediaAssetAdmin(admin.ModelAdmin):
     form = SourceMediaAssetAdminForm
-    list_display = ("display_name", "file", "usage_status", "created_at", "delete_action")
-    search_fields = ("file",)
+    list_display = ("display_name", "church", "file", "usage_status", "created_at", "delete_action")
+    search_fields = ("file", "church__name", "church__slug")
+    list_filter = ("church",)
     actions = ["delete_selected"]
     change_list_template = "admin/core/sourcemediaasset/change_list.html"
     ordering = ("file",)
@@ -289,7 +334,9 @@ class SourceMediaAssetAdmin(admin.ModelAdmin):
         sync_source_media_assets()
         extra_context = extra_context or {}
         extra_context["source_media_root"] = str(get_source_media_root())
-        return super().changelist_view(request, extra_context=extra_context)
+        response = super().changelist_view(request, extra_context=extra_context)
+        add_never_cache_headers(response)
+        return response
 
     def delete_model(self, request, obj):
         file_path = Path(obj.file.path) if obj.file else None
@@ -367,6 +414,7 @@ class MediaStorageSettingAdmin(admin.ModelAdmin):
 class SermonAdmin(admin.ModelAdmin):
     form = SermonAdminForm
     list_display = (
+        "church",
         "title",
         "sermon_date",
         "preacher",
@@ -378,6 +426,7 @@ class SermonAdmin(admin.ModelAdmin):
         "last_ai_generated_at",
     )
     search_fields = ("title", "preacher", "bible_passage", "transcript")
+    list_filter = ("church", "status", "pastor_review_requested", "ai_generated")
     date_hierarchy = "sermon_date"
     inlines = [SermonSummaryInline, DailyEngagementInline]
     actions = None
@@ -401,6 +450,7 @@ class SermonAdmin(admin.ModelAdmin):
             "기본 정보",
             {
                 "fields": (
+                    "church",
                     ("title", "preacher"),
                     ("sermon_date", "bible_passage"),
                     "bible_text",
@@ -453,9 +503,20 @@ class SermonAdmin(admin.ModelAdmin):
         css = {"all": ("core/admin-compact.css",)}
         js = ("core/admin-inline-toggle.js", "core/admin-sermon-defaults.js")
 
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        sync_source_media_assets()
+        base_form = super().get_form(request, obj, change=change, **kwargs)
+
+        class RequestAwareSermonAdminForm(base_form):
+            def __init__(self, *args, **inner_kwargs):
+                self.request = request
+                super().__init__(*args, **inner_kwargs)
+
+        return RequestAwareSermonAdminForm
+
     def publication_state_display(self, obj):
-        current_public_sermon_id = get_current_public_sermon_id()
-        if obj.force_public_visibility and obj.is_published:
+        current_public_sermon_id = get_current_public_sermon_id(church=obj.church)
+        if obj.force_public_visibility and obj.is_published and obj.pk == current_public_sermon_id:
             return "강제 공개 중"
         if obj.scheduled_publish_at and not obj.is_published:
             return "화요일 예약 공개"
@@ -480,6 +541,9 @@ class SermonAdmin(admin.ModelAdmin):
             days_since_sunday = 7
         initial.setdefault("sermon_date", today - timedelta(days=days_since_sunday))
         initial.setdefault("preacher", "Pastor Kim")
+        requested_church = request.GET.get("church")
+        if requested_church and Church.objects.filter(pk=requested_church).exists():
+            initial["church"] = requested_church
         return initial
 
     def get_urls(self):
@@ -534,15 +598,15 @@ class SermonAdmin(admin.ModelAdmin):
         if object_id:
             sermon = self.get_object(request, object_id)
             active_recipients = list(
-                PastorNotificationRecipient.objects.filter(is_active=True)
+                PastorNotificationRecipient.objects.filter(is_active=True, church=sermon.church)
                 .order_by("name", "email")
                 .values_list("email", flat=True)
             )
-            current_public_sermon_id = get_current_public_sermon_id()
+            current_public_sermon_id = get_current_public_sermon_id(church=sermon.church if sermon else None)
             is_current_public_sermon = bool(
                 sermon and sermon.is_published and sermon.pk == current_public_sermon_id
             )
-            if sermon and sermon.force_public_visibility and sermon.is_published:
+            if sermon and sermon.force_public_visibility and sermon.is_published and is_current_public_sermon:
                 publication_state_label = "강제 공개 중"
             elif sermon and sermon.scheduled_publish_at and not sermon.is_published:
                 publication_state_label = "화요일 예약 공개"
@@ -747,7 +811,7 @@ class SermonAdmin(admin.ModelAdmin):
             self.message_user(request, "설교를 찾을 수 없습니다.", level=messages.ERROR)
             return HttpResponseRedirect(reverse("admin:core_sermon_changelist"))
 
-        if sermon.pk != get_current_public_sermon_id():
+        if sermon.pk != get_current_public_sermon_id(church=sermon.church):
             self.message_user(
                 request,
                 "현재 공개 중인 설교만 공개 해제할 수 있습니다.",
@@ -886,17 +950,25 @@ class SermonAdmin(admin.ModelAdmin):
             obj.schedule_or_publish()
         elif approve_requested:
             obj.approve_generated_content()
+@admin.register(Church)
+class ChurchAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug", "is_default", "updated_at")
+    search_fields = ("name", "slug")
+    list_filter = ("is_default",)
+
+
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "member_role", "points", "streak_days")
-    search_fields = ("user__username", "member_role")
+    list_display = ("user", "church", "member_role", "points", "streak_days")
+    search_fields = ("user__username", "member_role", "church__name", "church__slug")
+    list_filter = ("church", "member_role")
 
 
 @admin.register(PastorNotificationRecipient)
 class PastorNotificationRecipientAdmin(admin.ModelAdmin):
-    list_display = ("name", "email", "is_active", "updated_at")
-    search_fields = ("name", "email")
-    list_filter = ("is_active",)
+    list_display = ("name", "church", "email", "is_active", "updated_at")
+    search_fields = ("name", "email", "church__name", "church__slug")
+    list_filter = ("church", "is_active")
 
 
 @admin.register(PointLedger)

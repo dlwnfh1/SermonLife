@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>&#xD68C;&#xC6D0;&#xAC00;&#xC785; | Word &amp; Life</title>
+    <title>{% if active_church %}{{ active_church.name }} | {% endif %}&#xD68C;&#xC6D0;&#xAC00;&#xC785; | Word &amp; Life</title>
     <link rel="stylesheet" href="{% static 'core/styles.css' %}">
     <style>
         .auth-form {
@@ -66,6 +66,21 @@
             white-space: nowrap !important;
             z-index: 2 !important;
         }
+
+        .auth-church-note {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            margin: 6px 0 0 !important;
+            padding: 8px 12px !important;
+            border-radius: 999px !important;
+            background: rgba(47, 107, 132, 0.09) !important;
+            border: 1px solid rgba(47, 107, 132, 0.14) !important;
+            color: #2f6b84 !important;
+            font-size: 0.92rem !important;
+            font-weight: 700 !important;
+            width: fit-content !important;
+        }
     </style>
     <link rel="manifest" href="{% static 'core/manifest.json' %}">
     <link rel="apple-touch-icon" href="{% static 'core/icons/apple-touch-icon.png' %}">
@@ -77,6 +92,9 @@
     <main class="page-shell auth-shell">
         <section class="auth-card">
             <p class="eyebrow">WORD &amp; LIFE</p>
+            {% if active_church %}
+                <p class="auth-church-note">{{ active_church.name }} 페이지</p>
+            {% endif %}
             <h1>&#xD68C;&#xC6D0;&#xAC00;&#xC785;</h1>
 
             {% if messages %}
@@ -123,7 +141,7 @@
                 <button type="submit" class="action-button wide-button">&#xACC4;&#xC815; &#xB9CC;&#xB4E4;&#xAE30;</button>
             </form>
 
-            <p class="auth-helper">&#xC774;&#xBBF8; &#xACC4;&#xC815;&#xC774; &#xC788;&#xC73C;&#xC2DC;&#xBA74; <a href="{% url 'core:login' %}">&#xB85C;&#xADF8;&#xC778;</a></p>
+            <p class="auth-helper">&#xC774;&#xBBF8; &#xACC4;&#xC815;&#xC774; &#xC788;&#xC73C;&#xC2DC;&#xBA74; <a href="{{ login_url }}">&#xB85C;&#xADF8;&#xC778;</a></p>
         </section>
     </main>
     <script>

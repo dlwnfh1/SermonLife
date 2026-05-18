@@ -23,6 +23,7 @@ from .forms import (
     SermonLifeSignUpForm,
 )
 from .models import (
+    Church,
     DailyEngagement,
     DailyMissionCompletion,
     DailyQuizAttempt,
@@ -77,13 +78,127 @@ from reports.services import (
 
 
 logger = logging.getLogger(__name__)
+ACTIVE_CHURCH_SESSION_KEY = "sermonlife_active_church_slug"
 
 
-def _get_or_create_profile(user):
+def _set_active_church_session(request, church):
+    if hasattr(request, "session") and church and church.slug:
+        request.session[ACTIVE_CHURCH_SESSION_KEY] = church.slug
+
+
+def _get_or_create_profile(user, church=None):
     if not user.is_authenticated:
         return None
-    profile, _ = UserProfile.objects.get_or_create(user=user)
+    default_church = church or Church.get_default()
+    profile, _ = UserProfile.objects.get_or_create(
+        user=user,
+        defaults={"church": default_church},
+    )
+    if profile.church_id is None:
+        default_church = church or Church.get_default()
+        if default_church:
+            profile.church = default_church
+            profile.save(update_fields=["church"])
     return profile
+
+
+def _get_user_church(user):
+    if not user.is_authenticated:
+        return None
+    profile = UserProfile.objects.filter(user=user).select_related("church").first()
+    if profile and profile.church_id:
+        return profile.church
+    return Church.get_default()
+
+
+def _resolve_active_church(request, church_slug=None):
+    if church_slug:
+        church = Church.get_by_slug(church_slug)
+        if not church:
+            raise Http404
+        _set_active_church_session(request, church)
+        return church
+
+    if request.user.is_authenticated:
+        church = _get_user_church(request.user)
+        if church:
+            _set_active_church_session(request, church)
+            return church
+
+    default_church = Church.get_default()
+    if default_church:
+        _set_active_church_session(request, default_church)
+    return default_church
+
+
+def _church_home_url(church=None):
+    default_church = Church.get_default()
+    if not church or (default_church and church.pk == default_church.pk):
+        return reverse("core:home")
+    return reverse("core:church_home", kwargs={"church_slug": church.slug})
+
+
+def _church_login_url(church=None):
+    default_church = Church.get_default()
+    if not church or (default_church and church.pk == default_church.pk):
+        return reverse("core:login")
+    return reverse("core:church_login", kwargs={"church_slug": church.slug})
+
+
+def _church_signup_url(church=None):
+    default_church = Church.get_default()
+    if not church or (default_church and church.pk == default_church.pk):
+        return reverse("core:signup")
+    return reverse("core:church_signup", kwargs={"church_slug": church.slug})
+
+
+def _church_logout_url(church=None):
+    default_church = Church.get_default()
+    if not church or (default_church and church.pk == default_church.pk):
+        return reverse("core:logout")
+    return reverse("core:church_logout", kwargs={"church_slug": church.slug})
+
+
+def _church_history_url(church=None):
+    default_church = Church.get_default()
+    if not church or (default_church and church.pk == default_church.pk):
+        return reverse("core:my_history")
+    return reverse("core:church_my_history", kwargs={"church_slug": church.slug})
+
+
+def _church_watch_url(church=None):
+    default_church = Church.get_default()
+    if not church or (default_church and church.pk == default_church.pk):
+        return reverse("core:watch_sermon")
+    return reverse("core:church_watch_sermon", kwargs={"church_slug": church.slug})
+
+
+def _church_read_url(church=None):
+    default_church = Church.get_default()
+    if not church or (default_church and church.pk == default_church.pk):
+        return reverse("core:read_sermon")
+    return reverse("core:church_read_sermon", kwargs={"church_slug": church.slug})
+
+
+def _build_church_nav_context(church=None):
+    return {
+        "home_url": _church_home_url(church),
+        "login_url": _church_login_url(church),
+        "signup_url": _church_signup_url(church),
+        "logout_url": _church_logout_url(church),
+        "history_url": _church_history_url(church),
+        "watch_sermon_url": _church_watch_url(church),
+        "read_sermon_url": _church_read_url(church),
+    }
+
+
+def _redirect_if_wrong_church_route(request, church_slug=None):
+    if not church_slug or not request.user.is_authenticated:
+        return None
+    user_church = _get_user_church(request.user)
+    if user_church and user_church.slug != church_slug:
+        return redirect(_church_home_url(user_church))
+    return None
 
 
 def _chunk_outline_points(outline_points, chunk_count=5):
@@ -154,13 +269,16 @@ def _format_transcript_paragraphs(transcript, sentences_per_paragraph=3):
 
     return paragraphs
 
-def _get_active_challenge():
-    challenge = WeeklyChallenge.get_current_public_challenge()
+def _get_active_challenge(church=None):
+    challenge = WeeklyChallenge.get_current_public_challenge(church=church)
     if not challenge and getattr(settings, "SERMONLIFE_ALLOW_PREVIEW_ANYDAY", False):
-        challenge = (
-            WeeklyChallenge.objects.filter(
+        queryset = WeeklyChallenge.objects.filter(
                 Q(sermon__is_published=True) | Q(sermon__scheduled_publish_at__isnull=False)
             )
+        if church is not None:
+            queryset = queryset.filter(sermon__church=church)
+        challenge = (
+            queryset
             .select_related("sermon", "sermon__summary")
             .prefetch_related("daily_engagements")
             .order_by("-week_start", "-id")
@@ -187,7 +305,8 @@ def _get_default_pastor_sermon(available_sermons, active_challenge=None):
     if requested_unpublished:
         return requested_unpublished[0]
 
-    current_public_sermon_id = get_current_public_sermon_id()
+    active_church = active_challenge.sermon.church if active_challenge and active_challenge.sermon_id else None
+    current_public_sermon_id = get_current_public_sermon_id(church=active_church)
     current_public = next(
         (sermon for sermon in available_sermons if sermon.pk == current_public_sermon_id),
         None,
@@ -203,7 +322,7 @@ def _get_publication_state(sermon, current_public_sermon_id=None):
         return {"label": "미공개", "is_current": False}
     if sermon.scheduled_publish_at and not sermon.is_published:
         return {"label": "화요일 예약 공개", "is_current": False}
-    current_public_sermon_id = current_public_sermon_id or get_current_public_sermon_id()
+    current_public_sermon_id = current_public_sermon_id or get_current_public_sermon_id(church=sermon.church)
     if sermon.is_published and sermon.pk == current_public_sermon_id:
         return {"label": "현재 공개 중", "is_current": True}
     if sermon.is_published:
@@ -248,6 +367,7 @@ def _get_daily_state(user, current_daily):
 
 
 def _build_home_context(request):
+    active_church = _resolve_active_church(request)
     highlight_messages = []
     for message in list(messages.get_messages(request)):
         text = str(message)
@@ -275,10 +395,10 @@ def _build_home_context(request):
     except (TypeError, ValueError):
         open_prayer_id = None
 
-    challenge = _get_active_challenge()
+    challenge = _get_active_challenge(active_church)
     sermon = challenge.sermon if challenge else None
     summary = _get_summary(sermon)
-    profile = _get_or_create_profile(request.user)
+    profile = _get_or_create_profile(request.user, active_church)
 
     weekly_points = 0
     weekly_bonus_awarded = False
@@ -427,7 +547,7 @@ def _build_home_context(request):
             )
         }
         public_prayer_requests = list(
-            PrayerRequest.objects.filter(is_public=True)
+            PrayerRequest.objects.filter(is_public=True, user__userprofile__church=active_church)
             .exclude(user=request.user)
             .annotate(support_count=Count("companions", distinct=True))
             .select_related("user")
@@ -448,6 +568,7 @@ def _build_home_context(request):
             PrayerRequest.objects.filter(
                 is_public=True,
                 status=PrayerRequestStatus.ANSWERED,
+                user__userprofile__church=active_church,
             )
             .exclude(testimony_note="")
             .select_related("user")
@@ -456,8 +577,9 @@ def _build_home_context(request):
     weekly_base_max_points = (QUIZ_POINTS + REFLECTION_POINTS + MISSION_POINTS + DAILY_COMPLETION_POINTS) * 5
     weekly_total_max_points = weekly_base_max_points + WEEKLY_COMPLETION_POINTS
 
-    return {
+    context = {
         "profile": profile,
+        "active_church": active_church,
         "challenge": challenge,
         "sermon": sermon,
         "weekly_points": weekly_points,
@@ -496,10 +618,12 @@ def _build_home_context(request):
         "prayer_status_choices": PrayerRequestStatus.choices,
         "prayer_visibility_choices": _build_prayer_visibility_options(),
     }
+    context.update(_build_church_nav_context(active_church))
+    return context
 
 
-def _get_released_daily_or_404(pk):
-    challenge = _get_active_challenge()
+def _get_released_daily_or_404(request, pk):
+    challenge = _get_active_challenge(_resolve_active_church(request))
     if not challenge:
         raise Http404
     daily = get_object_or_404(
@@ -513,27 +637,27 @@ def _get_released_daily_or_404(pk):
     return daily
 
 
-def _redirect_home(tab="sermon", anchor="", extra_params=None):
+def _redirect_home(request, tab="sermon", anchor="", extra_params=None):
     params = {}
     if tab:
         params["tab"] = tab
     if extra_params:
         params.update({key: value for key, value in extra_params.items() if value})
     query = urlencode(params) if params else ""
-    url = reverse("core:home")
+    url = _church_home_url(_resolve_active_church(request))
     if query:
         url = f"{url}?{query}"
     if anchor:
         url = f"{url}#{anchor}"
     return redirect(url)
 
-def _redirect_to_today_set():
-    return _redirect_home(tab="today", anchor="today-set")
+def _redirect_to_today_set(request):
+    return _redirect_home(request, tab="today", anchor="today-set")
 
 
 def _redirect_to_today_anchor(request, default_anchor="today-set"):
     anchor = request.POST.get("return_anchor", "").strip() or default_anchor
-    return _redirect_home(tab="today", anchor=anchor)
+    return _redirect_home(request, tab="today", anchor=anchor)
 
 
 def _build_prayer_visibility_options():
@@ -563,8 +687,14 @@ def _is_pastor_user(user):
 
 def _can_access_prayer_tab(user):
     if getattr(settings, "SERMONLIFE_PRAYER_TAB_PUBLIC", False):
-        return True
+        return user.is_authenticated
     return _is_pastor_user(user)
+
+
+def _get_access_scope_church(user):
+    if user.is_superuser:
+        return None
+    return _get_user_church(user)
 
 
 pastor_required = user_passes_test(_is_pastor_user, login_url="core:login")
@@ -605,24 +735,31 @@ def _build_pastor_publish_checklist(sermon):
 
 
 @login_required
-def watch_sermon_view(request):
-    challenge = _get_active_challenge()
+def watch_sermon_view(request, church_slug=None):
+    wrong_route_redirect = _redirect_if_wrong_church_route(request, church_slug)
+    if wrong_route_redirect:
+        return wrong_route_redirect
+    active_church = _resolve_active_church(request, church_slug)
+    challenge = _get_active_challenge(active_church)
     sermon = challenge.sermon if challenge else None
     if not sermon:
         raise Http404
-    return render(
-        request,
-        "core/watch_sermon.html",
-        {
-            "challenge": challenge,
-            "sermon": sermon,
-        },
-    )
+    context = {
+        "challenge": challenge,
+        "sermon": sermon,
+        "active_church": active_church,
+    }
+    context.update(_build_church_nav_context(active_church))
+    return render(request, "core/watch_sermon.html", context)
 
 
 @login_required
-def read_sermon_view(request):
-    challenge = _get_active_challenge()
+def read_sermon_view(request, church_slug=None):
+    wrong_route_redirect = _redirect_if_wrong_church_route(request, church_slug)
+    if wrong_route_redirect:
+        return wrong_route_redirect
+    active_church = _resolve_active_church(request, church_slug)
+    challenge = _get_active_challenge(active_church)
     sermon = challenge.sermon if challenge else None
     if not sermon:
         raise Http404
@@ -636,23 +773,26 @@ def read_sermon_view(request):
                 day_number=current_day_number,
             ).first()
         )
-    return render(
-        request,
-        "core/read_sermon.html",
-        {
-            "challenge": challenge,
-            "sermon": sermon,
-            "transcript_paragraphs": transcript_paragraphs,
-            "current_daily": current_daily,
-            "current_day_number": current_day_number,
-        },
-    )
+    context = {
+        "challenge": challenge,
+        "sermon": sermon,
+        "transcript_paragraphs": transcript_paragraphs,
+        "current_daily": current_daily,
+        "current_day_number": current_day_number,
+        "active_church": active_church,
+    }
+    context.update(_build_church_nav_context(active_church))
+    return render(request, "core/read_sermon.html", context)
 
 
 @login_required
-def my_history_view(request):
-    profile = _get_or_create_profile(request.user)
-    challenge = _get_active_challenge()
+def my_history_view(request, church_slug=None):
+    wrong_route_redirect = _redirect_if_wrong_church_route(request, church_slug)
+    if wrong_route_redirect:
+        return wrong_route_redirect
+    active_church = _resolve_active_church(request, church_slug)
+    profile = _get_or_create_profile(request.user, active_church)
+    challenge = _get_active_challenge(active_church)
     weekly_points = 0
     if challenge:
         weekly_points = (
@@ -663,7 +803,7 @@ def my_history_view(request):
         )
 
     challenge_ids = list(
-        PointLedger.objects.filter(user=request.user)
+        PointLedger.objects.filter(user=request.user, challenge__sermon__church=active_church)
         .order_by("-created_at")
         .values_list("challenge_id", flat=True)
         .distinct()[:8]
@@ -710,30 +850,37 @@ def my_history_view(request):
             }
         )
 
-    recent_entries = PointLedger.objects.filter(user=request.user).select_related("challenge", "sermon")[:20]
+    recent_entries = PointLedger.objects.filter(
+        user=request.user,
+        challenge__sermon__church=active_church,
+    ).select_related("challenge", "sermon")[:20]
 
-    return render(
-        request,
-        "core/my_history.html",
-        {
-            "profile": profile,
-            "current_challenge": challenge,
-            "weekly_points": weekly_points,
-            "weekly_history": weekly_history,
-            "recent_entries": recent_entries,
-        },
-    )
+    context = {
+        "profile": profile,
+        "current_challenge": challenge,
+        "weekly_points": weekly_points,
+        "weekly_history": weekly_history,
+        "recent_entries": recent_entries,
+        "active_church": active_church,
+    }
+    context.update(_build_church_nav_context(active_church))
+    return render(request, "core/my_history.html", context)
 
 
-def home_view(request):
+def home_view(request, church_slug=None):
+    wrong_route_redirect = _redirect_if_wrong_church_route(request, church_slug)
+    if wrong_route_redirect:
+        return wrong_route_redirect
+    active_church = _resolve_active_church(request, church_slug)
     if not request.user.is_authenticated:
-        return redirect("core:login")
+        return redirect(_church_login_url(active_church))
     return render(request, "core/home.html", _build_home_context(request))
 
 
-def signup_view(request):
+def signup_view(request, church_slug=None):
+    active_church = _resolve_active_church(request, church_slug)
     if request.user.is_authenticated:
-        return redirect("core:home")
+        return redirect(_church_home_url(_get_user_church(request.user) or active_church))
 
     if request.method == "POST":
         form = SermonLifeSignUpForm(request.POST)
@@ -743,11 +890,12 @@ def signup_view(request):
             user.save()
             UserProfile.objects.update_or_create(
                 user=user,
-                defaults={"member_role": form.cleaned_data["member_role"]},
+                defaults={"member_role": form.cleaned_data["member_role"], "church": active_church},
             )
+            _set_active_church_session(request, active_church)
             login(request, user)
             messages.success(request, "?뚯썝媛?낆씠 ?꾨즺?섏뿀?듬땲?? ?대쾲 二??ㅺ탳 猷⑦떞???쒖옉??蹂댁꽭??")
-            return redirect("core:home")
+            return redirect(_church_home_url(active_church))
         if "username" in form.errors:
             messages.error(request, "?대? ?ъ슜 以묒씤 ?꾩씠?붿엯?덈떎.")
         else:
@@ -755,12 +903,18 @@ def signup_view(request):
     else:
         form = SermonLifeSignUpForm()
 
-    return render(request, "core/signup.html", {"form": form})
+    context = {
+        "form": form,
+        "active_church": active_church,
+    }
+    context.update(_build_church_nav_context(active_church))
+    return render(request, "core/signup.html", context)
 
 
-def login_view(request):
+def login_view(request, church_slug=None):
+    active_church = _resolve_active_church(request, church_slug)
     if request.user.is_authenticated:
-        return redirect("core:home")
+        return redirect(_church_home_url(_get_user_church(request.user) or active_church))
 
     form = AuthenticationForm(request, data=request.POST or None)
     form.fields["username"].label = "아이디"
@@ -768,27 +922,36 @@ def login_view(request):
     form.fields["username"].widget.attrs.update({"placeholder": "아이디"})
     form.fields["password"].widget.attrs.update({"placeholder": "비밀번호"})
     if request.method == "POST" and form.is_valid():
-        login(request, form.get_user())
+        user = form.get_user()
+        user_church = _get_user_church(user) or active_church
+        _set_active_church_session(request, user_church)
+        login(request, user)
         messages.success(request, "로그인되었습니다.")
-        return redirect("core:home")
+        return redirect(_church_home_url(user_church))
 
-    return render(request, "core/login.html", {"form": form})
+    context = {
+        "form": form,
+        "active_church": active_church,
+    }
+    context.update(_build_church_nav_context(active_church))
+    return render(request, "core/login.html", context)
 
 
-def logout_view(request):
+def logout_view(request, church_slug=None):
+    active_church = _resolve_active_church(request, church_slug)
     logout(request)
     messages.success(request, "로그아웃되었습니다.")
-    return redirect("core:login")
+    return redirect(_church_login_url(active_church))
 
 
 @login_required
 @require_POST
 def submit_daily_quiz_view(request, pk):
-    daily = _get_released_daily_or_404(pk)
+    daily = _get_released_daily_or_404(request, pk)
     selected_answer = request.POST.get("selected_answer", "").strip()
     if selected_answer not in daily.choices:
         messages.error(request, "퀴즈 보기를 선택한 뒤 제출해 주세요.")
-        return _redirect_home(tab="today", anchor="today-quiz-card", extra_params={"feedback": "quiz"})
+        return _redirect_home(request, tab="today", anchor="today-quiz-card", extra_params={"feedback": "quiz"})
 
     result = submit_daily_quiz(
         user=request.user,
@@ -811,13 +974,13 @@ def submit_daily_quiz_view(request, pk):
         messages.success(request, f"정답입니다. 퀴즈 5달란트를 받았습니다.{bonus_suffix}")
     else:
         messages.warning(request, "정답이 아닙니다. 다시 설교 내용을 확인해 보세요.")
-    return _redirect_home(tab="today", anchor="today-quiz-card", extra_params={"feedback": "quiz"})
+    return _redirect_home(request, tab="today", anchor="today-quiz-card", extra_params={"feedback": "quiz"})
 
 
 @login_required
 @require_POST
 def submit_reflection_view(request, pk):
-    daily = _get_released_daily_or_404(pk)
+    daily = _get_released_daily_or_404(request, pk)
     response_text = request.POST.get("response_text", "")
     try:
         result = submit_reflection(
@@ -827,7 +990,7 @@ def submit_reflection_view(request, pk):
         )
     except ValueError as exc:
         messages.error(request, str(exc))
-        return _redirect_home(tab="today", anchor="today-reflection-card", extra_params={"feedback": "reflection"})
+        return _redirect_home(request, tab="today", anchor="today-reflection-card", extra_params={"feedback": "reflection"})
 
     bonus_suffix = ""
     if result["daily_bonus_awarded"]:
@@ -839,13 +1002,13 @@ def submit_reflection_view(request, pk):
         messages.warning(request, f"이미 저장한 묵상입니다. 달란트는 1회만 적립됩니다.{bonus_suffix}")
     else:
         messages.success(request, f"묵상 답변이 저장되었습니다. 5달란트를 받았습니다.{bonus_suffix}")
-    return _redirect_home(tab="today", anchor="today-reflection-card", extra_params={"feedback": "reflection"})
+    return _redirect_home(request, tab="today", anchor="today-reflection-card", extra_params={"feedback": "reflection"})
 
 
 @login_required
 @require_POST
 def complete_mission_view(request, pk):
-    daily = _get_released_daily_or_404(pk)
+    daily = _get_released_daily_or_404(request, pk)
     note = request.POST.get("mission_note", "")
     result = complete_mission(
         user=request.user,
@@ -863,7 +1026,7 @@ def complete_mission_view(request, pk):
         messages.warning(request, f"이미 완료한 미션입니다. 달란트는 1회만 적립됩니다.{bonus_suffix}")
     else:
         messages.success(request, f"오늘의 미션을 완료했습니다. 7달란트를 받았습니다.{bonus_suffix}")
-    return _redirect_home(tab="today", anchor="today-mission-card", extra_params={"feedback": "mission"})
+    return _redirect_home(request, tab="today", anchor="today-mission-card", extra_params={"feedback": "mission"})
 
 
 @login_required
@@ -871,17 +1034,17 @@ def complete_mission_view(request, pk):
 def create_prayer_request_view(request):
     if not _can_access_prayer_tab(request.user):
         messages.error(request, "기도 기능은 아직 전체 공개 전입니다.")
-        return _redirect_home()
+        return _redirect_home(request)
     content = (request.POST.get("content") or "").strip()
     visibility = (request.POST.get("visibility") or PrayerRequestVisibility.PRIVATE).strip()
     valid_visibilities = {choice[0] for choice in PrayerRequestVisibility.choices}
 
     if len(content) < 5:
         messages.error(request, "기도제목 내용을 조금 더 적어 주세요.")
-        return _redirect_home(tab="prayer", anchor="prayer-create-card")
+        return _redirect_home(request, tab="prayer", anchor="prayer-create-card")
     if visibility not in valid_visibilities:
         messages.error(request, "공개 방식을 다시 선택해 주세요.")
-        return _redirect_home(tab="prayer", anchor="prayer-create-card")
+        return _redirect_home(request, tab="prayer", anchor="prayer-create-card")
 
     prayer_request = PrayerRequest.objects.create(
         user=request.user,
@@ -906,6 +1069,7 @@ def create_prayer_request_view(request):
         message = f"{message} 함께 읽어보면 좋은 말씀도 추천해 드렸습니다."
     messages.success(request, message)
     return _redirect_home(
+        request,
         tab="prayer",
         anchor=f"prayer-request-{prayer_request.pk}",
         extra_params={"open_prayer": prayer_request.pk},
@@ -917,7 +1081,7 @@ def create_prayer_request_view(request):
 def update_prayer_request_view(request, pk):
     if not _can_access_prayer_tab(request.user):
         messages.error(request, "기도 기능은 아직 전체 공개 전입니다.")
-        return _redirect_home()
+        return _redirect_home(request)
     prayer_request = get_object_or_404(PrayerRequest, pk=pk, user=request.user)
     previous_content = prayer_request.content
     content = (request.POST.get("content") or "").strip()
@@ -929,16 +1093,16 @@ def update_prayer_request_view(request, pk):
     valid_visibilities = {choice[0] for choice in PrayerRequestVisibility.choices}
     if status not in valid_statuses:
         messages.error(request, "기도 상태를 다시 선택해 주세요.")
-        return _redirect_home(tab="prayer", anchor=f"prayer-request-{prayer_request.pk}")
+        return _redirect_home(request, tab="prayer", anchor=f"prayer-request-{prayer_request.pk}")
     if len(content) < 5:
         messages.error(request, "기도제목 내용을 조금 더 적어 주세요.")
-        return _redirect_home(tab="prayer", anchor=f"prayer-request-{prayer_request.pk}")
+        return _redirect_home(request, tab="prayer", anchor=f"prayer-request-{prayer_request.pk}")
     if visibility not in valid_visibilities:
         messages.error(request, "공개 방식을 다시 선택해 주세요.")
-        return _redirect_home(tab="prayer", anchor=f"prayer-request-{prayer_request.pk}")
+        return _redirect_home(request, tab="prayer", anchor=f"prayer-request-{prayer_request.pk}")
     if status == PrayerRequestStatus.ANSWERED and not testimony_note:
         messages.error(request, "응답받음으로 표시할 때는 간증이나 결과 메모를 함께 적어 주세요.")
-        return _redirect_home(tab="prayer", anchor=f"prayer-request-{prayer_request.pk}")
+        return _redirect_home(request, tab="prayer", anchor=f"prayer-request-{prayer_request.pk}")
 
     prayer_request.content = content
     prayer_request.status = status
@@ -962,10 +1126,24 @@ def update_prayer_request_view(request, pk):
         message = f"{message} 함께 읽어보면 좋은 말씀도 새로 추천해 드렸습니다."
     messages.success(request, message)
     return _redirect_home(
+        request,
         tab="prayer",
-        anchor=f"prayer-request-{prayer_request.pk}",
-        extra_params={"open_prayer": prayer_request.pk},
+        anchor="my-prayer-list",
     )
+
+
+@login_required
+@require_POST
+def delete_prayer_request_view(request, pk):
+    if not _can_access_prayer_tab(request.user):
+        messages.error(request, "기도 기능은 아직 전체 공개 전입니다.")
+        return _redirect_home(request)
+
+    prayer_request = get_object_or_404(PrayerRequest, pk=pk, user=request.user)
+    prayer_title = prayer_request.title
+    prayer_request.delete()
+    messages.success(request, f"'{prayer_title}' 기도제목을 삭제했습니다.")
+    return _redirect_home(request, tab="prayer", anchor="my-prayer-list")
 
 
 @login_required
@@ -973,7 +1151,7 @@ def update_prayer_request_view(request, pk):
 def join_prayer_request_view(request, pk):
     if not _can_access_prayer_tab(request.user):
         messages.error(request, "기도 기능은 아직 전체 공개 전입니다.")
-        return _redirect_home()
+        return _redirect_home(request)
     prayer_request = get_object_or_404(
         PrayerRequest.objects.exclude(user=request.user),
         pk=pk,
@@ -987,7 +1165,7 @@ def join_prayer_request_view(request, pk):
         messages.success(request, "함께 기도하기로 표시했습니다.")
     else:
         messages.success(request, "이미 함께 기도 중으로 표시되어 있습니다.")
-    return _redirect_home(tab="prayer", anchor="public-prayer-list")
+    return _redirect_home(request, tab="prayer", anchor="public-prayer-list")
 
 
 @login_required
@@ -1026,7 +1204,7 @@ def transcribe_voice_note_view(request):
 @login_required
 @require_POST
 def submit_highlight_vote_view(request):
-    challenge = _get_active_challenge()
+    challenge = _get_active_challenge(_resolve_active_church(request))
     sermon = challenge.sermon if challenge else None
     if not sermon:
         messages.error(request, "투표할 설교를 찾을 수 없습니다.")
@@ -1050,14 +1228,18 @@ def submit_highlight_vote_view(request):
     else:
         messages.success(request, "가장 마음에 남은 말씀에 투표했습니다.")
 
-    return _redirect_home(tab="routine", anchor="highlight-panel")
+    return _redirect_home(request, tab="routine", anchor="highlight-panel")
 
 
 @pastor_required
 def pastor_dashboard_view(request):
-    active_challenge = _get_active_challenge()
+    scope_church = _get_access_scope_church(request.user)
+    active_challenge = _get_active_challenge(scope_church)
+    sermon_queryset = Sermon.objects.filter(Q(pastor_review_requested=True) | Q(is_published=True))
+    if scope_church is not None:
+        sermon_queryset = sermon_queryset.filter(church=scope_church)
     available_sermons = list(
-        Sermon.objects.filter(Q(pastor_review_requested=True) | Q(is_published=True))
+        sermon_queryset
         .select_related("summary")
         .prefetch_related("daily_engagements", "weekly_challenges")
         .order_by("-created_at", "-id")
@@ -1076,6 +1258,7 @@ def pastor_dashboard_view(request):
         request,
         "core/pastor_dashboard.html",
         {
+            "active_church": scope_church,
             "sermon": None,
             "summary": None,
             "active_challenge": None,
@@ -1086,25 +1269,30 @@ def pastor_dashboard_view(request):
             "quality_report": None,
             "member_reports": [],
             "pastor_menu": "sermon",
+            **_build_church_nav_context(scope_church),
         },
     )
 
 
 @pastor_required
 def pastor_sermon_edit_view(request, pk):
-    sermon = get_object_or_404(
-        Sermon.objects.prefetch_related("daily_engagements", "highlight_choices", "weekly_challenges"),
-        pk=pk,
-    )
+    scope_church = _get_access_scope_church(request.user)
+    sermon_queryset = Sermon.objects.prefetch_related("daily_engagements", "highlight_choices", "weekly_challenges")
+    if scope_church is not None:
+        sermon_queryset = sermon_queryset.filter(church=scope_church)
+    sermon = get_object_or_404(sermon_queryset, pk=pk)
     if not sermon.pastor_review_requested and not sermon.is_published:
         messages.warning(request, "?꾩쭅 ?대뱶誘쇱뿉??紐⑺쉶??寃???붿껌??蹂대궡吏 ?딆? ?ㅺ탳?낅땲??")
         return redirect("core:pastor_dashboard")
+    available_queryset = Sermon.objects.filter(Q(pastor_review_requested=True) | Q(is_published=True))
+    if scope_church is not None:
+        available_queryset = available_queryset.filter(church=scope_church)
     available_sermons = list(
-        Sermon.objects.filter(Q(pastor_review_requested=True) | Q(is_published=True))
+        available_queryset
         .order_by("-created_at", "-id")
         .only("id", "title", "sermon_date")
     )
-    current_public_sermon_id = get_current_public_sermon_id()
+    current_public_sermon_id = get_current_public_sermon_id(church=sermon.church)
     publication_state = _get_publication_state(sermon, current_public_sermon_id)
     summary, _ = SermonSummary.objects.get_or_create(sermon=sermon)
     daily_qs = sermon.daily_engagements.order_by("day_number", "id")
@@ -1203,6 +1391,7 @@ def pastor_sermon_edit_view(request, pk):
         request,
         "core/pastor_sermon_edit.html",
         {
+            "active_church": scope_church,
             "sermon": sermon,
             "challenge": challenge,
             "available_sermons": available_sermons,
@@ -1215,15 +1404,18 @@ def pastor_sermon_edit_view(request, pk):
             "publication_state_label": publication_state["label"],
             "is_current_public_sermon": publication_state["is_current"],
             "pastor_menu": "sermon",
+            **_build_church_nav_context(scope_church),
         },
     )
 
 
 @pastor_required
 def pastor_reports_view(request):
-    available_challenges = list(
-        WeeklyChallenge.objects.select_related("sermon").order_by("-week_start", "-id")
-    )
+    scope_church = _get_access_scope_church(request.user)
+    challenge_queryset = WeeklyChallenge.objects.select_related("sermon")
+    if scope_church is not None:
+        challenge_queryset = challenge_queryset.filter(sermon__church=scope_church)
+    available_challenges = list(challenge_queryset.order_by("-week_start", "-id"))
 
     selected_challenge = None
     selected_challenge_id = request.GET.get("challenge")
@@ -1244,15 +1436,19 @@ def pastor_reports_view(request):
     sermon = selected_challenge.sermon if selected_challenge else None
     sermon_report = sync_sermon_participation_report(sermon) if sermon else None
     highlight_summary = _build_highlight_summary(sermon)
+    member_queryset = UserProfile.objects.select_related("user")
+    if scope_church is not None:
+        member_queryset = member_queryset.filter(church=scope_church)
     member_reports = [
         sync_user_participation_report(profile.user)
-        for profile in UserProfile.objects.select_related("user").order_by("-points", "user__username")[:20]
+        for profile in member_queryset.order_by("-points", "user__username")[:20]
     ]
 
     return render(
         request,
         "core/pastor_reports.html",
         {
+            "active_church": scope_church,
             "active_challenge": selected_challenge,
             "available_challenges": available_challenges,
             "weekly_report": weekly_report,
@@ -1262,13 +1458,18 @@ def pastor_reports_view(request):
             "highlight_summary": highlight_summary,
             "member_reports": member_reports,
             "pastor_menu": "reports",
+            **_build_church_nav_context(scope_church),
         },
     )
 
 
 @pastor_required
 def pastor_members_view(request):
-    profiles = list(UserProfile.objects.select_related("user").order_by("-points", "user__username"))
+    scope_church = _get_access_scope_church(request.user)
+    profile_queryset = UserProfile.objects.select_related("user")
+    if scope_church is not None:
+        profile_queryset = profile_queryset.filter(church=scope_church)
+    profiles = list(profile_queryset.order_by("-points", "user__username"))
     all_reports = [sync_user_participation_report(profile.user) for profile in profiles]
 
     search_query = (request.GET.get("q") or "").strip().lower()
@@ -1312,6 +1513,7 @@ def pastor_members_view(request):
         request,
         "core/pastor_members.html",
         {
+            "active_church": scope_church,
             "member_reports": member_reports,
             "role_options": role_options,
             "search_query": request.GET.get("q", ""),
@@ -1319,6 +1521,7 @@ def pastor_members_view(request):
             "selected_status": status_filter,
             "member_summary": summary,
             "pastor_menu": "members",
+            **_build_church_nav_context(scope_church),
         },
     )
 
