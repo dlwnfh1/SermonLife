@@ -1239,7 +1239,9 @@ def pastor_transcript_corrections_view(request):
     if request.method == "POST":
         action = (request.POST.get("action") or "").strip()
         if action == "create":
-            create_form = PastorTranscriptCorrectionRuleForm(request.POST, prefix="create")
+            create_post = request.POST.copy()
+            create_post["create-is_active"] = "on"
+            create_form = PastorTranscriptCorrectionRuleForm(create_post, prefix="create")
             if create_form.is_valid():
                 create_form.save()
                 messages.success(request, "새 단어 규칙을 저장했습니다.")
@@ -1262,7 +1264,9 @@ def pastor_transcript_corrections_view(request):
                 return redirect("core:pastor_transcript_corrections")
 
             editing_rule_id = rule.pk
-            edit_form = PastorTranscriptCorrectionRuleForm(request.POST, instance=rule, prefix=f"rule-{rule.pk}")
+            edit_post = request.POST.copy()
+            edit_post[f"rule-{rule.pk}-is_active"] = "on"
+            edit_form = PastorTranscriptCorrectionRuleForm(edit_post, instance=rule, prefix=f"rule-{rule.pk}")
             if edit_form.is_valid():
                 edit_form.save()
                 messages.success(request, f"'{rule.source_text}' 규칙을 저장했습니다.")
@@ -1273,7 +1277,9 @@ def pastor_transcript_corrections_view(request):
     rule_rows = []
     for rule in rules:
         if request.method == "POST" and editing_rule_id == rule.pk:
-            form = PastorTranscriptCorrectionRuleForm(request.POST, instance=rule, prefix=f"rule-{rule.pk}")
+            edit_post = request.POST.copy()
+            edit_post[f"rule-{rule.pk}-is_active"] = "on"
+            form = PastorTranscriptCorrectionRuleForm(edit_post, instance=rule, prefix=f"rule-{rule.pk}")
         else:
             form = PastorTranscriptCorrectionRuleForm(instance=rule, prefix=f"rule-{rule.pk}")
         rule_rows.append({"rule": rule, "form": form})

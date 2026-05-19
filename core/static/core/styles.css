@@ -2127,6 +2127,20 @@ a {
     color: var(--ink);
 }
 
+.transcript-rule-expand {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: rgba(47, 107, 132, 0.08);
+    color: #2f6b84;
+    font-size: 0.92rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
 .transcript-rule-body {
     padding: 0 24px 24px;
     border-top: 1px solid rgba(32, 25, 19, 0.08);

@@ -57,7 +57,7 @@
                 <p class="auth-church-note">{{ active_church.name }} 교역자 페이지</p>
             {% endif %}
             <h1>AI 단어 학습 시키기</h1>
-            <p class="lede">자막과 transcript에서 반복해서 잘못 나오는 단어를 미리 알려두면, 다음 전사부터 원하는 표현으로 자동 저장합니다. 이 규칙은 공동체 구분 없이 함께 사용됩니다.</p>
+            <p class="lede">자막과 transcript에서 반복해서 잘못 나오는 단어를 미리 학습 시키면, 다음부터 원하는 표현으로 자동 저장합니다.</p>
         </section>
 
         {% include "core/includes/pastor_nav.html" %}
@@ -107,14 +107,6 @@
                         {% for error in create_form.note.errors %}<p class="message-row error">{{ error }}</p>{% endfor %}
                     </label>
                 </div>
-                <label class="auth-label pastor-field">
-                    <span>{{ create_form.is_active.label }}</span>
-                    <div class="pastor-inline-checkbox">
-                        {{ create_form.is_active }}
-                        <span>{{ create_form.is_active.help_text }}</span>
-                    </div>
-                    {% for error in create_form.is_active.errors %}<p class="message-row error">{{ error }}</p>{% endfor %}
-                </label>
                 <div class="pastor-toolbar-buttons">
                     <button type="submit" class="pastor-toolbar-button pastor-toolbar-button-primary">규칙 저장</button>
                 </div>
@@ -133,6 +125,7 @@
                                 <div class="transcript-rule-summary-copy">
                                     <strong>{{ row.rule.source_text }} → {{ row.rule.replacement_text }}</strong>
                                 </div>
+                                <span class="transcript-rule-expand">펼치기</span>
                             </summary>
                             <div class="transcript-rule-body">
                                 <form method="post" class="pastor-report-section-stack">
@@ -163,26 +156,8 @@
                                             {% for error in row.form.note.errors %}<p class="message-row error">{{ error }}</p>{% endfor %}
                                         </label>
                                     </div>
-                                    <div class="pastor-kpi-grid pastor-kpi-grid-compact">
-                                        <label class="auth-label pastor-field">
-                                            <span>이 규칙을 바로 적용할까요?</span>
-                                            <div class="pastor-inline-checkbox">
-                                                {{ row.form.is_active }}
-                                                <span>체크하면 다음 transcript부터 이 규칙을 사용합니다. 체크를 끄면 규칙은 남아 있고 적용만 잠시 멈춥니다.</span>
-                                            </div>
-                                            {% for error in row.form.is_active.errors %}<p class="message-row error">{{ error }}</p>{% endfor %}
-                                        </label>
-                                        <div class="pastor-kpi-card">
-                                            <span>마지막 수정</span>
-                                            <strong>{{ row.rule.updated_at|date:"Y-m-d H:i" }}</strong>
-                                            <small>{% if row.rule.is_active %}현재 이 규칙을 사용 중입니다.{% else %}현재 이 규칙 적용이 잠시 중지되어 있습니다.{% endif %}</small>
-                                        </div>
-                                    </div>
                                     <div class="pastor-toolbar-buttons">
                                         <button type="submit" class="pastor-toolbar-button pastor-toolbar-button-primary">저장</button>
-                                        <button type="submit" name="action" value="toggle" class="pastor-toolbar-button pastor-toolbar-button-secondary">
-                                            {% if row.rule.is_active %}사용 중지{% else %}다시 사용{% endif %}
-                                        </button>
                                         <button
                                             type="submit"
                                             name="action"
