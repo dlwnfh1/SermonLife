@@ -394,7 +394,16 @@
             border: 1px solid rgba(157, 109, 71, 0.12);
         }
 
-        .prayer-scripture-card > strong {
+        .prayer-scripture-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .prayer-scripture-card > strong,
+        .prayer-scripture-title {
             display: block;
             color: #201913;
             padding: 12px 14px;
@@ -407,6 +416,34 @@
             font-size: 1.06rem;
             font-weight: 700;
             line-height: 1.5;
+        }
+
+        .prayer-scripture-language-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.76);
+            border: 1px solid rgba(139, 92, 59, 0.12);
+        }
+
+        .prayer-scripture-language-button {
+            border: 0;
+            background: transparent;
+            color: #8b5c3b;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font: inherit;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .prayer-scripture-language-button.is-active {
+            background: rgba(139, 92, 59, 0.14);
+            color: #6c4328;
+            box-shadow: inset 0 0 0 1px rgba(139, 92, 59, 0.12);
         }
 
         .prayer-scripture-list {
@@ -428,11 +465,23 @@
             letter-spacing: 0.02em;
         }
 
+        .prayer-scripture-card[data-language="ko"] .prayer-scripture-reference-en,
+        .prayer-scripture-card[data-language="en"] .prayer-scripture-reference-ko,
+        .prayer-scripture-card[data-language="ko"] .prayer-scripture-title-en,
+        .prayer-scripture-card[data-language="en"] .prayer-scripture-title-ko {
+            display: none;
+        }
+
         .prayer-scripture-verse {
             margin: 10px 0 0;
             color: #201913 !important;
             line-height: 1.8;
             font-size: 0.98rem;
+        }
+
+        .prayer-scripture-card[data-language="ko"] .prayer-scripture-verse-en,
+        .prayer-scripture-card[data-language="en"] .prayer-scripture-verse-ko {
+            display: none;
         }
 
         .prayer-visibility-group {
@@ -478,6 +527,20 @@
             .prayer-overview-grid,
             .prayer-public-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .prayer-scripture-header {
+                align-items: stretch;
+            }
+
+            .prayer-scripture-language-toggle {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .prayer-scripture-language-button {
+                flex: 1 1 0;
+                text-align: center;
             }
 
             .prayer-create-summary {
@@ -1130,14 +1193,27 @@
                                                     <span id="prayer-voice-status-{{ prayer.id }}" class="voice-entry-status" aria-live="polite"></span>
                                                 </div>
                                                 {% if prayer.scripture_recommendations %}
-                                                    <section class="prayer-scripture-card">
-                                                        <strong>함께 읽어보면 좋은 말씀 (공개 한국어 성경(1910 번역))</strong>
+                                                    <section class="prayer-scripture-card" data-language="ko">
+                                                        <div class="prayer-scripture-header">
+                                                            <strong class="prayer-scripture-title prayer-scripture-title-ko">함께 읽어보면 좋은 말씀 (공개 한국어 성경(1910 번역))</strong>
+                                                            <strong class="prayer-scripture-title prayer-scripture-title-en">Helpful Scripture to Read Together (World English Bible, Public Domain)</strong>
+                                                            <div class="prayer-scripture-language-toggle" role="tablist" aria-label="추천 말씀 언어 선택">
+                                                                <button type="button" class="prayer-scripture-language-button is-active" data-language="ko" aria-pressed="true">한국어</button>
+                                                                <button type="button" class="prayer-scripture-language-button" data-language="en" aria-pressed="false">English</button>
+                                                            </div>
+                                                        </div>
                                                         <div class="prayer-scripture-list">
                                                             {% for item in prayer.scripture_recommendations %}
                                                                 <article class="prayer-scripture-item">
-                                                                    <span class="prayer-scripture-reference">{{ item.reference }}</span>
+                                                                    <span class="prayer-scripture-reference prayer-scripture-reference-ko">{{ item.reference }}</span>
+                                                                    {% if item.reference_en %}
+                                                                        <span class="prayer-scripture-reference prayer-scripture-reference-en">{{ item.reference_en }}</span>
+                                                                    {% endif %}
                                                                     {% if item.verse_text %}
-                                                                        <p class="prayer-scripture-verse">{{ item.verse_text }}</p>
+                                                                        <p class="prayer-scripture-verse prayer-scripture-verse-ko">{{ item.verse_text }}</p>
+                                                                    {% endif %}
+                                                                    {% if item.verse_text_en %}
+                                                                        <p class="prayer-scripture-verse prayer-scripture-verse-en">{{ item.verse_text_en }}</p>
                                                                     {% endif %}
                                                                 </article>
                                                             {% endfor %}
@@ -1885,6 +1961,22 @@
                     if (!window.confirm("'" + label + "' 기도제목을 정말 삭제할까요?")) {
                         event.preventDefault();
                     }
+                });
+            });
+
+            document.querySelectorAll(".prayer-scripture-language-button").forEach(function (button) {
+                button.addEventListener("click", function () {
+                    var targetLanguage = button.getAttribute("data-language") || "ko";
+                    var card = button.closest(".prayer-scripture-card");
+                    if (!card) {
+                        return;
+                    }
+                    card.setAttribute("data-language", targetLanguage);
+                    card.querySelectorAll(".prayer-scripture-language-button").forEach(function (toggleButton) {
+                        var isActive = toggleButton === button;
+                        toggleButton.classList.toggle("is-active", isActive);
+                        toggleButton.setAttribute("aria-pressed", isActive ? "true" : "false");
+                    });
                 });
             });
         })();

@@ -41,6 +41,8 @@ class PrayerScriptureRecommendationError(Exception):
 
 PUBLIC_DOMAIN_KOREAN_BIBLE_BASE_URL = "https://ebible.org/kor/{book_code}{chapter:02d}.htm"
 PUBLIC_DOMAIN_TRANSLATION_LABEL = "공개 한국어 성경(1910 번역)"
+PUBLIC_DOMAIN_ENGLISH_BIBLE_BASE_URL = "https://ebible.org/eng-web/{book_code}{chapter:02d}.htm"
+PUBLIC_DOMAIN_ENGLISH_TRANSLATION_LABEL = "World English Bible (Public Domain)"
 
 KOREAN_BIBLE_BOOK_CODES = {
     "창세기": "GEN",
@@ -109,6 +111,75 @@ KOREAN_BIBLE_BOOK_CODES = {
     "요한삼서": "3JN",
     "유다서": "JUD",
     "요한계시록": "REV",
+}
+
+ENGLISH_BIBLE_BOOK_NAMES = {
+    "GEN": "Genesis",
+    "EXO": "Exodus",
+    "LEV": "Leviticus",
+    "NUM": "Numbers",
+    "DEU": "Deuteronomy",
+    "JOS": "Joshua",
+    "JDG": "Judges",
+    "RUT": "Ruth",
+    "1SA": "1 Samuel",
+    "2SA": "2 Samuel",
+    "1KI": "1 Kings",
+    "2KI": "2 Kings",
+    "1CH": "1 Chronicles",
+    "2CH": "2 Chronicles",
+    "EZR": "Ezra",
+    "NEH": "Nehemiah",
+    "EST": "Esther",
+    "JOB": "Job",
+    "PSA": "Psalms",
+    "PRO": "Proverbs",
+    "ECC": "Ecclesiastes",
+    "SNG": "Song of Solomon",
+    "ISA": "Isaiah",
+    "JER": "Jeremiah",
+    "LAM": "Lamentations",
+    "EZK": "Ezekiel",
+    "DAN": "Daniel",
+    "HOS": "Hosea",
+    "JOL": "Joel",
+    "AMO": "Amos",
+    "OBA": "Obadiah",
+    "JON": "Jonah",
+    "MIC": "Micah",
+    "NAH": "Nahum",
+    "HAB": "Habakkuk",
+    "ZEP": "Zephaniah",
+    "HAG": "Haggai",
+    "ZEC": "Zechariah",
+    "MAL": "Malachi",
+    "MAT": "Matthew",
+    "MRK": "Mark",
+    "LUK": "Luke",
+    "JHN": "John",
+    "ACT": "Acts",
+    "ROM": "Romans",
+    "1CO": "1 Corinthians",
+    "2CO": "2 Corinthians",
+    "GAL": "Galatians",
+    "EPH": "Ephesians",
+    "PHP": "Philippians",
+    "COL": "Colossians",
+    "1TH": "1 Thessalonians",
+    "2TH": "2 Thessalonians",
+    "1TI": "1 Timothy",
+    "2TI": "2 Timothy",
+    "TIT": "Titus",
+    "PHM": "Philemon",
+    "HEB": "Hebrews",
+    "JAS": "James",
+    "1PE": "1 Peter",
+    "2PE": "2 Peter",
+    "1JN": "1 John",
+    "2JN": "2 John",
+    "3JN": "3 John",
+    "JUD": "Jude",
+    "REV": "Revelation",
 }
 
 
@@ -195,9 +266,8 @@ def _parse_reference(reference: str):
     return book_code, chapter, verse
 
 
-@lru_cache(maxsize=256)
-def _fetch_public_domain_chapter_text(book_code: str, chapter: int) -> str:
-    url = PUBLIC_DOMAIN_KOREAN_BIBLE_BASE_URL.format(book_code=book_code, chapter=chapter)
+@lru_cache(maxsize=512)
+def _fetch_public_domain_chapter_text(url: str) -> str:
     request = Request(url, headers={"User-Agent": "WordAndLife/1.0"})
     with urlopen(request, timeout=15) as response:
         html = response.read().decode("utf-8", errors="ignore")
@@ -213,43 +283,67 @@ def _fetch_public_domain_chapter_text(book_code: str, chapter: int) -> str:
     return text
 
 
-def _lookup_public_domain_verse_text(reference: str) -> str:
+def _lookup_public_domain_verse_text(reference: str, url_template: str) -> str:
     parsed = _parse_reference(reference)
     if not parsed:
         return ""
     book_code, chapter, verse = parsed
+    url = url_template.format(book_code=book_code, chapter=chapter)
     try:
-        chapter_text = _fetch_public_domain_chapter_text(book_code, chapter)
+        chapter_text = _fetch_public_domain_chapter_text(url)
     except Exception:
         return ""
-
-    verse_pattern = re.compile(rf"(?m)^\s*{verse}\s+(?P<text>.+)$")
-    lines = chapter_text.splitlines()
-    capture = False
-    collected = []
-    for raw_line in lines:
+    filtered_lines = []
+    for raw_line in chapter_text.splitlines():
         line = " ".join(raw_line.split()).strip()
         if not line:
             continue
-        verse_match = re.match(r"^(?P<number>\d+)\s+(?P<text>.+)$", line)
-        if verse_match:
-            number = int(verse_match.group("number"))
-            if capture and number != verse:
-                break
-            if number == verse:
-                capture = True
-                collected.append(verse_match.group("text").strip())
-                continue
-        elif capture:
-            if re.match(r"^\d+$", line) or line in {"<", ">"}:
-                break
-            collected.append(line)
-    if not collected:
+        if line in {"<", ">"}:
+            continue
+        if re.match(r"^\d+$", line):
+            continue
+        if line.startswith("This is the Classic") or line.startswith("Public Domain"):
+            break
+        if line.startswith("Frequently Asked Questions") or line.startswith("Downloads"):
+            break
+        if re.match(r"^[\*\u2020\u2021]", line):
+            break
+        filtered_lines.append(line)
+
+    body = " ".join(filtered_lines).strip()
+    if not body:
         return ""
-    best = " ".join(collected).strip()
+
+    verse_pattern = re.compile(
+        rf"(?<![\d:]){verse}\s+(?P<text>.+?)(?=(?<![\d:])\d+\s+|$)"
+    )
+    verse_match = verse_pattern.search(body)
+    if not verse_match:
+        return ""
+
+    best = " ".join(verse_match.group("text").split()).strip()
     if best in {"<", ">"}:
         return ""
     return best
+
+
+def _lookup_public_domain_korean_verse_text(reference: str) -> str:
+    return _lookup_public_domain_verse_text(reference, PUBLIC_DOMAIN_KOREAN_BIBLE_BASE_URL)
+
+
+def _lookup_public_domain_english_verse_text(reference: str) -> str:
+    return _lookup_public_domain_verse_text(reference, PUBLIC_DOMAIN_ENGLISH_BIBLE_BASE_URL)
+
+
+def _build_english_reference(reference: str) -> str:
+    parsed = _parse_reference(reference)
+    if not parsed:
+        return reference
+    book_code, chapter, verse = parsed
+    book_name = ENGLISH_BIBLE_BOOK_NAMES.get(book_code)
+    if not book_name:
+        return reference
+    return f"{book_name} {chapter}:{verse}"
 
 
 def enrich_prayer_scripture_recommendations(recommendations: list[dict]) -> tuple[list[dict], bool]:
@@ -261,15 +355,26 @@ def enrich_prayer_scripture_recommendations(recommendations: list[dict]) -> tupl
             "reason": (item.get("reason") or "").strip(),
         }
         previous_verse_text = (item.get("verse_text") or "").strip()
+        previous_verse_text_en = (item.get("verse_text_en") or "").strip()
         verse_text = ""
+        verse_text_en = ""
         if normalized["reference"]:
-            verse_text = _lookup_public_domain_verse_text(normalized["reference"])
+            verse_text = _lookup_public_domain_korean_verse_text(normalized["reference"])
+            verse_text_en = _lookup_public_domain_english_verse_text(normalized["reference"])
         if verse_text != previous_verse_text:
+            changed = True
+        if verse_text_en != previous_verse_text_en:
             changed = True
         if verse_text:
             normalized["verse_text"] = verse_text
             normalized["translation"] = PUBLIC_DOMAIN_TRANSLATION_LABEL
         elif item.get("verse_text") or item.get("translation"):
+            changed = True
+        normalized["reference_en"] = _build_english_reference(normalized["reference"])
+        if verse_text_en:
+            normalized["verse_text_en"] = verse_text_en
+            normalized["translation_en"] = PUBLIC_DOMAIN_ENGLISH_TRANSLATION_LABEL
+        elif item.get("verse_text_en") or item.get("translation_en"):
             changed = True
         enriched.append(normalized)
     return enriched, changed
