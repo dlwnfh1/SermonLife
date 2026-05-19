@@ -61,6 +61,7 @@ from .services.engagement import (
 )
 from .services.prayer_scripture_recommendations import (
     PrayerScriptureRecommendationError,
+    enrich_prayer_scripture_recommendations,
     request_prayer_scripture_recommendations,
 )
 from reports.models import (
@@ -540,6 +541,7 @@ def _build_home_context(request):
         for prayer in my_prayer_requests:
             prayer.support_count = my_prayer_support_counts.get(prayer.id, 0)
             prayer.supported_by_me = prayer.id in my_prayer_support_me
+        _hydrate_prayer_scripture_recommendations(my_prayer_requests)
 
         supported_public_ids = {
             row["prayer_request_id"]
@@ -566,6 +568,7 @@ def _build_home_context(request):
         )
         for prayer in public_prayer_requests:
             prayer.supported_by_me = prayer.id in supported_public_ids
+        _hydrate_prayer_scripture_recommendations(public_prayer_requests)
         testimony_prayer_requests = list(
             PrayerRequest.objects.filter(
                 is_public=True,
@@ -576,6 +579,7 @@ def _build_home_context(request):
             .select_related("user")
             .order_by("-answered_at", "-updated_at", "-created_at")[:6]
         )
+        _hydrate_prayer_scripture_recommendations(testimony_prayer_requests)
     weekly_base_max_points = (QUIZ_POINTS + REFLECTION_POINTS + MISSION_POINTS + DAILY_COMPLETION_POINTS) * 5
     weekly_total_max_points = weekly_base_max_points + WEEKLY_COMPLETION_POINTS
 
@@ -655,6 +659,21 @@ def _redirect_home(request, tab="sermon", anchor="", extra_params=None):
 
 def _redirect_to_today_set(request):
     return _redirect_home(request, tab="today", anchor="today-set")
+
+
+def _hydrate_prayer_scripture_recommendations(prayer_requests):
+    for prayer in prayer_requests or []:
+        recommendations = getattr(prayer, "scripture_recommendations", None) or []
+        if not recommendations:
+            continue
+        try:
+            enriched, changed = enrich_prayer_scripture_recommendations(recommendations)
+        except Exception:
+            logger.exception("Failed to enrich prayer scripture recommendations for prayer_request=%s", prayer.pk)
+            continue
+        prayer.scripture_recommendations = enriched
+        if changed:
+            PrayerRequest.objects.filter(pk=prayer.pk).update(scripture_recommendations=enriched)
 
 
 def _redirect_to_today_anchor(request, default_anchor="today-set"):

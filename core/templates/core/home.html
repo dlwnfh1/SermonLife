@@ -107,6 +107,121 @@
             gap: 16px;
         }
 
+        .prayer-overview-grid,
+        .prayer-public-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .prayer-overview-card,
+        .prayer-create-card,
+        .prayer-request-card,
+        .prayer-public-card,
+        .prayer-testimony-card {
+            border-radius: 28px;
+        }
+
+        .prayer-overview-card {
+            padding: 28px 28px 30px;
+        }
+
+        .prayer-overview-card h3 {
+            margin: 0 0 10px;
+            color: #201913;
+        }
+
+        .prayer-overview-card strong {
+            display: block;
+            margin: 0 0 8px;
+            color: #201913;
+        }
+
+        .prayer-overview-card p {
+            margin: 0;
+            color: #201913;
+            line-height: 1.7;
+        }
+
+        .prayer-create-details {
+            padding: 0;
+            overflow: hidden;
+            border-radius: 22px;
+            background: linear-gradient(180deg, rgba(157, 109, 71, 0.12), rgba(255, 250, 242, 0.9));
+            border: 1px solid rgba(157, 109, 71, 0.18);
+            box-shadow: 0 18px 36px rgba(109, 74, 46, 0.08);
+        }
+
+        .prayer-create-summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 18px 20px;
+            cursor: pointer;
+            list-style: none;
+            background: transparent;
+            border: 0;
+            outline: 0;
+        }
+
+        .prayer-create-summary::-webkit-details-marker {
+            display: none !important;
+        }
+
+        summary.prayer-create-summary::marker {
+            content: "";
+            font-size: 0;
+        }
+
+        .prayer-create-summary-copy {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .prayer-create-summary-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 999px;
+            background: rgba(139, 92, 59, 0.12);
+            color: #8b5c3b;
+            font-size: 1.85rem;
+            font-weight: 400;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .prayer-create-summary strong {
+            display: block;
+            margin: 0 0 4px;
+            color: #201913;
+            font-family: "Noto Serif KR", serif;
+            font-size: 1.08rem;
+            line-height: 1.35;
+        }
+
+        .prayer-create-summary small {
+            color: #7f6b58;
+            font-size: 0.84rem;
+            line-height: 1.5;
+        }
+
+        .prayer-create-summary-hint {
+            color: #8b5c3b;
+            font-size: 0.95rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .prayer-create-form {
+            padding: 0 20px 20px;
+        }
+
         .prayer-request-card {
             padding: 0;
             overflow: hidden;
@@ -221,6 +336,120 @@
             color: #7f6b58;
         }
 
+        .prayer-edit-form {
+            padding: 0 28px 28px;
+        }
+
+        .prayer-edit-form textarea,
+        .prayer-edit-form input[type="text"],
+        .prayer-edit-form select,
+        .prayer-create-form textarea,
+        .prayer-create-form input[type="text"],
+        .prayer-create-form select {
+            width: 100%;
+            padding: 16px 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(32, 25, 19, 0.12);
+            background: rgba(255, 255, 255, 0.86);
+            color: #201913;
+            font: inherit;
+            box-sizing: border-box;
+        }
+
+        .prayer-edit-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .prayer-edit-grid label {
+            display: grid;
+            gap: 8px;
+        }
+
+        .prayer-edit-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .prayer-voice-toolbar {
+            margin-top: 12px;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .prayer-voice-button {
+            min-height: 48px;
+            padding: 12px 18px;
+        }
+
+        .prayer-scripture-card {
+            margin-top: 16px;
+            padding: 16px 18px;
+            border-radius: 18px;
+            background: rgba(255, 250, 242, 0.78);
+            border: 1px solid rgba(157, 109, 71, 0.12);
+        }
+
+        .prayer-scripture-card > strong {
+            display: block;
+            color: #201913;
+            font-size: 0.98rem;
+            line-height: 1.5;
+        }
+
+        .prayer-scripture-list {
+            display: grid;
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .prayer-scripture-item {
+            padding: 12px 14px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.72);
+        }
+
+        .prayer-scripture-reference {
+            display: inline-block;
+            color: #8b5c3b;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+        }
+
+        .prayer-scripture-verse {
+            margin: 10px 0 0;
+            color: #201913 !important;
+            line-height: 1.8;
+            font-size: 0.98rem;
+        }
+
+        .prayer-visibility-group {
+            margin-top: 16px;
+        }
+
+        .prayer-privacy-option {
+            align-items: flex-start;
+            padding: 16px 18px;
+        }
+
+        .prayer-privacy-option span {
+            display: grid;
+            gap: 4px;
+        }
+
+        .prayer-privacy-option strong {
+            color: #201913;
+        }
+
+        .prayer-privacy-option small {
+            color: #7f6b58;
+            line-height: 1.5;
+        }
+
         @media (max-width: 900px) {
             .home-tab-sticky {
                 width: 100%;
@@ -238,6 +467,25 @@
                 font-size: 0.9rem;
             }
 
+            .prayer-overview-grid,
+            .prayer-public-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .prayer-create-summary {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 22px 20px;
+            }
+
+            .prayer-create-summary-copy {
+                width: 100%;
+            }
+
+            .prayer-create-form {
+                padding: 0 20px 22px;
+            }
+
             .prayer-request-summary {
                 flex-direction: column;
                 padding: 22px 20px;
@@ -249,6 +497,14 @@
 
             .prayer-request-summary-meta {
                 justify-content: flex-start;
+            }
+
+            .prayer-edit-form {
+                padding: 0 20px 22px;
+            }
+
+            .prayer-edit-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -753,18 +1009,19 @@
                                 </article>
                             </div>
 
-                            <details class="content-card prayer-create-card prayer-create-details">
-                                <summary class="prayer-create-summary">
-                                    <div class="prayer-create-summary-copy">
-                                        <span class="prayer-create-summary-badge">+</span>
-                                        <span>
-                                            <strong>새 기도 등록</strong>
-                                            <small>기도제목이 생기면 여기에서 바로 적어 보세요.</small>
+                            <details class="content-card prayer-create-card prayer-create-details" style="display:block;width:100%;margin-top:18px;padding:0;overflow:hidden;border-radius:22px;box-sizing:border-box;position:relative;z-index:0;background:linear-gradient(180deg, rgba(157,109,71,0.12), rgba(255,250,242,0.9));border:1px solid rgba(157,109,71,0.18);box-shadow:0 18px 36px rgba(109,74,46,0.08);">
+                                <summary class="prayer-create-summary" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px;cursor:pointer;list-style:none;box-sizing:border-box;width:100%;background:transparent;border:0;outline:0;">
+                                    <span style="display:none;" aria-hidden="true"></span>
+                                    <div class="prayer-create-summary-copy" style="display:flex;align-items:center;gap:14px;min-width:0;flex:1 1 auto;">
+                                        <span class="prayer-create-summary-badge" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:999px;background:rgba(139,92,59,0.12);color:#8b5c3b;font-size:1.85rem;font-weight:400;line-height:1;flex-shrink:0;">+</span>
+                                        <span style="display:block;min-width:0;">
+                                            <strong style="display:block;margin:0 0 4px;color:#201913;font-family:'Noto Serif KR',serif;font-size:1.08rem;line-height:1.35;">새 기도 등록</strong>
+                                            <small style="display:block;color:#7f6b58;font-size:0.84rem;line-height:1.5;">기도제목이 생기면 여기에서 바로 적어 보세요.</small>
                                         </span>
                                     </div>
-                                    <small class="prayer-create-summary-hint">열어서 작성하기</small>
+                                    <small class="prayer-create-summary-hint" style="display:inline-block;flex:0 0 auto;color:#8b5c3b;font-size:0.95rem;font-weight:700;line-height:1.5;white-space:nowrap;">열어서 작성하기</small>
                                 </summary>
-                                <form method="post" action="{% url 'core:create_prayer_request' %}" class="action-form prayer-create-form">
+                                <form method="post" action="{% url 'core:create_prayer_request' %}" class="action-form prayer-create-form" style="padding:0 20px 20px;">
                                     {% csrf_token %}
                                     <textarea id="prayer-create-content" name="content" rows="3" placeholder="기도제목을 바로 적어 주세요. 예: 아버지 수술 회복을 위해 기도 부탁드립니다."></textarea>
                                     <div class="voice-entry-toolbar prayer-voice-toolbar">
@@ -866,12 +1123,14 @@
                                                 </div>
                                                 {% if prayer.scripture_recommendations %}
                                                     <section class="prayer-scripture-card">
-                                                        <strong>함께 읽어보면 좋은 말씀</strong>
+                                                        <strong>함께 읽어보면 좋은 말씀 (공개 한국어 성경(1910 번역))</strong>
                                                         <div class="prayer-scripture-list">
                                                             {% for item in prayer.scripture_recommendations %}
                                                                 <article class="prayer-scripture-item">
                                                                     <span class="prayer-scripture-reference">{{ item.reference }}</span>
-                                                                    <p>{{ item.reason }}</p>
+                                                                    {% if item.verse_text %}
+                                                                        <p class="prayer-scripture-verse">{{ item.verse_text }}</p>
+                                                                    {% endif %}
                                                                 </article>
                                                             {% endfor %}
                                                         </div>
