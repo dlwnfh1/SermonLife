@@ -2064,6 +2064,81 @@ a {
     display: block;
 }
 
+.pastor-inline-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 54px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(32, 25, 19, 0.12);
+    background: rgba(255, 255, 255, 0.82);
+    color: var(--ink);
+}
+
+.pastor-inline-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: #2f6b84;
+}
+
+.pastor-inline-checkbox span {
+    color: var(--muted);
+    font-size: 0.94rem;
+    line-height: 1.5;
+}
+
+.transcript-rule-stack {
+    gap: 14px;
+}
+
+.transcript-rule-item {
+    border-radius: 22px;
+    border: 1px solid rgba(32, 25, 19, 0.08);
+    background: rgba(255, 251, 245, 0.96);
+    box-shadow: 0 18px 34px rgba(55, 38, 20, 0.06);
+    overflow: hidden;
+}
+
+.transcript-rule-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 20px 24px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.transcript-rule-summary::-webkit-details-marker {
+    display: none;
+}
+
+.transcript-rule-summary-copy {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.transcript-rule-summary-copy strong {
+    font-size: 1.08rem;
+    line-height: 1.5;
+    color: var(--ink);
+}
+
+.transcript-rule-body {
+    padding: 0 24px 24px;
+    border-top: 1px solid rgba(32, 25, 19, 0.08);
+}
+
+@media (max-width: 900px) {
+    .transcript-rule-summary {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
 .pastor-field textarea {
     padding: 18px 20px;
     border: 1px solid rgba(32, 25, 19, 0.14);

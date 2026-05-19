@@ -4,7 +4,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
 
-from .models import DailyEngagement, MemberRole, Sermon, SermonSummary
+from .models import DailyEngagement, MemberRole, Sermon, SermonSummary, TranscriptCorrectionRule
 
 
 User = get_user_model()
@@ -169,4 +169,30 @@ class PastorDailyEngagementForm(forms.ModelForm):
             "reflection_question": forms.Textarea(attrs={"rows": 3}),
             "mission_title": forms.Textarea(attrs={"rows": 2}),
             "mission_description": forms.Textarea(attrs={"rows": 3}),
+        }
+
+
+class PastorTranscriptCorrectionRuleForm(forms.ModelForm):
+    class Meta:
+        model = TranscriptCorrectionRule
+        fields = ("source_text", "replacement_text", "sort_order", "is_active", "note")
+        widgets = {
+            "source_text": forms.TextInput(attrs={"placeholder": "예: 스테판, 시브리"}),
+            "replacement_text": forms.TextInput(attrs={"placeholder": "예: 스테반, 히브리"}),
+            "sort_order": forms.NumberInput(attrs={"min": 0, "step": 10}),
+            "note": forms.TextInput(attrs={"placeholder": "필요하면 메모를 남겨 주세요."}),
+        }
+        labels = {
+            "source_text": "AI가 잘못 쓰는 표현",
+            "replacement_text": "원하는 표현",
+            "sort_order": "적용 순서",
+            "is_active": "사용 여부",
+            "note": "메모",
+        }
+        help_texts = {
+            "source_text": "자막이나 transcript에서 반복해서 잘못 나오는 표현을 적어 주세요.",
+            "replacement_text": "앞으로는 transcript에 이 표현으로 자동 저장합니다.",
+            "sort_order": "숫자가 작을수록 먼저 적용됩니다. 보통은 100 그대로 두면 됩니다.",
+            "is_active": "체크를 끄면 규칙은 남겨두고 적용만 중지합니다.",
+            "note": "왜 등록했는지 간단히 남길 수 있습니다.",
         }

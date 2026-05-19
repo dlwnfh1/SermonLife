@@ -162,6 +162,24 @@ class SourceMediaAsset(models.Model):
         super().save(*args, **kwargs)
 
 
+class TranscriptCorrectionRule(models.Model):
+    source_text = models.CharField(max_length=255, unique=True)
+    replacement_text = models.CharField(max_length=255)
+    sort_order = models.PositiveIntegerField(default=100)
+    is_active = models.BooleanField(default=True)
+    note = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["sort_order", "source_text", "id"]
+        verbose_name = "AI 단어 학습 시키기"
+        verbose_name_plural = "AI 단어 학습 시키기"
+
+    def __str__(self):
+        return f"{self.source_text} -> {self.replacement_text}"
+
+
 class Sermon(models.Model):
     church = models.ForeignKey(
         Church,

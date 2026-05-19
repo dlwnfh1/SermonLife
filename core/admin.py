@@ -27,6 +27,7 @@ from .models import (
     SermonAudioClip,
     SermonStatus,
     SermonSummary,
+    TranscriptCorrectionRule,
     UserProfile,
 )
 from .services.ai_generation import AIContentGenerationError, generate_sermon_content
@@ -969,6 +970,40 @@ class PastorNotificationRecipientAdmin(admin.ModelAdmin):
     list_display = ("name", "church", "email", "is_active", "updated_at")
     search_fields = ("name", "email", "church__name", "church__slug")
     list_filter = ("church", "is_active")
+
+
+@admin.register(TranscriptCorrectionRule)
+class TranscriptCorrectionRuleAdmin(admin.ModelAdmin):
+    list_display = ("source_text", "replacement_text", "sort_order", "is_active", "updated_at")
+    search_fields = ("source_text", "replacement_text", "note")
+    list_filter = ("is_active",)
+    list_editable = ("sort_order", "is_active")
+    fields = ("source_text", "replacement_text", "sort_order", "is_active", "note")
+
+    def get_queryset(self, request):
+        return super().get_queryset(request)
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        field = super().formfield_for_dbfield(db_field, request, **kwargs)
+        label_map = {
+            "source_text": "AI가 잘못 쓰는 표현",
+            "replacement_text": "원하는 표현",
+            "sort_order": "적용 순서",
+            "is_active": "사용 여부",
+            "note": "메모",
+        }
+        help_text_map = {
+            "source_text": "예: 스테판, 시브리처럼 자주 잘못 나오는 표현을 적어 주세요.",
+            "replacement_text": "앞으로 transcript에서 이렇게 바꾸어 저장합니다.",
+            "sort_order": "숫자가 작을수록 먼저 적용됩니다. 보통은 100 그대로 두면 됩니다.",
+            "is_active": "체크된 규칙만 실제 전사 결과에 적용됩니다.",
+            "note": "왜 이 단어를 학습시켰는지 간단히 남길 수 있습니다.",
+        }
+        if db_field.name in label_map:
+            field.label = label_map[db_field.name]
+        if db_field.name in help_text_map:
+            field.help_text = help_text_map[db_field.name]
+        return field
 
 
 @admin.register(PointLedger)

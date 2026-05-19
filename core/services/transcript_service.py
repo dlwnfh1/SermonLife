@@ -8,6 +8,8 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import requests
+from django.apps import apps as django_apps
+from django.db.utils import OperationalError, ProgrammingError
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import NoTranscriptFound, TranscriptsDisabled, VideoUnavailable
 from yt_dlp import YoutubeDL
@@ -75,6 +77,28 @@ def _apply_transcript_phrase_normalizations(transcript_text: str) -> str:
     normalized = transcript_text
     for pattern, replacement in TRANSCRIPT_PHRASE_NORMALIZATIONS:
         normalized = pattern.sub(replacement, normalized)
+    normalized = _apply_transcript_correction_rules(normalized)
+    return normalized
+
+
+def _apply_transcript_correction_rules(transcript_text: str) -> str:
+    try:
+        rule_model = django_apps.get_model("core", "TranscriptCorrectionRule")
+        rules = list(
+            rule_model.objects.filter(is_active=True)
+            .values_list("source_text", "replacement_text", "sort_order")
+        )
+    except (LookupError, OperationalError, ProgrammingError):
+        return transcript_text
+
+    normalized = transcript_text
+    for source_text, replacement_text, _sort_order in sorted(
+        rules,
+        key=lambda item: (item[2], -len(item[0]), item[0]),
+    ):
+        if not source_text:
+            continue
+        normalized = normalized.replace(source_text, replacement_text)
     return normalized
 
 

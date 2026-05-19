@@ -20,6 +20,7 @@ from .forms import (
     PastorDailyEngagementForm,
     PastorSermonEditForm,
     PastorSermonSummaryForm,
+    PastorTranscriptCorrectionRuleForm,
     SermonLifeSignUpForm,
 )
 from .models import (
@@ -43,6 +44,7 @@ from .models import (
     SermonSummary,
     UserProfile,
     WeeklyChallenge,
+    TranscriptCorrectionRule,
     get_current_public_sermon_id,
 )
 from .services.ai_generation import AIContentGenerationError, generate_sermon_content
@@ -1225,6 +1227,68 @@ def submit_highlight_vote_view(request):
         messages.success(request, "가장 마음에 남은 말씀에 투표했습니다.")
 
     return _redirect_home(request, tab="routine", anchor="highlight-panel")
+
+
+@pastor_required
+def pastor_transcript_corrections_view(request):
+    scope_church = _get_access_scope_church(request.user)
+    rules = list(TranscriptCorrectionRule.objects.all())
+    create_form = PastorTranscriptCorrectionRuleForm(prefix="create")
+    editing_rule_id = None
+
+    if request.method == "POST":
+        action = (request.POST.get("action") or "").strip()
+        if action == "create":
+            create_form = PastorTranscriptCorrectionRuleForm(request.POST, prefix="create")
+            if create_form.is_valid():
+                create_form.save()
+                messages.success(request, "새 단어 규칙을 저장했습니다.")
+                return redirect("core:pastor_transcript_corrections")
+            messages.error(request, "새 규칙 내용을 다시 확인해 주세요.")
+        elif action in {"update", "delete", "toggle"}:
+            rule = get_object_or_404(TranscriptCorrectionRule, pk=request.POST.get("rule_id"))
+            if action == "delete":
+                deleted_name = rule.source_text
+                rule.delete()
+                messages.success(request, f"'{deleted_name}' 규칙을 삭제했습니다.")
+                return redirect("core:pastor_transcript_corrections")
+            if action == "toggle":
+                rule.is_active = not rule.is_active
+                rule.save(update_fields=["is_active", "updated_at"])
+                if rule.is_active:
+                    messages.success(request, f"'{rule.source_text}' 규칙을 다시 사용합니다.")
+                else:
+                    messages.success(request, f"'{rule.source_text}' 규칙 적용을 잠시 중지했습니다.")
+                return redirect("core:pastor_transcript_corrections")
+
+            editing_rule_id = rule.pk
+            edit_form = PastorTranscriptCorrectionRuleForm(request.POST, instance=rule, prefix=f"rule-{rule.pk}")
+            if edit_form.is_valid():
+                edit_form.save()
+                messages.success(request, f"'{rule.source_text}' 규칙을 저장했습니다.")
+                return redirect("core:pastor_transcript_corrections")
+            messages.error(request, "수정한 규칙 내용을 다시 확인해 주세요.")
+        rules = list(TranscriptCorrectionRule.objects.all())
+
+    rule_rows = []
+    for rule in rules:
+        if request.method == "POST" and editing_rule_id == rule.pk:
+            form = PastorTranscriptCorrectionRuleForm(request.POST, instance=rule, prefix=f"rule-{rule.pk}")
+        else:
+            form = PastorTranscriptCorrectionRuleForm(instance=rule, prefix=f"rule-{rule.pk}")
+        rule_rows.append({"rule": rule, "form": form})
+
+    return render(
+        request,
+        "core/pastor_transcript_corrections.html",
+        {
+            "active_church": scope_church,
+            "create_form": create_form,
+            "rule_rows": rule_rows,
+            "pastor_menu": "transcript_rules",
+            **_build_church_nav_context(scope_church),
+        },
+    )
 
 
 @pastor_required
