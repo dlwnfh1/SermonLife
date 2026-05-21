@@ -7,6 +7,8 @@ from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import AuthenticationForm
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import Case, Count, IntegerField, Q, Sum, Value, When
 from django.forms import modelformset_factory
@@ -14,9 +16,12 @@ from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
 from .forms import (
+    PastorAudioTranscriptUploadForm,
     PastorDailyEngagementForm,
     PastorSermonEditForm,
     PastorSermonSummaryForm,
@@ -29,6 +34,8 @@ from .models import (
     DailyMissionCompletion,
     DailyQuizAttempt,
     DailyReflectionResponse,
+    PastorAudioTranscript,
+    PastorAudioTranscriptStatus,
     PointLedger,
     PointSource,
     PrayerCompanion,
@@ -48,7 +55,7 @@ from .models import (
     get_current_public_sermon_id,
 )
 from .services.ai_generation import AIContentGenerationError, generate_sermon_content
-from .services.transcript_service import TranscriptFetchError, transcribe_uploaded_audio
+from .services.transcript_service import TranscriptFetchError, transcribe_audio_file, transcribe_uploaded_audio
 from .services.engagement import (
     DAILY_COMPLETION_POINTS,
     MISSION_POINTS,
@@ -706,6 +713,41 @@ def _is_pastor_user(user):
     return bool(profile and profile.member_role == "pastor")
 
 
+def _can_use_audio_transcriber(user):
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser or user.is_staff:
+        return True
+    profile = UserProfile.objects.filter(user=user).first()
+    return bool(profile and profile.member_role == "pastor" and profile.can_use_audio_transcriber)
+
+
+def _create_pastor_audio_transcript_job(*, user, scope_church, uploaded_file):
+    transcript_job = PastorAudioTranscript(
+        church=scope_church,
+        user=user,
+        source_file=uploaded_file,
+        original_filename=getattr(uploaded_file, "name", ""),
+        source_content_type=getattr(uploaded_file, "content_type", "") or "",
+        source_size=getattr(uploaded_file, "size", 0) or 0,
+    )
+    transcript_job.save()
+    try:
+        transcript_text = transcribe_audio_file(transcript_job.source_file.path)
+    except TranscriptFetchError as exc:
+        transcript_job.status = PastorAudioTranscriptStatus.FAILED
+        transcript_job.error_text = str(exc)
+        transcript_job.transcript_text = ""
+        transcript_job.save(update_fields=["status", "error_text", "transcript_text", "updated_at"])
+        raise
+    else:
+        transcript_job.status = PastorAudioTranscriptStatus.COMPLETED
+        transcript_job.transcript_text = transcript_text
+        transcript_job.error_text = ""
+        transcript_job.save(update_fields=["status", "transcript_text", "error_text", "updated_at"])
+        return transcript_job
+
+
 def _can_access_prayer_tab(user):
     if getattr(settings, "SERMONLIFE_PRAYER_TAB_PUBLIC", False):
         return user.is_authenticated
@@ -898,6 +940,8 @@ def home_view(request, church_slug=None):
     return render(request, "core/home.html", _build_home_context(request))
 
 
+@never_cache
+@ensure_csrf_cookie
 def signup_view(request, church_slug=None):
     active_church = _resolve_active_church(request, church_slug)
     if request.user.is_authenticated:
@@ -928,6 +972,8 @@ def signup_view(request, church_slug=None):
     return render(request, "core/signup.html", context)
 
 
+@never_cache
+@ensure_csrf_cookie
 def login_view(request, church_slug=None):
     active_church = _resolve_active_church(request, church_slug)
     if request.user.is_authenticated:
@@ -1311,9 +1357,163 @@ def pastor_transcript_corrections_view(request):
             "create_form": create_form,
             "rule_rows": rule_rows,
             "pastor_menu": "transcript_rules",
+            "can_use_audio_transcriber": _can_use_audio_transcriber(request.user),
             **_build_church_nav_context(scope_church),
         },
     )
+
+
+@never_cache
+@ensure_csrf_cookie
+@pastor_required
+def pastor_audio_transcriber_view(request):
+    scope_church = _get_access_scope_church(request.user)
+    if not _can_use_audio_transcriber(request.user):
+        messages.warning(request, "이 기능은 허용된 목회자 계정에서만 사용할 수 있습니다.")
+        return redirect("core:pastor_dashboard")
+
+    create_form = PastorAudioTranscriptUploadForm(prefix="create")
+
+    if request.method == "POST":
+        create_form = PastorAudioTranscriptUploadForm(request.POST, request.FILES, prefix="create")
+        if create_form.is_valid():
+            uploaded_file = create_form.cleaned_data["source_file"]
+            try:
+                _create_pastor_audio_transcript_job(
+                    user=request.user,
+                    scope_church=scope_church,
+                    uploaded_file=uploaded_file,
+                )
+            except TranscriptFetchError as exc:
+                messages.error(request, "음성 전사에 실패했습니다. 파일 형식이나 음질을 다시 확인해 주세요.")
+            else:
+                messages.success(request, "음성 파일 transcript를 생성했습니다.")
+            return redirect("core:pastor_audio_transcriber")
+        messages.error(request, "업로드할 음성 파일을 다시 확인해 주세요.")
+
+    transcript_jobs = list(
+        PastorAudioTranscript.objects.filter(user=request.user)
+        .select_related("church")
+        .order_by("-created_at", "-id")[:20]
+    )
+
+    return render(
+        request,
+        "core/pastor_audio_transcriber.html",
+        {
+            "active_church": scope_church,
+            "create_form": create_form,
+            "transcript_jobs": transcript_jobs,
+            "pastor_menu": "audio_transcriber",
+            "can_use_audio_transcriber": True,
+            **_build_church_nav_context(scope_church),
+        },
+    )
+
+
+@never_cache
+@ensure_csrf_cookie
+@pastor_required
+@require_POST
+def pastor_audio_transcriber_record_view(request):
+    scope_church = _get_access_scope_church(request.user)
+    if not _can_use_audio_transcriber(request.user):
+        return JsonResponse({"ok": False, "error": "이 기능은 허용된 목회자 계정에서만 사용할 수 있습니다."}, status=403)
+
+    recorded_audio = request.FILES.get("audio")
+    if not recorded_audio:
+        return JsonResponse({"ok": False, "error": "녹음 파일이 전달되지 않았습니다."}, status=400)
+
+    content_type = getattr(recorded_audio, "content_type", "") or "audio/webm"
+    extension_map = {
+        "audio/mp4": ".m4a",
+        "audio/x-m4a": ".m4a",
+        "audio/aac": ".aac",
+        "audio/mpeg": ".mp3",
+        "audio/mp3": ".mp3",
+        "audio/wav": ".wav",
+        "audio/x-wav": ".wav",
+        "audio/webm": ".webm",
+        "audio/ogg": ".ogg",
+    }
+    suffix = extension_map.get(content_type, ".webm")
+    uploaded_file = SimpleUploadedFile(
+        name=f"pastor-recording-{timezone.now().strftime('%Y%m%d-%H%M%S')}{suffix}",
+        content=recorded_audio.read(),
+        content_type=content_type,
+    )
+
+    try:
+        _create_pastor_audio_transcript_job(
+            user=request.user,
+            scope_church=scope_church,
+            uploaded_file=uploaded_file,
+        )
+    except TranscriptFetchError as exc:
+        messages.error(request, "음성 전사에 실패했습니다. 파일 형식이나 음질을 다시 확인해 주세요.")
+        return JsonResponse({"ok": False, "error": str(exc)}, status=400)
+
+    messages.success(request, "바로 녹음한 음성을 transcript로 저장했습니다.")
+    return JsonResponse({"ok": True, "redirect_url": reverse("core:pastor_audio_transcriber")})
+
+
+@pastor_required
+@require_POST
+def delete_pastor_audio_transcript_view(request, pk):
+    if not _can_use_audio_transcriber(request.user):
+        messages.warning(request, "이 기능은 허용된 목회자 계정에서만 사용할 수 있습니다.")
+        return redirect("core:pastor_dashboard")
+
+    transcript_job = get_object_or_404(PastorAudioTranscript, pk=pk, user=request.user)
+    if transcript_job.source_file:
+        transcript_job.source_file.delete(save=False)
+    transcript_job.delete()
+    messages.success(request, "Transcript 기록을 삭제했습니다.")
+    return redirect("core:pastor_audio_transcriber")
+
+
+@pastor_required
+@require_POST
+def email_pastor_audio_transcript_view(request, pk):
+    if not _can_use_audio_transcriber(request.user):
+        messages.warning(request, "이 기능은 허용된 목회자 계정에서만 사용할 수 있습니다.")
+        return redirect("core:pastor_dashboard")
+
+    transcript_job = get_object_or_404(PastorAudioTranscript, pk=pk, user=request.user)
+    recipient = (request.user.email or "").strip()
+    if not recipient:
+        messages.error(request, "이 계정에는 이메일 주소가 등록되어 있지 않습니다.")
+        return redirect("core:pastor_audio_transcriber")
+
+    if not transcript_job.transcript_text.strip():
+        messages.error(request, "보낼 Transcript 내용이 아직 없습니다.")
+        return redirect("core:pastor_audio_transcriber")
+
+    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "") or getattr(settings, "EMAIL_HOST_USER", "")
+    if not from_email:
+        messages.error(request, "발신 이메일 설정이 없습니다. DEFAULT_FROM_EMAIL 또는 EMAIL_HOST_USER를 설정해 주세요.")
+        return redirect("core:pastor_audio_transcriber")
+
+    subject = f"[WORD & LIFE] Transcript: {transcript_job.original_filename or '녹음 파일'}"
+    body = (
+        "요청하신 Transcript를 보내드립니다.\n\n"
+        f"파일명: {transcript_job.original_filename or transcript_job.source_file.name}\n"
+        f"생성 시각: {timezone.localtime(transcript_job.created_at).strftime('%Y-%m-%d %H:%M')}\n\n"
+        f"{transcript_job.transcript_text}"
+    )
+    try:
+        send_mail(
+            subject=subject,
+            message=body,
+            from_email=from_email,
+            recipient_list=[recipient],
+            fail_silently=False,
+        )
+    except Exception:
+        messages.error(request, "이메일 전송에 실패했습니다. 메일 설정과 네트워크 상태를 확인해 주세요.")
+    else:
+        messages.success(request, f"{recipient} 로 Transcript를 보냈습니다.")
+    return redirect("core:pastor_audio_transcriber")
 
 
 @pastor_required
@@ -1354,6 +1554,7 @@ def pastor_dashboard_view(request):
             "quality_report": None,
             "member_reports": [],
             "pastor_menu": "sermon",
+            "can_use_audio_transcriber": _can_use_audio_transcriber(request.user),
             **_build_church_nav_context(scope_church),
         },
     )
@@ -1489,6 +1690,7 @@ def pastor_sermon_edit_view(request, pk):
             "publication_state_label": publication_state["label"],
             "is_current_public_sermon": publication_state["is_current"],
             "pastor_menu": "sermon",
+            "can_use_audio_transcriber": _can_use_audio_transcriber(request.user),
             **_build_church_nav_context(scope_church),
         },
     )
@@ -1543,6 +1745,7 @@ def pastor_reports_view(request):
             "highlight_summary": highlight_summary,
             "member_reports": member_reports,
             "pastor_menu": "reports",
+            "can_use_audio_transcriber": _can_use_audio_transcriber(request.user),
             **_build_church_nav_context(scope_church),
         },
     )
@@ -1606,6 +1809,7 @@ def pastor_members_view(request):
             "selected_status": status_filter,
             "member_summary": summary,
             "pastor_menu": "members",
+            "can_use_audio_transcriber": _can_use_audio_transcriber(request.user),
             **_build_church_nav_context(scope_church),
         },
     )

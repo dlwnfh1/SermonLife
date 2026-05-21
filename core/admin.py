@@ -21,6 +21,7 @@ from .models import (
     get_current_public_sermon_id,
     MediaStorageSetting,
     PastorNotificationRecipient,
+    PastorAudioTranscript,
     PointLedger,
     SourceMediaAsset,
     Sermon,
@@ -960,9 +961,10 @@ class ChurchAdmin(admin.ModelAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "church", "member_role", "points", "streak_days")
+    list_display = ("user", "church", "member_role", "can_use_audio_transcriber", "points", "streak_days")
     search_fields = ("user__username", "member_role", "church__name", "church__slug")
-    list_filter = ("church", "member_role")
+    list_filter = ("church", "member_role", "can_use_audio_transcriber")
+    list_editable = ("can_use_audio_transcriber",)
 
 
 @admin.register(PastorNotificationRecipient)
@@ -1010,6 +1012,14 @@ class TranscriptCorrectionRuleAdmin(admin.ModelAdmin):
 class PointLedgerAdmin(admin.ModelAdmin):
     list_display = ("user", "challenge", "source", "points", "created_at")
     search_fields = ("user__username", "challenge__title", "sermon__title", "note")
+
+
+@admin.register(PastorAudioTranscript)
+class PastorAudioTranscriptAdmin(admin.ModelAdmin):
+    list_display = ("original_filename", "church", "user", "status", "created_at")
+    search_fields = ("original_filename", "user__username", "church__name", "transcript_text", "error_text")
+    list_filter = ("church", "status", "created_at")
+    readonly_fields = ("original_filename", "source_content_type", "source_size", "transcript_text", "error_text", "created_at", "updated_at")
 
 
 @admin.register(SermonAudioClip)

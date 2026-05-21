@@ -4,7 +4,14 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
 
-from .models import DailyEngagement, MemberRole, Sermon, SermonSummary, TranscriptCorrectionRule
+from .models import (
+    DailyEngagement,
+    MemberRole,
+    PastorAudioTranscript,
+    Sermon,
+    SermonSummary,
+    TranscriptCorrectionRule,
+)
 
 
 User = get_user_model()
@@ -65,7 +72,7 @@ def _format_transcript_for_pastor_edit(value):
 
     sentences = [
         sentence.strip()
-        for sentence in re.split(r"(?<=[.!?。！？])\s+", compact)
+        for sentence in re.split(r"(?<=[.!?])\s+", compact)
         if sentence.strip()
     ]
     if len(sentences) <= 2:
@@ -180,7 +187,7 @@ class PastorTranscriptCorrectionRuleForm(forms.ModelForm):
             "source_text": forms.TextInput(attrs={"placeholder": "예: 스테판, 시브리"}),
             "replacement_text": forms.TextInput(attrs={"placeholder": "예: 스테반, 히브리"}),
             "sort_order": forms.NumberInput(attrs={"min": 0, "step": 10}),
-            "note": forms.TextInput(attrs={"placeholder": "필요하면 메모를 남겨 주세요."}),
+            "note": forms.TextInput(attrs={"placeholder": "필요하면 간단한 메모를 적어 주세요."}),
         }
         labels = {
             "source_text": "AI가 잘못 쓰는 표현",
@@ -193,6 +200,23 @@ class PastorTranscriptCorrectionRuleForm(forms.ModelForm):
             "source_text": "자막이나 transcript에서 반복해서 잘못 나오는 표현을 적어 주세요.",
             "replacement_text": "앞으로는 transcript에 이 표현으로 자동 저장합니다.",
             "sort_order": "숫자가 작을수록 먼저 적용됩니다. 보통은 100 그대로 두면 됩니다.",
-            "is_active": "체크를 끄면 규칙은 남겨두고 적용만 중지합니다.",
-            "note": "왜 등록했는지 간단히 남길 수 있습니다.",
+            "is_active": "체크를 끄면 규칙은 남겨두고 적용만 잠시 멈춥니다.",
+            "note": "왜 이 단어를 학습시켰는지 간단히 남길 수 있습니다.",
+        }
+
+
+class PastorAudioTranscriptUploadForm(forms.ModelForm):
+    class Meta:
+        model = PastorAudioTranscript
+        fields = ("source_file",)
+        widgets = {
+            "source_file": forms.ClearableFileInput(
+                attrs={
+                    "accept": ".m4a,.mp3,.wav,.aac,.ogg,.webm,.mp4,.mov,.m4v",
+                }
+            ),
+        }
+        labels = {"source_file": "음성 파일"}
+        help_texts = {
+            "source_file": "휴대폰 녹음 파일이나 영상 파일을 올리면 transcript를 자동으로 만들어 줍니다.",
         }

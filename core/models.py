@@ -643,6 +643,7 @@ class UserProfile(models.Model):
     )
     points = models.IntegerField(default=0)
     streak_days = models.IntegerField(default=0)
+    can_use_audio_transcriber = models.BooleanField(default=False)
 
     def __str__(self):
         return self.user.get_username()
@@ -778,6 +779,75 @@ class PastorNotificationRecipient(models.Model):
             default_church = Church.get_default()
             if default_church:
                 self.church = default_church
+        super().save(*args, **kwargs)
+
+
+class PastorAudioTranscriptStatus(models.TextChoices):
+    COMPLETED = "completed", "완료"
+    FAILED = "failed", "실패"
+
+
+def pastor_audio_transcript_upload_to(instance, filename):
+    church_slug = ""
+    if getattr(instance, "church_id", None) and getattr(instance, "church", None):
+        church_slug = instance.church.slug
+    elif getattr(instance, "church_id", None):
+        church_model = django_apps.get_model("core", "Church")
+        church = church_model.objects.filter(pk=instance.church_id).first()
+        church_slug = church.slug if church else ""
+    base = "pastor-audio-transcripts"
+    if church_slug:
+        return f"{base}/{church_slug}/{filename}"
+    return f"{base}/{filename}"
+
+
+class PastorAudioTranscript(models.Model):
+    church = models.ForeignKey(
+        Church,
+        on_delete=models.PROTECT,
+        related_name="pastor_audio_transcripts",
+        null=True,
+        blank=True,
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="pastor_audio_transcripts",
+    )
+    source_file = models.FileField(upload_to=pastor_audio_transcript_upload_to)
+    original_filename = models.CharField(max_length=255, blank=True)
+    source_content_type = models.CharField(max_length=120, blank=True)
+    source_size = models.PositiveBigIntegerField(default=0)
+    transcript_text = models.TextField(blank=True)
+    error_text = models.TextField(blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=PastorAudioTranscriptStatus.choices,
+        default=PastorAudioTranscriptStatus.COMPLETED,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        verbose_name = "목회자 음성 전사"
+        verbose_name_plural = "목회자 음성 전사"
+
+    def __str__(self):
+        label = self.original_filename or Path(self.source_file.name).name or f"Transcript {self.pk}"
+        return f"{self.user.get_username()} - {label}"
+
+    def save(self, *args, **kwargs):
+        if self.church_id is None:
+            profile = UserProfile.objects.filter(user=self.user).select_related("church").first()
+            if profile and profile.church_id:
+                self.church = profile.church
+            else:
+                default_church = Church.get_default()
+                if default_church:
+                    self.church = default_church
+        if self.source_file and not self.original_filename:
+            self.original_filename = Path(self.source_file.name).name
         super().save(*args, **kwargs)
 
 

@@ -1135,6 +1135,12 @@ a {
     color: #fffaf2;
 }
 
+@media (min-width: 560px) and (max-width: 860px) {
+    .pastor-nav {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
 .pastor-dashboard-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3512,18 +3518,18 @@ a {
     }
 
     .pastor-nav {
-        flex-wrap: nowrap;
-        overflow-x: auto;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
-        padding-bottom: 2px;
-        -webkit-overflow-scrolling: touch;
     }
 
     .pastor-nav-link {
-        flex: 0 0 auto;
-        min-height: 40px;
-        padding: 0 14px;
+        min-height: 46px;
+        padding: 8px 12px;
         font-size: 0.9rem;
+        white-space: normal;
+        line-height: 1.25;
+        text-align: center;
     }
 
     .pastor-edit-form .panel {
