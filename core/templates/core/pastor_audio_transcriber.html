@@ -656,7 +656,7 @@
             <form method="post" enctype="multipart/form-data" class="pastor-report-section-stack">
                 {% csrf_token %}
                 <div class="audio-transcript-split">
-                    <section class="audio-transcript-mode-card">
+                    <section class="audio-transcript-mode-card" id="audio-recorder-panel">
                         <span class="audio-transcript-section-label">파일 업로드</span>
                         <h3 class="audio-transcript-mode-title">파일 업로드로 만들기</h3>
                         <p class="audio-transcript-mode-copy">이미 녹음해 둔 파일을 올리면 기존 전사 파이프라인으로 transcript를 만듭니다.</p>
@@ -1120,7 +1120,11 @@
                     window.sessionStorage.setItem(successMessageKey, result.data.success_message || "바로 녹음한 음성을 Transcript로 저장했습니다.");
                     window.sessionStorage.setItem("pastor_audio_transcriber_focus", "record");
                     window.setTimeout(function () {
-                        window.location.href = result.data.redirect_url || window.location.href;
+                        var targetUrl = result.data.redirect_url || window.location.href;
+                        if (targetUrl.indexOf("#audio-recorder-panel") === -1) {
+                            targetUrl += "#audio-recorder-panel";
+                        }
+                        window.location.href = targetUrl;
                     }, 1600);
                 }).catch(function (error) {
                     setRecordButtonState(false, false);
@@ -1205,7 +1209,9 @@
                 recordStatus.classList.remove("is-error", "is-recording", "is-processing");
                 recordStatus.classList.add("is-success");
                 if (savedFocus === "record") {
-                    recordStatus.scrollIntoView({ behavior: "smooth", block: "center" });
+                    window.setTimeout(function () {
+                        recordStatus.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }, 120);
                 }
             }
 
