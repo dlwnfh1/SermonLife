@@ -456,6 +456,17 @@
 </head>
 <body>
     <main class="app-shell" style="padding-top: 28px;">
+        <section class="top-actions">
+            {% if active_church %}
+                <span class="church-context-badge">{{ active_church.name }} 공동체</span>
+            {% endif %}
+            <a class="text-link" href="{% url 'core:pastor_dashboard' %}">교역자 홈</a>
+            <a class="text-link" href="{{ home_url }}">사용자 화면</a>
+            <a class="text-link" href="{{ logout_url }}">로그아웃</a>
+        </section>
+
+        {% include "core/includes/pastor_nav.html" %}
+
         <section class="panel transcriber-hero">
             <span class="eyebrow">WORD &amp; LIFE</span>
             {% if active_church %}
@@ -480,8 +491,6 @@
                 </article>
             </div>
         </section>
-
-        {% include "core/includes/pastor_nav.html" %}
 
         {% if messages %}
             <section class="panel transcriber-section">
