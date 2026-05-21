@@ -15,6 +15,7 @@ from django.forms import modelformset_factory
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.template.defaultfilters import filesizeformat
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -748,6 +749,22 @@ def _create_pastor_audio_transcript_job(*, user, scope_church, uploaded_file):
         return transcript_job
 
 
+def _serialize_pastor_audio_transcript_job(transcript_job):
+    return {
+        "id": transcript_job.pk,
+        "original_filename": transcript_job.original_filename or Path(transcript_job.source_file.name).name,
+        "created_at": timezone.localtime(transcript_job.created_at).strftime("%Y-%m-%d %H:%M"),
+        "source_size_display": filesizeformat(transcript_job.source_size),
+        "status": transcript_job.status,
+        "status_display": transcript_job.get_status_display(),
+        "transcript_text": transcript_job.transcript_text,
+        "formatted_paragraphs": _format_transcript_paragraphs(transcript_job.transcript_text, sentences_per_paragraph=3)
+        if transcript_job.transcript_text
+        else [],
+        "error_text": transcript_job.error_text,
+    }
+
+
 def _can_access_prayer_tab(user):
     if getattr(settings, "SERMONLIFE_PRAYER_TAB_PUBLIC", False):
         return user.is_authenticated
@@ -1449,7 +1466,7 @@ def pastor_audio_transcriber_record_view(request):
     )
 
     try:
-        _create_pastor_audio_transcript_job(
+        transcript_job = _create_pastor_audio_transcript_job(
             user=request.user,
             scope_church=scope_church,
             uploaded_file=uploaded_file,
@@ -1460,8 +1477,8 @@ def pastor_audio_transcriber_record_view(request):
     return JsonResponse(
         {
             "ok": True,
-            "redirect_url": reverse("core:pastor_audio_transcriber"),
             "success_message": "바로 녹음한 음성을 Transcript로 저장했습니다.",
+            "job": _serialize_pastor_audio_transcript_job(transcript_job),
         }
     )
 
