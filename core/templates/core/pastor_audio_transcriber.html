@@ -1005,6 +1005,7 @@
             }
 
             var recordToggleButton = originalButton.cloneNode(true);
+            var successMessageKey = "pastor_audio_transcriber_success";
             originalButton.parentNode.replaceChild(recordToggleButton, originalButton);
 
             function getCookie(name) {
@@ -1044,6 +1045,24 @@
 
             setRecordButtonState(false, false);
             setRecorderStatus("버튼을 누르면 바로 녹음이 시작됩니다. 끝나면 다시 눌러 저장해 주세요.", null);
+
+            setRecordButtonState(false, false);
+            var savedSuccessMessage = window.sessionStorage.getItem(successMessageKey);
+            if (savedSuccessMessage) {
+                window.sessionStorage.removeItem(successMessageKey);
+                setRecorderStatus(savedSuccessMessage, "success");
+            } else {
+                setRecorderStatus("버튼을 누르면 바로 녹음이 시작됩니다. 끝나면 다시 눌러 저장해 주세요.", null);
+            }
+
+            setRecordButtonState(false, false);
+            var savedSuccessMessage = window.sessionStorage.getItem(successMessageKey);
+            if (savedSuccessMessage) {
+                window.sessionStorage.removeItem(successMessageKey);
+                setRecorderStatus(savedSuccessMessage, "success");
+            } else {
+                setRecorderStatus("버튼을 누르면 바로 녹음이 시작됩니다. 끝나면 다시 눌러 저장해 주세요.", null);
+            }
 
             var activeRecorder = null;
             var activeStream = null;
@@ -1098,6 +1117,7 @@
                         throw new Error(result.data && result.data.error ? result.data.error : "녹음 Transcript 생성에 실패했습니다.");
                     }
                     setRecorderStatus("Transcript를 저장했습니다. 화면을 다시 불러옵니다.", "success");
+                    window.sessionStorage.setItem(successMessageKey, result.data.success_message || "바로 녹음한 음성을 Transcript로 저장했습니다.");
                     window.location.href = result.data.redirect_url || window.location.href;
                 }).catch(function (error) {
                     setRecordButtonState(false, false);
@@ -1162,6 +1182,29 @@
                     setRecordButtonState(false, false);
                     setRecorderStatus("마이크 권한이 필요합니다. 브라우저 설정에서 허용한 뒤 다시 시도해 주세요.", "error");
                 });
+            });
+        })();
+    </script>
+    <script>
+        (function () {
+            var successMessageKey = "pastor_audio_transcriber_success";
+            var savedMessage = window.sessionStorage.getItem(successMessageKey);
+            if (!savedMessage) {
+                return;
+            }
+            window.sessionStorage.removeItem(successMessageKey);
+
+            var recordStatus = document.querySelector("[data-audio-recording-status]");
+            if (recordStatus) {
+                recordStatus.textContent = savedMessage;
+                recordStatus.classList.remove("is-error", "is-recording", "is-processing");
+                recordStatus.classList.add("is-success");
+            }
+
+            document.querySelectorAll(".message-row").forEach(function (row) {
+                if ((row.textContent || "").indexOf("바로 녹음한 음성") !== -1) {
+                    row.style.display = "none";
+                }
             });
         })();
     </script>

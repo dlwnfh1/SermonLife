@@ -1455,11 +1455,15 @@ def pastor_audio_transcriber_record_view(request):
             uploaded_file=uploaded_file,
         )
     except TranscriptFetchError as exc:
-        messages.error(request, "음성 전사에 실패했습니다. 파일 형식이나 음질을 다시 확인해 주세요.")
         return JsonResponse({"ok": False, "error": str(exc)}, status=400)
 
-    messages.success(request, "바로 녹음한 음성을 transcript로 저장했습니다.")
-    return JsonResponse({"ok": True, "redirect_url": reverse("core:pastor_audio_transcriber")})
+    return JsonResponse(
+        {
+            "ok": True,
+            "redirect_url": reverse("core:pastor_audio_transcriber"),
+            "success_message": "바로 녹음한 음성을 Transcript로 저장했습니다.",
+        }
+    )
 
 
 @pastor_required
