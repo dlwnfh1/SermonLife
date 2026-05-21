@@ -1118,7 +1118,10 @@
                     }
                     setRecorderStatus("Transcript를 저장했습니다. 화면을 다시 불러옵니다.", "success");
                     window.sessionStorage.setItem(successMessageKey, result.data.success_message || "바로 녹음한 음성을 Transcript로 저장했습니다.");
-                    window.location.href = result.data.redirect_url || window.location.href;
+                    window.sessionStorage.setItem("pastor_audio_transcriber_focus", "record");
+                    window.setTimeout(function () {
+                        window.location.href = result.data.redirect_url || window.location.href;
+                    }, 1600);
                 }).catch(function (error) {
                     setRecordButtonState(false, false);
                     setRecorderStatus(error.message || "녹음 Transcript 생성 중 오류가 발생했습니다. 다시 시도해 주세요.", "error");
@@ -1189,16 +1192,21 @@
         (function () {
             var successMessageKey = "pastor_audio_transcriber_success";
             var savedMessage = window.sessionStorage.getItem(successMessageKey);
+            var savedFocus = window.sessionStorage.getItem("pastor_audio_transcriber_focus");
             if (!savedMessage) {
                 return;
             }
             window.sessionStorage.removeItem(successMessageKey);
+            window.sessionStorage.removeItem("pastor_audio_transcriber_focus");
 
             var recordStatus = document.querySelector("[data-audio-recording-status]");
             if (recordStatus) {
                 recordStatus.textContent = savedMessage;
                 recordStatus.classList.remove("is-error", "is-recording", "is-processing");
                 recordStatus.classList.add("is-success");
+                if (savedFocus === "record") {
+                    recordStatus.scrollIntoView({ behavior: "smooth", block: "center" });
+                }
             }
 
             document.querySelectorAll(".message-row").forEach(function (row) {
