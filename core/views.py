@@ -461,16 +461,32 @@ def _build_home_context(request):
             None,
         )
         if request.user.is_authenticated:
+            daily_ids = [item.id for item in daily_engagements]
+            quiz_done_ids = set(
+                DailyQuizAttempt.objects.filter(
+                    user=request.user,
+                    daily_engagement_id__in=daily_ids,
+                ).values_list("daily_engagement_id", flat=True)
+            )
+            reflection_done_ids = set(
+                DailyReflectionResponse.objects.filter(
+                    user=request.user,
+                    daily_engagement_id__in=daily_ids,
+                ).values_list("daily_engagement_id", flat=True)
+            )
+            mission_done_ids = set(
+                DailyMissionCompletion.objects.filter(
+                    user=request.user,
+                    daily_engagement_id__in=daily_ids,
+                    completed=True,
+                ).values_list("daily_engagement_id", flat=True)
+            )
             completed_days_count = sum(
                 1
                 for item in daily_engagements
-                if DailyQuizAttempt.objects.filter(user=request.user, daily_engagement=item).exists()
-                and DailyReflectionResponse.objects.filter(user=request.user, daily_engagement=item).exists()
-                and DailyMissionCompletion.objects.filter(
-                    user=request.user,
-                    daily_engagement=item,
-                    completed=True,
-                ).exists()
+                if item.id in quiz_done_ids
+                and item.id in reflection_done_ids
+                and item.id in mission_done_ids
             )
 
     current_daily_state = _get_daily_state(request.user, current_daily)
@@ -674,6 +690,16 @@ def _hydrate_prayer_scripture_recommendations(prayer_requests):
         recommendations = getattr(prayer, "scripture_recommendations", None) or []
         if not recommendations:
             continue
+        if all(
+            (item.get("reference") or "").strip()
+            and (item.get("verse_text") or "").strip()
+            and (item.get("translation") or "").strip()
+            and (item.get("reference_en") or "").strip()
+            and (item.get("verse_text_en") or "").strip()
+            and (item.get("translation_en") or "").strip()
+            for item in recommendations
+        ):
+            continue
         try:
             enriched, changed = enrich_prayer_scripture_recommendations(recommendations)
         except Exception:
@@ -703,6 +729,45 @@ def _build_prayer_visibility_options():
         }
         for value, label in PrayerRequestVisibility.choices
     ]
+
+
+def _should_refresh_reports(request):
+    return request.GET.get("refresh") in {"1", "true", "yes"}
+
+
+def _get_cached_or_sync_challenge_report(challenge, related_attr, sync_func, force_refresh=False):
+    if not challenge:
+        return None
+    if force_refresh:
+        return sync_func(challenge)
+    try:
+        cached = getattr(challenge, related_attr)
+    except Exception:
+        cached = None
+    if cached:
+        return cached
+    return sync_func(challenge)
+
+
+def _get_cached_or_sync_sermon_report(sermon, sync_func, force_refresh=False):
+    if not sermon:
+        return None
+    if force_refresh:
+        return sync_func(sermon)
+    try:
+        cached = sermon.sermon_participation_report
+    except Exception:
+        cached = None
+    if cached:
+        return cached
+    return sync_func(sermon)
+
+
+def _get_cached_user_participation_report(user):
+    try:
+        return user.participation_report
+    except Exception:
+        return None
 
 
 def _is_pastor_user(user):
@@ -1725,6 +1790,7 @@ def pastor_sermon_edit_view(request, pk):
 @pastor_required
 def pastor_reports_view(request):
     scope_church = _get_access_scope_church(request.user)
+    force_refresh = _should_refresh_reports(request)
     challenge_queryset = WeeklyChallenge.objects.select_related("sermon")
     if scope_church is not None:
         challenge_queryset = challenge_queryset.filter(sermon__church=scope_church)
@@ -1743,19 +1809,39 @@ def pastor_reports_view(request):
     if selected_challenge is None and available_challenges:
         selected_challenge = available_challenges[1] if len(available_challenges) > 1 else available_challenges[0]
 
-    weekly_report = sync_weekly_participation_report(selected_challenge) if selected_challenge else None
-    daily_report = sync_daily_action_report(selected_challenge) if selected_challenge else None
-    quality_report = sync_content_quality_report(selected_challenge) if selected_challenge else None
+    weekly_report = _get_cached_or_sync_challenge_report(
+        selected_challenge,
+        "weekly_participation_report",
+        sync_weekly_participation_report,
+        force_refresh=force_refresh,
+    )
+    daily_report = _get_cached_or_sync_challenge_report(
+        selected_challenge,
+        "daily_action_report",
+        sync_daily_action_report,
+        force_refresh=force_refresh,
+    )
+    quality_report = _get_cached_or_sync_challenge_report(
+        selected_challenge,
+        "content_quality_report",
+        sync_content_quality_report,
+        force_refresh=force_refresh,
+    )
     sermon = selected_challenge.sermon if selected_challenge else None
-    sermon_report = sync_sermon_participation_report(sermon) if sermon else None
+    sermon_report = _get_cached_or_sync_sermon_report(
+        sermon,
+        sync_sermon_participation_report,
+        force_refresh=force_refresh,
+    )
     highlight_summary = _build_highlight_summary(sermon)
     member_queryset = UserProfile.objects.select_related("user")
     if scope_church is not None:
         member_queryset = member_queryset.filter(church=scope_church)
-    member_reports = [
-        sync_user_participation_report(profile.user)
-        for profile in member_queryset.order_by("-points", "user__username")[:20]
-    ]
+    top_profiles = list(member_queryset.order_by("-points", "user__username")[:20])
+    member_reports = []
+    for profile in top_profiles:
+        cached_report = None if force_refresh else _get_cached_user_participation_report(profile.user)
+        member_reports.append(cached_report or sync_user_participation_report(profile.user))
 
     return render(
         request,
@@ -1780,11 +1866,15 @@ def pastor_reports_view(request):
 @pastor_required
 def pastor_members_view(request):
     scope_church = _get_access_scope_church(request.user)
+    force_refresh = _should_refresh_reports(request)
     profile_queryset = UserProfile.objects.select_related("user")
     if scope_church is not None:
         profile_queryset = profile_queryset.filter(church=scope_church)
     profiles = list(profile_queryset.order_by("-points", "user__username"))
-    all_reports = [sync_user_participation_report(profile.user) for profile in profiles]
+    all_reports = []
+    for profile in profiles:
+        cached_report = None if force_refresh else _get_cached_user_participation_report(profile.user)
+        all_reports.append(cached_report or sync_user_participation_report(profile.user))
 
     search_query = (request.GET.get("q") or "").strip().lower()
     role_filter = (request.GET.get("role") or "").strip()
