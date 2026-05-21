@@ -1396,6 +1396,11 @@ def pastor_audio_transcriber_view(request):
         .select_related("church")
         .order_by("-created_at", "-id")[:20]
     )
+    for transcript_job in transcript_jobs:
+        transcript_job.formatted_paragraphs = _format_transcript_paragraphs(
+            transcript_job.transcript_text,
+            sentences_per_paragraph=3,
+        ) if transcript_job.transcript_text else []
 
     return render(
         request,

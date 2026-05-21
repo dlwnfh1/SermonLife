@@ -389,6 +389,34 @@
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
         }
 
+        .audio-transcript-copy-source {
+            position: absolute;
+            left: -9999px;
+            top: auto;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .audio-transcript-readable {
+            display: grid;
+            gap: 14px;
+            padding: 20px 22px;
+            border-radius: 20px;
+            border: 1px solid rgba(32, 25, 19, 0.12);
+            background: rgba(255, 255, 255, 0.92);
+            color: var(--transcriber-ink);
+            line-height: 1.9;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+        }
+
+        .audio-transcript-readable p {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: keep-all;
+        }
+
         .audio-transcript-error {
             padding: 14px 16px;
             border-radius: 16px;
@@ -637,7 +665,14 @@
                             </summary>
                             <div class="audio-transcript-body">
                                 {% if item.transcript_text %}
-                                    <textarea readonly data-transcript-output>{{ item.transcript_text }}</textarea>
+                                    <div class="audio-transcript-readable">
+                                        {% for paragraph in item.formatted_paragraphs %}
+                                            <p>{{ paragraph }}</p>
+                                        {% empty %}
+                                            <p>{{ item.transcript_text }}</p>
+                                        {% endfor %}
+                                    </div>
+                                    <textarea readonly class="audio-transcript-copy-source" data-transcript-output>{{ item.transcript_text }}</textarea>
                                     <div class="audio-transcript-toolbar">
                                         <button type="button" class="audio-transcript-action" data-copy-transcript="true">
                                             <span class="audio-transcript-action-icon">⎘</span>
