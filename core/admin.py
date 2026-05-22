@@ -1,6 +1,8 @@
 ﻿from datetime import timedelta
 from pathlib import Path
 import re
+import subprocess
+import sys
 from time import perf_counter
 
 from django import forms
@@ -36,16 +38,31 @@ from .services.pastor_review_notifications import (
     PastorReviewNotificationError,
     send_pastor_review_notification,
 )
-from .services.transcript_service import (
-    TranscriptFetchError,
-    transcribe_audio_file,
-)
 
 admin.site.site_header = "WORD & LIFE 관리하기"
 admin.site.site_title = "WORD & LIFE 관리하기"
 admin.site.index_title = "WORD & LIFE 관리하기"
 PointLedger._meta.verbose_name = "달란트 내역"
 PointLedger._meta.verbose_name_plural = "달란트 내역"
+
+
+def _launch_sermon_pipeline(sermon_id):
+    manage_py = Path(settings.BASE_DIR) / "manage.py"
+    log_dir = Path(settings.BASE_DIR) / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path = log_dir / "sermon_pipeline.log"
+
+    log_stream = open(log_path, "a", encoding="utf-8")
+    command = [sys.executable, str(manage_py), "process_sermon_pipeline", str(sermon_id)]
+    popen_kwargs = {
+        "cwd": str(settings.BASE_DIR),
+        "stdout": log_stream,
+        "stderr": subprocess.STDOUT,
+        "start_new_session": True,
+    }
+    if sys.platform.startswith("win"):
+        popen_kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    return subprocess.Popen(command, **popen_kwargs)
 
 
 def _clean_sermon_title_from_filename(value):
@@ -763,28 +780,25 @@ class SermonAdmin(admin.ModelAdmin):
             )
             return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
 
+        sermon.import_error = ""
+        sermon.ai_error = ""
+        sermon.save(update_fields=["import_error", "ai_error", "updated_at"])
+
         try:
-            transcript = transcribe_audio_file(media_path)
-            sermon.transcript = transcript
-            sermon.import_error = ""
-            sermon.save(update_fields=["transcript", "import_error", "updated_at"])
-            generate_sermon_content(sermon)
-        except (TranscriptFetchError, AIContentGenerationError) as exc:
-            if isinstance(exc, TranscriptFetchError):
-                sermon.import_error = str(exc)
-                sermon.save(update_fields=["import_error", "updated_at"])
-                self.message_user(request, f"전사 실패: {exc}", level=messages.ERROR)
-            else:
-                sermon.ai_error = str(exc)
-                sermon.save(update_fields=["ai_error", "updated_at"])
-                self.message_user(request, f"AI 생성 실패: {exc}", level=messages.ERROR)
-        else:
-            sermon.pastor_review_requested = False
-            sermon.pastor_review_requested_at = None
-            sermon.save(update_fields=["pastor_review_requested", "pastor_review_requested_at", "updated_at"])
+            _launch_sermon_pipeline(sermon.pk)
+        except OSError as exc:
             self.message_user(
                 request,
-                f"'{sermon.title}' 설교를 전사하고 AI 내용까지 정리했습니다.",
+                f"백그라운드 작업을 시작하지 못했습니다: {exc}",
+                level=messages.ERROR,
+            )
+        else:
+            self.message_user(
+                request,
+                (
+                    f"'{sermon.title}' 설교의 전사와 AI 자동정리를 백그라운드에서 시작했습니다. "
+                    "잠시 후 다시 열어 결과를 확인해 주세요."
+                ),
                 level=messages.SUCCESS,
             )
         return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
