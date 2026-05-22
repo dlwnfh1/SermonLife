@@ -1,4 +1,5 @@
 ﻿from datetime import timedelta
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -7,6 +8,7 @@ from time import perf_counter
 
 from django import forms
 from django.contrib import admin, messages
+from django.contrib.messages import get_messages
 from django.db import models as dj_models
 from django.db.models import Q
 from django.http import HttpResponseRedirect
@@ -52,20 +54,32 @@ def _launch_sermon_pipeline(sermon_id):
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / "sermon_pipeline.log"
 
-    executable_name = Path(sys.executable).name.lower()
-    virtual_env = Path(sys.prefix)
-    if "uwsgi" in executable_name:
-        if sys.platform.startswith("win"):
-            python_executable = virtual_env / "Scripts" / "python.exe"
-        else:
-            python_executable = virtual_env / "bin" / "python"
-    else:
-        python_executable = Path(sys.executable)
-        if not python_executable.exists():
-            if sys.platform.startswith("win"):
-                python_executable = virtual_env / "Scripts" / "python.exe"
-            else:
-                python_executable = virtual_env / "bin" / "python"
+    python_executable = None
+    executable_path = Path(sys.executable)
+    executable_name = executable_path.name.lower()
+    if executable_path.exists() and executable_name.startswith("python"):
+        python_executable = executable_path
+
+    if python_executable is None:
+        candidate_roots = []
+        virtual_env_env = os.environ.get("VIRTUAL_ENV")
+        if virtual_env_env:
+            candidate_roots.append(Path(virtual_env_env))
+        candidate_roots.append(Path(sys.prefix))
+        candidate_roots.append(Path(getattr(sys, "base_prefix", sys.prefix)))
+
+        candidate_names = ["Scripts/python.exe"] if sys.platform.startswith("win") else ["bin/python", "python"]
+        for root in candidate_roots:
+            for relative_name in candidate_names:
+                candidate = root / relative_name
+                if candidate.exists():
+                    python_executable = candidate
+                    break
+            if python_executable is not None:
+                break
+
+    if python_executable is None:
+        python_executable = executable_path
 
     log_stream = open(log_path, "a", encoding="utf-8")
     command = [str(python_executable), str(manage_py), "process_sermon_pipeline", str(sermon_id)]
@@ -78,6 +92,10 @@ def _launch_sermon_pipeline(sermon_id):
     if sys.platform.startswith("win"):
         popen_kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     return subprocess.Popen(command, **popen_kwargs)
+
+
+def _clear_existing_messages(request):
+    list(get_messages(request))
 
 
 def _clean_sermon_title_from_filename(value):
@@ -699,6 +717,32 @@ class SermonAdmin(admin.ModelAdmin):
             extra_context["pastor_notification_recipient_url"] = reverse(
                 "admin:core_pastornotificationrecipient_changelist"
             )
+            if request.GET.get("pipeline") == "1" and sermon:
+                try:
+                    initial_ai = float(request.GET.get("initial_ai", "0") or "0")
+                except ValueError:
+                    initial_ai = 0.0
+                try:
+                    initial_import = float(request.GET.get("initial_import", "0") or "0")
+                except ValueError:
+                    initial_import = 0.0
+
+                current_ai = sermon.last_ai_generated_at.timestamp() if sermon.last_ai_generated_at else 0.0
+                current_import = sermon.last_imported_at.timestamp() if sermon.last_imported_at else 0.0
+                pipeline_completed = current_ai > initial_ai
+                pipeline_failed = bool(sermon.import_error or sermon.ai_error) and not pipeline_completed
+                pipeline_poll_url = (
+                    f"{reverse('admin:core_sermon_change', args=[object_id])}"
+                    f"?church={sermon.church_id or ''}&pipeline=1&initial_ai={initial_ai}&initial_import={initial_import}"
+                )
+
+                extra_context["pipeline_should_poll"] = not pipeline_completed and not pipeline_failed
+                extra_context["pipeline_completed"] = pipeline_completed
+                extra_context["pipeline_failed"] = pipeline_failed
+                extra_context["pipeline_error_message"] = sermon.ai_error or sermon.import_error
+                extra_context["pipeline_poll_url"] = pipeline_poll_url
+                extra_context["pipeline_refresh_target_url"] = reverse("admin:core_sermon_change", args=[object_id])
+                extra_context["pipeline_current_import_at"] = current_import
         return super().changeform_view(request, object_id, form_url, extra_context=extra_context)
 
     def response_add(self, request, obj, post_url_continue=None):
@@ -798,6 +842,7 @@ class SermonAdmin(admin.ModelAdmin):
         sermon.import_error = ""
         sermon.ai_error = ""
         sermon.save(update_fields=["import_error", "ai_error", "updated_at"])
+        _clear_existing_messages(request)
 
         try:
             _launch_sermon_pipeline(sermon.pk)
@@ -808,14 +853,13 @@ class SermonAdmin(admin.ModelAdmin):
                 level=messages.ERROR,
             )
         else:
-            self.message_user(
-                request,
-                (
-                    f"'{sermon.title}' 설교의 전사와 AI 자동정리를 백그라운드에서 시작했습니다. "
-                    "잠시 후 다시 열어 결과를 확인해 주세요."
-                ),
-                level=messages.SUCCESS,
+            initial_ai = sermon.last_ai_generated_at.timestamp() if sermon.last_ai_generated_at else 0.0
+            initial_import = sermon.last_imported_at.timestamp() if sermon.last_imported_at else 0.0
+            redirect_url = (
+                f"{reverse('admin:core_sermon_change', args=[sermon.pk])}"
+                f"?church={sermon.church_id or ''}&pipeline=1&initial_ai={initial_ai}&initial_import={initial_import}"
             )
+            return HttpResponseRedirect(redirect_url)
         return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
 
     def publish_single_view(self, request, object_id):

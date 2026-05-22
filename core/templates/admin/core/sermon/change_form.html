@@ -18,13 +18,14 @@
         background: #111827;
         color: #fff;
         border-radius: 10px;
-        padding: 12px 14px;
+        padding: 12px 42px 12px 14px;
         box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
         font-size: 13px;
         line-height: 1.4;
         opacity: 0;
         transform: translateY(-8px);
         transition: opacity 0.2s ease, transform 0.2s ease;
+        position: relative;
     }
 
     .codex-toast.show {
@@ -35,6 +36,19 @@
     .codex-toast.success { background: #14532d; }
     .codex-toast.error { background: #7f1d1d; }
     .codex-toast.warning { background: #78350f; }
+
+    .codex-toast-close {
+        position: absolute;
+        top: 8px;
+        right: 10px;
+        border: 0;
+        background: transparent;
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 16px;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0;
+    }
 
     .codex-processing-overlay {
         position: fixed;
@@ -399,15 +413,34 @@
             }
             var toast = document.createElement("div");
             toast.className = "codex-toast" + (level ? " " + level : "");
-            toast.textContent = message;
+            var text = document.createElement("div");
+            text.textContent = message;
+            toast.appendChild(text);
+            var closeButton = document.createElement("button");
+            closeButton.type = "button";
+            closeButton.className = "codex-toast-close";
+            closeButton.setAttribute("aria-label", "닫기");
+            closeButton.textContent = "×";
+            closeButton.addEventListener("click", function () {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+                if (!stack.children.length && stack.parentNode) {
+                    stack.parentNode.removeChild(stack);
+                }
+            });
+            toast.appendChild(closeButton);
             stack.appendChild(toast);
             var delay = offset || 0;
             window.setTimeout(function () {
                 toast.classList.add("show");
             }, 50 + delay);
+            if (level === "error" || level === "warning") {
+                return;
+            }
             window.setTimeout(function () {
                 toast.classList.remove("show");
-            }, 3400 + delay);
+            }, 5200 + delay);
             window.setTimeout(function () {
                 if (toast.parentNode) {
                     toast.parentNode.removeChild(toast);
@@ -415,7 +448,7 @@
                 if (!stack.children.length && stack.parentNode) {
                     stack.parentNode.removeChild(stack);
                 }
-            }, 3800 + delay);
+            }, 5700 + delay);
         }
 
         if (popupMessages.length) {
@@ -503,6 +536,38 @@
                 showProcessing(button.dataset.progressTitle, button.dataset.progressText);
             });
         });
+
+        var pipelineShouldPoll = {% if pipeline_should_poll %}true{% else %}false{% endif %};
+        var pipelineCompleted = {% if pipeline_completed %}true{% else %}false{% endif %};
+        var pipelineFailed = {% if pipeline_failed %}true{% else %}false{% endif %};
+        var pipelineErrorMessage = "{{ pipeline_error_message|default:''|escapejs }}";
+        var pipelinePollUrl = "{{ pipeline_poll_url|default:''|escapejs }}";
+        var pipelineRefreshTargetUrl = "{{ pipeline_refresh_target_url|default:''|escapejs }}";
+
+        if (pipelineShouldPoll) {
+            showProcessing("AI 자동정리 진행 중", "지금 설교 음성을 전사하고 AI 내용을 만드는 중입니다. 완료되면 이 화면을 자동으로 다시 불러옵니다.");
+            window.setTimeout(function () {
+                window.location.href = pipelinePollUrl || window.location.href;
+            }, 4500);
+        } else if (pipelineCompleted) {
+            if (overlay) {
+                overlay.classList.remove("show");
+                overlay.setAttribute("aria-hidden", "true");
+            }
+            showToast("AI 자동정리가 완료되었습니다. 최신 내용을 반영했습니다.", "success", 0);
+            if (window.history && window.history.replaceState && pipelineRefreshTargetUrl) {
+                window.history.replaceState({}, document.title, pipelineRefreshTargetUrl);
+            }
+        } else if (pipelineFailed) {
+            if (overlay) {
+                overlay.classList.remove("show");
+                overlay.setAttribute("aria-hidden", "true");
+            }
+            showToast(pipelineErrorMessage || "AI 자동정리 중 오류가 발생했습니다.", "error", 0);
+            if (window.history && window.history.replaceState && pipelineRefreshTargetUrl) {
+                window.history.replaceState({}, document.title, pipelineRefreshTargetUrl);
+            }
+        }
 
         var churchField = document.getElementById("id_church");
         var sourceMediaSelect = document.getElementById("id_source_media_asset");
