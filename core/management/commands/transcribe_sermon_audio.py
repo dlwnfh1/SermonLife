@@ -14,44 +14,52 @@ class Command(BaseCommand):
         parser.add_argument("audio_path")
 
     def handle(self, *args, **options):
+        now = timezone.now()
         try:
             sermon = Sermon.objects.get(pk=options["sermon_id"])
         except Sermon.DoesNotExist as exc:
             raise CommandError("Sermon not found.") from exc
 
-        sermon.import_error = ""
-        sermon.ai_error = ""
-        sermon.save(update_fields=["import_error", "ai_error", "updated_at"])
+        Sermon.objects.filter(pk=sermon.pk).update(
+            import_error="",
+            ai_error="",
+            updated_at=now,
+        )
 
         try:
             transcript = transcribe_audio_file(options["audio_path"])
         except TranscriptFetchError as exc:
-            sermon.import_error = str(exc)
-            sermon.save(update_fields=["import_error", "updated_at"])
+            Sermon.objects.filter(pk=sermon.pk).update(
+                import_error=str(exc),
+                updated_at=timezone.now(),
+            )
             raise CommandError(str(exc)) from exc
 
-        sermon.transcript = transcript
-        sermon.import_error = ""
-        sermon.last_imported_at = timezone.now()
-        sermon.save(update_fields=["transcript", "import_error", "last_imported_at", "updated_at"])
+        updated = Sermon.objects.filter(pk=sermon.pk).update(
+            transcript=transcript,
+            import_error="",
+            last_imported_at=timezone.now(),
+            updated_at=timezone.now(),
+        )
+        if not updated:
+            raise CommandError("Sermon no longer exists while saving transcript.")
+
+        sermon.refresh_from_db()
 
         try:
             generate_sermon_content(sermon)
         except AIContentGenerationError as exc:
-            sermon.ai_error = str(exc)
-            sermon.save(update_fields=["ai_error", "updated_at"])
+            Sermon.objects.filter(pk=sermon.pk).update(
+                ai_error=str(exc),
+                updated_at=timezone.now(),
+            )
             raise CommandError(f"Transcript saved, but AI generation failed: {exc}") from exc
 
-        sermon.ai_error = ""
-        sermon.pastor_review_requested = False
-        sermon.pastor_review_requested_at = None
-        sermon.save(
-            update_fields=[
-                "ai_error",
-                "pastor_review_requested",
-                "pastor_review_requested_at",
-                "updated_at",
-            ]
+        Sermon.objects.filter(pk=sermon.pk).update(
+            ai_error="",
+            pastor_review_requested=False,
+            pastor_review_requested_at=None,
+            updated_at=timezone.now(),
         )
 
         self.stdout.write(

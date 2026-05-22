@@ -52,8 +52,23 @@ def _launch_sermon_pipeline(sermon_id):
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / "sermon_pipeline.log"
 
+    executable_name = Path(sys.executable).name.lower()
+    virtual_env = Path(sys.prefix)
+    if "uwsgi" in executable_name:
+        if sys.platform.startswith("win"):
+            python_executable = virtual_env / "Scripts" / "python.exe"
+        else:
+            python_executable = virtual_env / "bin" / "python"
+    else:
+        python_executable = Path(sys.executable)
+        if not python_executable.exists():
+            if sys.platform.startswith("win"):
+                python_executable = virtual_env / "Scripts" / "python.exe"
+            else:
+                python_executable = virtual_env / "bin" / "python"
+
     log_stream = open(log_path, "a", encoding="utf-8")
-    command = [sys.executable, str(manage_py), "process_sermon_pipeline", str(sermon_id)]
+    command = [str(python_executable), str(manage_py), "process_sermon_pipeline", str(sermon_id)]
     popen_kwargs = {
         "cwd": str(settings.BASE_DIR),
         "stdout": log_stream,
