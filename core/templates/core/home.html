@@ -143,6 +143,148 @@
             line-height: 1.7;
         }
 
+        .prayer-quick-nav {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+            padding: 4px 2px 2px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .prayer-quick-nav::-webkit-scrollbar {
+            display: none;
+        }
+
+        .prayer-quick-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 38px;
+            padding: 0 14px;
+            border-radius: 999px;
+            background: rgba(255, 250, 242, 0.86);
+            border: 1px solid rgba(139, 92, 59, 0.14);
+            color: #8b5c3b;
+            font-size: 0.88rem;
+            font-weight: 700;
+            line-height: 1;
+            white-space: nowrap;
+            text-decoration: none;
+            box-shadow: 0 10px 20px rgba(109, 74, 46, 0.06);
+        }
+
+        .prayer-section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .prayer-section-copy {
+            display: grid;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .prayer-section-kicker {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            min-height: 26px;
+            padding: 0 10px;
+            border-radius: 999px;
+            background: rgba(139, 92, 59, 0.12);
+            color: #8b5c3b;
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .prayer-section-copy h2 {
+            margin: 0;
+        }
+
+        .prayer-section-note {
+            margin: 0;
+            color: #7f6b58;
+            font-size: 0.92rem;
+            line-height: 1.6;
+        }
+
+        .prayer-section-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 36px;
+            padding: 0 14px;
+            border-radius: 999px;
+            background: rgba(139, 92, 59, 0.12);
+            color: #8b5c3b;
+            font-size: 0.9rem;
+            font-weight: 800;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .prayer-section-panel {
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(139, 92, 59, 0.1);
+            box-shadow: 0 22px 38px rgba(62, 42, 21, 0.07);
+        }
+
+        .prayer-section-panel::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            height: 7px;
+            background: linear-gradient(90deg, rgba(139, 92, 59, 0.8), rgba(47, 107, 132, 0.45));
+            opacity: 0.85;
+        }
+
+        .prayer-section-panel-create {
+            background: linear-gradient(180deg, rgba(255, 250, 242, 0.98), rgba(244, 234, 220, 0.96));
+        }
+
+        .prayer-section-panel-mine {
+            background: linear-gradient(180deg, rgba(255, 251, 245, 0.98), rgba(242, 231, 216, 0.98));
+        }
+
+        .prayer-section-panel-public {
+            background: linear-gradient(180deg, rgba(248, 252, 254, 0.98), rgba(234, 243, 247, 0.98));
+            border-color: rgba(47, 107, 132, 0.14);
+        }
+
+        .prayer-section-panel-public::before {
+            background: linear-gradient(90deg, rgba(47, 107, 132, 0.85), rgba(104, 154, 171, 0.58));
+        }
+
+        .prayer-section-panel-testimony {
+            background: linear-gradient(180deg, rgba(250, 255, 250, 0.98), rgba(236, 246, 236, 0.98));
+            border-color: rgba(31, 135, 76, 0.14);
+        }
+
+        .prayer-section-panel-testimony::before {
+            background: linear-gradient(90deg, rgba(31, 135, 76, 0.82), rgba(91, 170, 112, 0.52));
+        }
+
+        .prayer-section-panel-public .prayer-section-kicker,
+        .prayer-section-panel-public .prayer-section-badge {
+            background: rgba(47, 107, 132, 0.12);
+            color: #1f5a6d;
+        }
+
+        .prayer-section-panel-testimony .prayer-section-kicker,
+        .prayer-section-panel-testimony .prayer-section-badge {
+            background: rgba(31, 135, 76, 0.12);
+            color: #1f6e3f;
+        }
+
         .prayer-create-details {
             padding: 0;
             overflow: hidden;
@@ -340,6 +482,11 @@
             padding: 0 28px 28px;
         }
 
+        .prayer-request-card form,
+        .prayer-public-card form {
+            border-top: 1px solid rgba(139, 92, 59, 0.08);
+        }
+
         .prayer-edit-form textarea,
         .prayer-edit-form input[type="text"],
         .prayer-edit-form select,
@@ -529,6 +676,28 @@
                 grid-template-columns: 1fr;
             }
 
+            .prayer-quick-nav {
+                margin-top: 16px;
+                margin-inline: -4px;
+                padding-inline: 4px;
+            }
+
+            .prayer-quick-link {
+                min-height: 40px;
+                padding: 0 15px;
+                font-size: 0.86rem;
+            }
+
+            .prayer-section-head {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .prayer-section-badge {
+                min-height: 34px;
+                padding: 0 12px;
+            }
+
             .prayer-scripture-header {
                 align-items: stretch;
             }
@@ -568,6 +737,11 @@
 
             .prayer-request-summary-meta {
                 justify-content: flex-start;
+                width: 100%;
+            }
+
+            .prayer-meta-chip {
+                min-width: calc(50% - 6px);
             }
 
             .prayer-edit-form {
@@ -1057,9 +1231,12 @@
 
                 {% if prayer_tab_enabled %}
                 <section class="home-tab-panel home-tab-panel-prayer">
-                    <section class="panel" id="prayer-create-card">
+                    <section class="panel prayer-section-panel prayer-section-panel-create" id="prayer-create-card">
                         <div class="panel-header">
-                            <h2>기도</h2>
+                            <div class="prayer-section-copy">
+                                <span class="prayer-section-kicker">시작하기</span>
+                                <h2>기도</h2>
+                            </div>
                         </div>
                         {% if request.user.is_authenticated %}
                             <div class="three-column prayer-overview-grid">
@@ -1079,6 +1256,13 @@
                                     <p>응답받은 기도는 간증과 결과 메모로 남길 수 있습니다.</p>
                                 </article>
                             </div>
+
+                            <nav class="prayer-quick-nav" aria-label="기도 탭 빠른 이동">
+                                <a class="prayer-quick-link" href="#prayer-create-card">새 기도 등록</a>
+                                <a class="prayer-quick-link" href="#my-prayer-list">내 기도</a>
+                                <a class="prayer-quick-link" href="#public-prayer-list">다 함께 기도해요</a>
+                                <a class="prayer-quick-link" href="#prayer-testimony-list">응답 간증</a>
+                            </nav>
 
                             <details class="content-card prayer-create-card prayer-create-details" style="display:block;width:100%;margin-top:18px;padding:0;overflow:hidden;border-radius:22px;box-sizing:border-box;position:relative;z-index:0;background:linear-gradient(180deg, rgba(157,109,71,0.12), rgba(255,250,242,0.9));border:1px solid rgba(157,109,71,0.18);box-shadow:0 18px 36px rgba(109,74,46,0.08);">
                                 <summary class="prayer-create-summary" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px;cursor:pointer;list-style:none;box-sizing:border-box;width:100%;background:transparent;border:0;outline:0;">
@@ -1126,9 +1310,16 @@
                     </section>
 
                     {% if request.user.is_authenticated %}
-                        <section class="panel" id="my-prayer-list">
+                        <section class="panel prayer-section-panel prayer-section-panel-mine" id="my-prayer-list">
                             <div class="panel-header">
-                                <h2>내 기도</h2>
+                                <div class="prayer-section-head">
+                                    <div class="prayer-section-copy">
+                                        <span class="prayer-section-kicker">개인 기록</span>
+                                        <h2>내 기도</h2>
+                                        <p class="prayer-section-note">내가 올린 기도제목을 수정하고, 상태와 공개 범위를 정리할 수 있습니다.</p>
+                                    </div>
+                                    <span class="prayer-section-badge">{{ my_prayer_requests|length }}개</span>
+                                </div>
                             </div>
                             {% if my_prayer_requests %}
                                 <div class="prayer-stack">
@@ -1277,9 +1468,16 @@
                             {% endif %}
                         </section>
 
-                        <section class="panel" id="public-prayer-list">
+                        <section class="panel prayer-section-panel prayer-section-panel-public" id="public-prayer-list">
                             <div class="panel-header">
-                                <h2>다 함께 기도해요</h2>
+                                <div class="prayer-section-head">
+                                    <div class="prayer-section-copy">
+                                        <span class="prayer-section-kicker">공동체 기도</span>
+                                        <h2>다 함께 기도해요</h2>
+                                        <p class="prayer-section-note">다른 성도가 공개한 기도제목을 함께 읽고, 바로 기도 참여를 남길 수 있습니다.</p>
+                                    </div>
+                                    <span class="prayer-section-badge">{{ public_prayer_requests|length }}개</span>
+                                </div>
                             </div>
                             {% if public_prayer_requests %}
                                 <div class="three-column prayer-public-grid">
@@ -1318,9 +1516,16 @@
                             {% endif %}
                         </section>
 
-                        <section class="panel" id="prayer-testimony-list">
+                        <section class="panel prayer-section-panel prayer-section-panel-testimony" id="prayer-testimony-list">
                             <div class="panel-header">
-                                <h2>응답 간증</h2>
+                                <div class="prayer-section-head">
+                                    <div class="prayer-section-copy">
+                                        <span class="prayer-section-kicker">응답의 기록</span>
+                                        <h2>응답 간증</h2>
+                                        <p class="prayer-section-note">응답받은 기도를 다시 읽고, 공동체와 나눌 간증을 차분히 살펴볼 수 있습니다.</p>
+                                    </div>
+                                    <span class="prayer-section-badge">{{ testimony_prayer_requests|length }}개</span>
+                                </div>
                             </div>
                             {% if testimony_prayer_requests %}
                                 <div class="three-column prayer-public-grid">

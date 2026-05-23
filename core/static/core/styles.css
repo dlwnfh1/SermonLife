@@ -2867,6 +2867,148 @@ a {
     margin-top: 16px;
 }
 
+.prayer-quick-nav {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+    padding: 4px 2px 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.prayer-quick-nav::-webkit-scrollbar {
+    display: none;
+}
+
+.prayer-quick-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: rgba(255, 250, 242, 0.86);
+    border: 1px solid rgba(139, 92, 59, 0.14);
+    color: var(--accent);
+    font-size: 0.88rem;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    text-decoration: none;
+    box-shadow: 0 10px 20px rgba(109, 74, 46, 0.06);
+}
+
+.prayer-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.prayer-section-copy {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.prayer-section-kicker {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    min-height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(139, 92, 59, 0.12);
+    color: var(--accent);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.prayer-section-copy h2 {
+    margin: 0;
+}
+
+.prayer-section-note {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.6;
+}
+
+.prayer-section-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: rgba(139, 92, 59, 0.12);
+    color: var(--accent);
+    font-size: 0.9rem;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.prayer-section-panel {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(139, 92, 59, 0.1);
+    box-shadow: 0 22px 38px rgba(62, 42, 21, 0.07);
+}
+
+.prayer-section-panel::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 7px;
+    background: linear-gradient(90deg, rgba(139, 92, 59, 0.8), rgba(47, 107, 132, 0.45));
+    opacity: 0.85;
+}
+
+.prayer-section-panel-create {
+    background: linear-gradient(180deg, rgba(255, 250, 242, 0.98), rgba(244, 234, 220, 0.96));
+}
+
+.prayer-section-panel-mine {
+    background: linear-gradient(180deg, rgba(255, 251, 245, 0.98), rgba(242, 231, 216, 0.98));
+}
+
+.prayer-section-panel-public {
+    background: linear-gradient(180deg, rgba(248, 252, 254, 0.98), rgba(234, 243, 247, 0.98));
+    border-color: rgba(47, 107, 132, 0.14);
+}
+
+.prayer-section-panel-public::before {
+    background: linear-gradient(90deg, rgba(47, 107, 132, 0.85), rgba(104, 154, 171, 0.58));
+}
+
+.prayer-section-panel-testimony {
+    background: linear-gradient(180deg, rgba(250, 255, 250, 0.98), rgba(236, 246, 236, 0.98));
+    border-color: rgba(31, 135, 76, 0.14);
+}
+
+.prayer-section-panel-testimony::before {
+    background: linear-gradient(90deg, rgba(31, 135, 76, 0.82), rgba(91, 170, 112, 0.52));
+}
+
+.prayer-section-panel-public .prayer-section-kicker,
+.prayer-section-panel-public .prayer-section-badge {
+    background: rgba(47, 107, 132, 0.12);
+    color: #1f5a6d;
+}
+
+.prayer-section-panel-testimony .prayer-section-kicker,
+.prayer-section-panel-testimony .prayer-section-badge {
+    background: rgba(31, 135, 76, 0.12);
+    color: #1f6e3f;
+}
+
 .prayer-overview-card strong {
     display: block;
     margin-top: 8px;
@@ -3062,6 +3204,11 @@ a {
 
 .prayer-edit-form {
     padding: 0 20px 20px;
+}
+
+.prayer-request-card form,
+.prayer-public-card form {
+    border-top: 1px solid rgba(139, 92, 59, 0.08);
 }
 
 .prayer-edit-actions {
@@ -3807,8 +3954,35 @@ a {
         flex-direction: column;
     }
 
+    .prayer-quick-nav {
+        margin-top: 16px;
+        margin-inline: -4px;
+        padding-inline: 4px;
+    }
+
+    .prayer-quick-link {
+        min-height: 40px;
+        padding: 0 15px;
+        font-size: 0.86rem;
+    }
+
+    .prayer-section-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .prayer-section-badge {
+        min-height: 34px;
+        padding: 0 12px;
+    }
+
     .prayer-request-summary-meta {
         justify-content: flex-start;
+        width: 100%;
+    }
+
+    .prayer-meta-chip {
+        min-width: calc(50% - 6px);
     }
 
     .prayer-edit-grid {
