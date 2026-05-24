@@ -743,7 +743,7 @@
 
             .prayer-request-summary-meta {
                 display: grid;
-                grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 1fr);
+                grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.25fr) minmax(0, 0.95fr);
                 width: 100%;
                 gap: 8px;
             }
@@ -753,7 +753,8 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                padding: 8px 6px;
+                min-height: 40px;
+                padding: 8px 7px;
                 gap: 0;
                 border-radius: 14px;
                 background: rgba(255, 250, 242, 0.9);
@@ -767,14 +768,15 @@
 
             .prayer-request-summary-meta .prayer-status,
             .prayer-request-summary-meta .prayer-visibility {
-                min-height: 0;
+                min-height: 24px;
                 width: 100%;
                 justify-content: center;
                 padding: 0;
-                font-size: 0.58rem !important;
-                line-height: 1.2;
+                font-size: 0.66rem !important;
+                line-height: 1.15;
                 text-align: center;
-                white-space: nowrap;
+                white-space: normal;
+                word-break: keep-all;
                 letter-spacing: -0.01em;
                 background: transparent;
                 overflow: hidden;
