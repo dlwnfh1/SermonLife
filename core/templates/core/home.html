@@ -737,7 +737,7 @@
 
             .prayer-request-summary-meta {
                 display: grid;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
+                grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 1fr);
                 width: 100%;
                 gap: 8px;
             }
@@ -747,11 +747,12 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                padding: 9px 10px;
+                padding: 8px 6px;
                 gap: 0;
                 border-radius: 14px;
                 background: rgba(255, 250, 242, 0.9);
                 border: 1px solid rgba(139, 92, 59, 0.1);
+                overflow: hidden;
             }
 
             .prayer-meta-chip small {
@@ -761,14 +762,16 @@
             .prayer-status,
             .prayer-visibility {
                 min-height: 0;
-                width: auto;
+                width: 100%;
                 justify-content: center;
                 padding: 0;
-                font-size: 0.72rem;
+                font-size: 0.64rem;
                 line-height: 1.2;
                 text-align: center;
                 white-space: nowrap;
+                letter-spacing: -0.01em;
                 background: transparent;
+                overflow: hidden;
             }
 
             .prayer-edit-form {
