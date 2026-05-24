@@ -14,7 +14,7 @@
         <section class="content-card prayer-create-card prayer-create-form-card" id="prayer-create-card">
             <form method="post" action="{% url 'core:create_prayer_request' %}" class="action-form prayer-create-form" style="padding:0;">
                 {% csrf_token %}
-                <textarea id="prayer-create-content" name="content" rows="3" placeholder="기도제목을 바로 적어 주세요. 예: 아버지 수술 회복을 위해 기도 부탁드립니다."></textarea>
+                <textarea id="prayer-create-content" name="content" rows="3" placeholder="기도제목을 바로 적어 주세요. 예) 아픈 가족의 회복을 위해 기도 부탁드립니다."></textarea>
                 <div class="voice-entry-toolbar prayer-voice-toolbar">
                     <button type="button" class="voice-input-button voice-input-button-secondary prayer-voice-button" data-voice-selector="#prayer-create-content" data-voice-label-id="prayer-create-voice-status" data-idle-label="🎤 말로 입력" data-listening-label="■ 녹음 중">🎤 말로 입력</button>
                     <span id="prayer-create-voice-status" class="voice-entry-status" aria-live="polite"></span>
@@ -30,7 +30,7 @@
                         </label>
                     {% endfor %}
                 </div>
-                <button type="submit" class="action-button">저장</button>
+                <button type="submit" class="action-button" data-prayer-create-submit="true">등록</button>
             </form>
         </section>
     {% endif %}
@@ -67,7 +67,7 @@
                                         <span class="prayer-meta-chip prayer-meta-chip-visibility"><small>공개</small><strong class="prayer-visibility prayer-visibility-private">혼자 기도</strong></span>
                                     {% endif %}
                                     {% if prayer.is_publicly_shared %}
-                                        <span class="prayer-meta-chip prayer-meta-chip-support"><small>함께 기도</small><strong class="prayer-visibility">{% if prayer.support_count %}{{ prayer.support_count }}명 기도 중{% else %}아직 없음{% endif %}</strong></span>
+                                        <span class="prayer-meta-chip prayer-meta-chip-support"><small>함께 기도</small><strong class="prayer-visibility">{% if prayer.support_count %}{{ prayer.support_count }}명 기도중{% else %}아직 없음{% endif %}</strong></span>
                                     {% endif %}
                                 </div>
                             </summary>
@@ -113,7 +113,7 @@
                                     {% endfor %}
                                 </div>
                                 {% if prayer.answered_at %}<p class="support-text">응답 기록: {{ prayer.answered_at|date:"Y-m-d H:i" }}</p>{% endif %}
-                                {% if prayer.is_publicly_shared %}<p class="support-text">{% if prayer.support_count %}{{ prayer.support_count }}명이 함께 기도 중입니다.{% else %}아직 함께 기도 중인 교인은 없습니다.{% endif %}</p>{% endif %}
+                                {% if prayer.is_publicly_shared %}<p class="support-text">{% if prayer.support_count %}{{ prayer.support_count }}명이 함께 기도 중입니다.{% else %}아직 함께 기도 중인 교인이 없습니다.{% endif %}</p>{% endif %}
                                 <div class="prayer-edit-actions">
                                     <button type="submit" class="action-button">저장</button>
                                     <button type="submit" class="action-button action-button-danger" formaction="{% url 'core:delete_prayer_request' prayer.id %}" formnovalidate data-confirm-delete="true" data-delete-label="{{ prayer.content|striptags|truncatechars:40|default:'이 기도제목' }}">삭제</button>
@@ -142,7 +142,7 @@
                     <div class="prayer-section-copy">
                         <span class="prayer-section-kicker">공동체 기도</span>
                         <h2>다 함께 기도해요</h2>
-                        <p class="prayer-section-note">다른 성도가 공개한 기도제목을 함께 읽고, 바로 기도 참여를 남길 수 있습니다.</p>
+                        <p class="prayer-section-note">다른 성도가 공개한 기도제목을 함께 읽고, 바로 기도에 참여할 수 있습니다.</p>
                     </div>
                     <span class="prayer-section-badge">{{ public_prayer_requests|length }}개</span>
                 </div>
@@ -183,7 +183,7 @@
                     <div class="prayer-section-copy">
                         <span class="prayer-section-kicker">응답의 기록</span>
                         <h2>응답 간증</h2>
-                        <p class="prayer-section-note">응답받은 기도를 다시 읽고, 공동체와 나눌 간증을 차분히 살펴볼 수 있습니다.</p>
+                        <p class="prayer-section-note">응답받은 기도와 결과 메모를 다시 읽고, 공동체와 간증을 나눌 수 있습니다.</p>
                     </div>
                     <span class="prayer-section-badge">{{ testimony_prayer_requests|length }}개</span>
                 </div>
