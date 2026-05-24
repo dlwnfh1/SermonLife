@@ -390,14 +390,22 @@ def _build_home_context(request):
                 request._remaining_messages = []
             request._remaining_messages.append({"text": text, "tags": message.tags})
 
-    prayer_tab_enabled = _can_access_prayer_tab(request.user)
-    allowed_tabs = {"sermon", "overview", "routine", "today"}
-    if prayer_tab_enabled:
-        allowed_tabs.add("prayer")
+    challenge = _get_active_challenge(active_church)
+    sermon = challenge.sermon if challenge else None
 
-    active_home_tab = request.GET.get("tab", "sermon")
+    prayer_tab_enabled = _can_access_prayer_tab(request.user)
+    if sermon:
+        allowed_tabs = {"sermon", "overview", "routine", "today"}
+        if prayer_tab_enabled:
+            allowed_tabs.add("prayer")
+        default_tab = "sermon"
+    else:
+        allowed_tabs = {"prayer"} if prayer_tab_enabled else {"sermon"}
+        default_tab = "prayer" if prayer_tab_enabled else "sermon"
+
+    active_home_tab = request.GET.get("tab", default_tab)
     if active_home_tab not in allowed_tabs:
-        active_home_tab = "sermon"
+        active_home_tab = default_tab
     active_feedback = request.GET.get("feedback", "")
     if active_feedback not in {"quiz", "reflection", "mission"}:
         active_feedback = ""
@@ -407,8 +415,6 @@ def _build_home_context(request):
     except (TypeError, ValueError):
         open_prayer_id = None
 
-    challenge = _get_active_challenge(active_church)
-    sermon = challenge.sermon if challenge else None
     summary = _get_summary(sermon)
     profile = _get_or_create_profile(request.user, active_church)
 

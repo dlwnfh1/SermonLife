@@ -849,21 +849,25 @@
             </div>
         </section>
 
-        {% if sermon %}
-            <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-sermon" {% if active_home_tab == "sermon" %}checked{% endif %}>
-            <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-overview" {% if active_home_tab == "overview" %}checked{% endif %}>
-            <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-routine" {% if active_home_tab == "routine" %}checked{% endif %}>
-            <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-today" {% if active_home_tab == "today" %}checked{% endif %}>
+        {% if sermon or prayer_tab_enabled %}
+            {% if sermon %}
+                <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-sermon" {% if active_home_tab == "sermon" %}checked{% endif %}>
+                <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-overview" {% if active_home_tab == "overview" %}checked{% endif %}>
+                <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-routine" {% if active_home_tab == "routine" %}checked{% endif %}>
+                <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-today" {% if active_home_tab == "today" %}checked{% endif %}>
+            {% endif %}
             {% if prayer_tab_enabled %}
                 <input class="home-tab-input" type="radio" name="home-tab" id="home-tab-prayer" {% if active_home_tab == "prayer" %}checked{% endif %}>
             {% endif %}
 
             <div class="home-tab-sticky">
                 <section class="home-tab-bar" aria-label="홈 탭">
-                    <label class="home-tab-control" for="home-tab-sermon">설교</label>
-                    <label class="home-tab-control" for="home-tab-overview">요약</label>
-                    <label class="home-tab-control" for="home-tab-routine">말씀</label>
-                    <label class="home-tab-control" for="home-tab-today">오늘</label>
+                    {% if sermon %}
+                        <label class="home-tab-control" for="home-tab-sermon">설교</label>
+                        <label class="home-tab-control" for="home-tab-overview">요약</label>
+                        <label class="home-tab-control" for="home-tab-routine">말씀</label>
+                        <label class="home-tab-control" for="home-tab-today">오늘</label>
+                    {% endif %}
                     {% if prayer_tab_enabled %}
                         <label class="home-tab-control" for="home-tab-prayer">기도</label>
                     {% endif %}
@@ -907,16 +911,18 @@
                 </form>
             </dialog>
 
-            <section class="panel stat-panel">
-                <div class="stat-card">
-                    <strong>이번 주 달란트</strong>
-                    <span>{{ weekly_points }}달란트 / {{ weekly_base_max_points }}달란트</span>
-                </div>
-                <div class="stat-card">
-                    <strong>완료 Day</strong>
-                    <span>{{ completed_days_count }} / 5 · 누적 {{ total_points }}달란트{% if weekly_bonus_awarded %} · 완주 보너스 획득{% endif %}</span>
-                </div>
-            </section>
+            {% if sermon %}
+                <section class="panel stat-panel">
+                    <div class="stat-card">
+                        <strong>이번 주 달란트</strong>
+                        <span>{{ weekly_points }}달란트 / {{ weekly_base_max_points }}달란트</span>
+                    </div>
+                    <div class="stat-card">
+                        <strong>완료 Day</strong>
+                        <span>{{ completed_days_count }} / 5 · 누적 {{ total_points }}달란트{% if weekly_bonus_awarded %} · 완주 보너스 획득{% endif %}</span>
+                    </div>
+                </section>
+            {% endif %}
 
             <div class="home-tab-panels">
 
@@ -1243,6 +1249,9 @@
                                 <h2>기도</h2>
                             </div>
                         </div>
+                        {% if not sermon %}
+                            <p class="support-text">이번 주 공개 설교는 아직 없습니다. 기도 탭은 계속 이용하실 수 있습니다.</p>
+                        {% endif %}
                         {% if request.user.is_authenticated %}
                             <div class="three-column prayer-overview-grid">
                                 <article class="content-card prayer-overview-card">
