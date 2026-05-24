@@ -1,4 +1,8 @@
-<div id="prayer-subview-root">
+<div
+    id="prayer-subview-root"
+    data-prayer-loaded="{% if prayer_subview_loaded %}true{% else %}false{% endif %}"
+    data-active-prayer-view="{{ active_prayer_view }}"
+>
     <div class="prayer-list-switcher" role="tablist" aria-label="기도 목록 보기 전환" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
         <a class="prayer-list-switcher-link{% if active_prayer_view == 'create' %} is-active{% endif %}" href="?tab=prayer&prayer_view=create#prayer-create-card" role="tab" aria-selected="{% if active_prayer_view == 'create' %}true{% else %}false{% endif %}" style="width:100%;min-width:0;">새 기도 등록</a>
         <a class="prayer-list-switcher-link{% if active_prayer_view == 'mine' %} is-active{% endif %}" href="?tab=prayer&prayer_view=mine#my-prayer-list" role="tab" aria-selected="{% if active_prayer_view == 'mine' %}true{% else %}false{% endif %}" style="width:100%;min-width:0;">내 기도</a>

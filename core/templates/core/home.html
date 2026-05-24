@@ -1938,9 +1938,28 @@
                             window.initPrayerVoiceButtons(newRoot);
                         }
                     })
-                    .catch(function () {
-                        window.location.href = link.href;
-                    });
+                      .catch(function () {
+                          window.location.href = link.href;
+                      });
+            }
+
+            function ensurePrayerSubviewLoaded(preferredView) {
+                var root = document.getElementById("prayer-subview-root");
+                if (!root || root.getAttribute("data-prayer-loaded") === "true") {
+                    return;
+                }
+                var view = preferredView || root.getAttribute("data-active-prayer-view") || "mine";
+                var anchor = "#my-prayer-list";
+                if (view === "create") {
+                    anchor = "#prayer-create-card";
+                } else if (view === "public") {
+                    anchor = "#public-prayer-list";
+                } else if (view === "testimony") {
+                    anchor = "#prayer-testimony-list";
+                }
+                fetchPrayerSubview({
+                    href: "?tab=prayer&prayer_view=" + encodeURIComponent(view) + anchor
+                });
             }
 
             document.addEventListener("click", function (event) {
@@ -1953,6 +1972,18 @@
                     fetchPrayerSubview(prayerLink);
                 }
             });
+
+            var prayerTabInput = document.getElementById("home-tab-prayer");
+            if (prayerTabInput) {
+                prayerTabInput.addEventListener("change", function () {
+                    if (prayerTabInput.checked) {
+                        ensurePrayerSubviewLoaded("mine");
+                    }
+                });
+                if (prayerTabInput.checked) {
+                    ensurePrayerSubviewLoaded("mine");
+                }
+            }
         })();
     </script>
 </body>

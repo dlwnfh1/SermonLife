@@ -680,6 +680,9 @@ def _build_home_context(request):
         "open_prayer_id": open_prayer_id,
         "prayer_tab_enabled": prayer_tab_enabled,
         "active_prayer_view": active_prayer_view,
+        "prayer_subview_loaded": bool(
+            request.user.is_authenticated and prayer_tab_enabled and active_home_tab == "prayer"
+        ),
         "my_prayer_requests": my_prayer_requests,
         "my_prayer_total_count": my_prayer_total_count,
         "my_prayer_page_obj": my_prayer_page_obj,
