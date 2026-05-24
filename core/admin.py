@@ -27,6 +27,8 @@ from .models import (
     PastorNotificationRecipient,
     PastorAudioTranscript,
     PointLedger,
+    PrayerCompanion,
+    PrayerRequest,
     SourceMediaAsset,
     Sermon,
     SermonAudioClip,
@@ -1045,6 +1047,66 @@ class PastorNotificationRecipientAdmin(admin.ModelAdmin):
     list_display = ("name", "church", "email", "is_active", "updated_at")
     search_fields = ("name", "email", "church__name", "church__slug")
     list_filter = ("church", "is_active")
+
+
+@admin.register(PrayerRequest)
+class PrayerRequestAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "request_church",
+        "user",
+        "status",
+        "visibility",
+        "is_public",
+        "supporter_count",
+        "updated_at",
+    )
+    search_fields = ("title", "content", "user__username", "user__first_name", "user__userprofile__church__name")
+    list_filter = ("status", "visibility", "is_public", "user__userprofile__church")
+    readonly_fields = ("created_at", "updated_at", "answered_at")
+    ordering = ("-updated_at", "-created_at", "-id")
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("user", "user__userprofile__church")
+
+    @admin.display(description="교회")
+    def request_church(self, obj):
+        profile = getattr(obj.user, "userprofile", None)
+        church = getattr(profile, "church", None)
+        return church.name if church else "-"
+
+    @admin.display(description="함께 기도")
+    def supporter_count(self, obj):
+        return obj.companions.count()
+
+
+@admin.register(PrayerCompanion)
+class PrayerCompanionAdmin(admin.ModelAdmin):
+    list_display = ("prayer_request", "request_church", "user", "created_at")
+    search_fields = (
+        "prayer_request__title",
+        "prayer_request__content",
+        "user__username",
+        "user__first_name",
+        "prayer_request__user__userprofile__church__name",
+    )
+    list_filter = ("prayer_request__status", "prayer_request__visibility", "prayer_request__user__userprofile__church")
+    readonly_fields = ("created_at",)
+    ordering = ("-created_at", "-id")
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            "user",
+            "prayer_request",
+            "prayer_request__user",
+            "prayer_request__user__userprofile__church",
+        )
+
+    @admin.display(description="교회")
+    def request_church(self, obj):
+        profile = getattr(obj.prayer_request.user, "userprofile", None)
+        church = getattr(profile, "church", None)
+        return church.name if church else "-"
 
 
 @admin.register(TranscriptCorrectionRule)
