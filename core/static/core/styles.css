@@ -3977,8 +3977,8 @@ a {
         display: flex;
         align-items: center;
         justify-content: center;
-        min-height: 46px;
-        padding: 8px 7px;
+        min-height: 52px;
+        padding: 8px 8px;
         gap: 0;
         border-radius: 14px;
         background: rgba(255, 250, 242, 0.9);
@@ -3992,21 +3992,19 @@ a {
 
     .prayer-request-summary-meta .prayer-status,
     .prayer-request-summary-meta .prayer-visibility {
-        min-height: 24px;
+        min-height: 0;
         width: 100%;
-        justify-content: center;
+        display: block;
         padding: 0;
-        font-size: 0.74rem !important;
-        line-height: 1.22;
+        font-size: 0.8rem !important;
+        line-height: 1.25;
         text-align: center;
         white-space: normal;
         word-break: keep-all;
         letter-spacing: -0.01em;
         background: transparent;
         overflow: hidden;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
+        align-self: center;
     }
 
     .prayer-edit-grid {
