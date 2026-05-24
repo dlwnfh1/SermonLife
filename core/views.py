@@ -612,17 +612,8 @@ def _build_home_context(request):
             public_prayer_page_obj = Paginator(public_prayer_queryset, 6).get_page(request.GET.get("page_public"))
             public_prayer_requests = list(public_prayer_page_obj.object_list)
             public_prayer_ids = [prayer.id for prayer in public_prayer_requests]
-            public_support_counts = {}
             supported_public_ids = set()
             if public_prayer_ids:
-                public_support_counts = {
-                    row["prayer_request_id"]: row["total"]
-                    for row in (
-                        PrayerCompanion.objects.filter(prayer_request_id__in=public_prayer_ids)
-                        .values("prayer_request_id")
-                        .annotate(total=Count("id"))
-                    )
-                }
                 supported_public_ids = {
                     row["prayer_request_id"]
                     for row in (
@@ -633,9 +624,7 @@ def _build_home_context(request):
                     )
                 }
             for prayer in public_prayer_requests:
-                prayer.support_count = public_support_counts.get(prayer.id, 0)
                 prayer.supported_by_me = prayer.id in supported_public_ids
-            _hydrate_prayer_scripture_recommendations(public_prayer_requests)
 
         if active_prayer_view == "testimony":
             testimony_prayer_page_obj = Paginator(testimony_prayer_queryset, 6).get_page(request.GET.get("page_testimony"))
