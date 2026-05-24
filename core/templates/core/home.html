@@ -530,6 +530,35 @@
             box-sizing: border-box;
         }
 
+        .home-tab-sticky-row {
+            display: grid;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .home-tab-sticky-row-prayer-only {
+            grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+        }
+
+        .home-tab-bar-prayer-only {
+            grid-template-columns: minmax(0, 1fr);
+            margin-top: 0;
+        }
+
+        .home-tab-inline-notice {
+            display: flex;
+            align-items: center;
+            min-height: 56px;
+            padding: 12px 16px;
+            border-radius: 18px;
+            background: rgba(255, 250, 242, 0.92);
+            border: 1px solid rgba(139, 92, 59, 0.12);
+            box-shadow: 0 10px 22px rgba(60, 39, 22, 0.06);
+            color: #7f6b58;
+            font-size: 0.93rem;
+            line-height: 1.45;
+        }
+
         .prayer-edit-grid {
             display: grid;
             grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
@@ -690,6 +719,16 @@
                 width: 100%;
                 gap: 8px;
                 padding: 6px;
+            }
+
+            .home-tab-sticky-row-prayer-only {
+                grid-template-columns: 1fr;
+            }
+
+            .home-tab-inline-notice {
+                min-height: 0;
+                padding: 10px 14px;
+                font-size: 0.9rem;
             }
 
             .home-tab-control {
@@ -917,17 +956,24 @@
             {% endif %}
 
             <div class="home-tab-sticky">
-                <section class="home-tab-bar" aria-label="홈 탭">
-                    {% if sermon %}
-                        <label class="home-tab-control" for="home-tab-sermon">설교</label>
-                        <label class="home-tab-control" for="home-tab-overview">요약</label>
-                        <label class="home-tab-control" for="home-tab-routine">말씀</label>
-                        <label class="home-tab-control" for="home-tab-today">오늘</label>
+                <div class="home-tab-sticky-row{% if not sermon and prayer_tab_enabled %} home-tab-sticky-row-prayer-only{% endif %}">
+                    <section class="home-tab-bar{% if not sermon and prayer_tab_enabled %} home-tab-bar-prayer-only{% endif %}" aria-label="홈 탭">
+                        {% if sermon %}
+                            <label class="home-tab-control" for="home-tab-sermon">설교</label>
+                            <label class="home-tab-control" for="home-tab-overview">요약</label>
+                            <label class="home-tab-control" for="home-tab-routine">말씀</label>
+                            <label class="home-tab-control" for="home-tab-today">오늘</label>
+                        {% endif %}
+                        {% if prayer_tab_enabled %}
+                            <label class="home-tab-control" for="home-tab-prayer">기도</label>
+                        {% endif %}
+                    </section>
+                    {% if not sermon and prayer_tab_enabled %}
+                        <div class="home-tab-inline-notice" role="status" aria-live="polite">
+                            이번 주 공개 설교는 아직 없습니다. 기도 탭은 계속 이용하실 수 있습니다.
+                        </div>
                     {% endif %}
-                    {% if prayer_tab_enabled %}
-                        <label class="home-tab-control" for="home-tab-prayer">기도</label>
-                    {% endif %}
-                </section>
+                </div>
             </div>
 
             {% if sermon.bible_text %}
@@ -1305,9 +1351,6 @@
                                 <h2>기도</h2>
                             </div>
                         </div>
-                        {% if not sermon %}
-                            <p class="support-text">이번 주 공개 설교는 아직 없습니다. 기도 탭은 계속 이용하실 수 있습니다.</p>
-                        {% endif %}
                         {% if request.user.is_authenticated %}
                             <div class="three-column prayer-overview-grid">
                                 <article class="content-card prayer-overview-card">
