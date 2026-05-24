@@ -3197,6 +3197,12 @@ a {
     color: var(--accent);
 }
 
+.prayer-request-summary .prayer-status,
+.prayer-request-summary .prayer-visibility {
+    font-family: inherit;
+    font-size: 0.84rem;
+}
+
 .prayer-visibility-private {
     background: rgba(32, 25, 19, 0.08);
     color: var(--muted);
@@ -4006,7 +4012,7 @@ a {
         width: 100%;
         justify-content: center;
         padding: 0;
-        font-size: 0.58rem;
+        font-size: 0.58rem !important;
         line-height: 1.2;
         text-align: center;
         white-space: nowrap;
