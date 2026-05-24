@@ -3979,10 +3979,28 @@ a {
     .prayer-request-summary-meta {
         justify-content: flex-start;
         width: 100%;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 2px;
     }
 
     .prayer-meta-chip {
-        min-width: calc(50% - 6px);
+        min-width: 0;
+        flex: 0 0 auto;
+        padding: 7px 10px;
+        gap: 3px;
+        border-radius: 16px;
+    }
+
+    .prayer-meta-chip small {
+        font-size: 0.68rem;
+    }
+
+    .prayer-status,
+    .prayer-visibility {
+        min-height: 28px;
+        padding: 0 10px;
+        font-size: 0.78rem;
     }
 
     .prayer-edit-grid {
