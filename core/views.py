@@ -552,39 +552,33 @@ def _build_home_context(request):
                 .exclude(file="")
                 .first()
             )
-    if request.user.is_authenticated:
-        my_prayer_support_counts = {
-            row["prayer_request_id"]: row["total"]
-            for row in (
-                PrayerCompanion.objects.filter(prayer_request__user=request.user)
-                .exclude(user=request.user)
-                .values("prayer_request_id")
-                .annotate(total=Count("id"))
-            )
-        }
-        my_prayer_support_me = {
-            row["prayer_request_id"]
-            for row in (
-                PrayerCompanion.objects.filter(prayer_request__user=request.user, user=request.user)
-                .values("prayer_request_id")
-            )
-        }
+    if request.user.is_authenticated and prayer_tab_enabled and active_home_tab == "prayer":
         my_prayer_queryset = PrayerRequest.objects.filter(user=request.user).order_by("-updated_at", "-created_at", "-id")
         my_prayer_total_count = my_prayer_queryset.count()
-        my_prayer_page_obj = Paginator(my_prayer_queryset, 5).get_page(request.GET.get("page_mine"))
-        my_prayer_requests = list(my_prayer_page_obj.object_list)
-        for prayer in my_prayer_requests:
-            prayer.support_count = my_prayer_support_counts.get(prayer.id, 0)
-            prayer.supported_by_me = prayer.id in my_prayer_support_me
-        _hydrate_prayer_scripture_recommendations(my_prayer_requests)
+        if active_prayer_view == "mine":
+            my_prayer_support_counts = {
+                row["prayer_request_id"]: row["total"]
+                for row in (
+                    PrayerCompanion.objects.filter(prayer_request__user=request.user)
+                    .exclude(user=request.user)
+                    .values("prayer_request_id")
+                    .annotate(total=Count("id"))
+                )
+            }
+            my_prayer_support_me = {
+                row["prayer_request_id"]
+                for row in (
+                    PrayerCompanion.objects.filter(prayer_request__user=request.user, user=request.user)
+                    .values("prayer_request_id")
+                )
+            }
+            my_prayer_page_obj = Paginator(my_prayer_queryset, 5).get_page(request.GET.get("page_mine"))
+            my_prayer_requests = list(my_prayer_page_obj.object_list)
+            for prayer in my_prayer_requests:
+                prayer.support_count = my_prayer_support_counts.get(prayer.id, 0)
+                prayer.supported_by_me = prayer.id in my_prayer_support_me
+            _hydrate_prayer_scripture_recommendations(my_prayer_requests)
 
-        supported_public_ids = {
-            row["prayer_request_id"]
-            for row in (
-                PrayerCompanion.objects.filter(user=request.user)
-                .values("prayer_request_id")
-            )
-        }
         public_prayer_queryset = (
             PrayerRequest.objects.filter(is_public=True, user__userprofile__church=active_church)
             .exclude(user=request.user)
@@ -602,11 +596,19 @@ def _build_home_context(request):
             )
         )
         public_prayer_total_count = public_prayer_queryset.count()
-        public_prayer_page_obj = Paginator(public_prayer_queryset, 6).get_page(request.GET.get("page_public"))
-        public_prayer_requests = list(public_prayer_page_obj.object_list)
-        for prayer in public_prayer_requests:
-            prayer.supported_by_me = prayer.id in supported_public_ids
-        _hydrate_prayer_scripture_recommendations(public_prayer_requests)
+        if active_prayer_view == "public":
+            supported_public_ids = {
+                row["prayer_request_id"]
+                for row in (
+                    PrayerCompanion.objects.filter(user=request.user)
+                    .values("prayer_request_id")
+                )
+            }
+            public_prayer_page_obj = Paginator(public_prayer_queryset, 6).get_page(request.GET.get("page_public"))
+            public_prayer_requests = list(public_prayer_page_obj.object_list)
+            for prayer in public_prayer_requests:
+                prayer.supported_by_me = prayer.id in supported_public_ids
+            _hydrate_prayer_scripture_recommendations(public_prayer_requests)
 
         testimony_prayer_queryset = (
             PrayerRequest.objects.filter(
@@ -619,9 +621,10 @@ def _build_home_context(request):
             .order_by("-answered_at", "-updated_at", "-created_at")
         )
         testimony_prayer_total_count = testimony_prayer_queryset.count()
-        testimony_prayer_page_obj = Paginator(testimony_prayer_queryset, 6).get_page(request.GET.get("page_testimony"))
-        testimony_prayer_requests = list(testimony_prayer_page_obj.object_list)
-        _hydrate_prayer_scripture_recommendations(testimony_prayer_requests)
+        if active_prayer_view == "testimony":
+            testimony_prayer_page_obj = Paginator(testimony_prayer_queryset, 6).get_page(request.GET.get("page_testimony"))
+            testimony_prayer_requests = list(testimony_prayer_page_obj.object_list)
+            _hydrate_prayer_scripture_recommendations(testimony_prayer_requests)
     weekly_base_max_points = (QUIZ_POINTS + REFLECTION_POINTS + MISSION_POINTS + DAILY_COMPLETION_POINTS) * 5
     weekly_total_max_points = weekly_base_max_points + WEEKLY_COMPLETION_POINTS
 
@@ -1044,7 +1047,10 @@ def home_view(request, church_slug=None):
     active_church = _resolve_active_church(request, church_slug)
     if not request.user.is_authenticated:
         return redirect(_church_login_url(active_church))
-    return render(request, "core/home.html", _build_home_context(request))
+    context = _build_home_context(request)
+    if request.GET.get("prayer_partial") == "1" and context.get("active_home_tab") == "prayer" and context.get("prayer_tab_enabled"):
+        return render(request, "core/includes/prayer_tab_content.html", context)
+    return render(request, "core/home.html", context)
 
 
 @never_cache
