@@ -1325,9 +1325,10 @@ def delete_prayer_request_view(request, pk):
         return _redirect_home(request)
 
     prayer_request = get_object_or_404(PrayerRequest, pk=pk, user=request.user)
-    prayer_title = prayer_request.title
+    prayer_label = (prayer_request.content or prayer_request.title or "이 기도제목").strip().replace("\r", " ").replace("\n", " ")
+    prayer_label = prayer_label[:40]
     prayer_request.delete()
-    messages.success(request, f"'{prayer_title}' 기도제목을 삭제했습니다.")
+    messages.success(request, f"'{prayer_label}' 기도제목을 삭제했습니다.")
     return _redirect_home(request, tab="prayer", anchor="my-prayer-list", extra_params={"prayer_view": "mine"})
 
 

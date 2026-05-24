@@ -55,7 +55,7 @@
                                 <div class="prayer-request-summary-main">
                                     <span class="prayer-request-toggle" aria-hidden="true">▶</span>
                                     <div>
-                                        <strong>{{ prayer.title }}</strong>
+                                        <strong>{{ prayer.content|linebreaksbr|striptags|truncatechars:72 }}</strong>
                                         <p>{{ prayer.created_at|date:"Y-m-d" }} 등록</p>
                                     </div>
                                 </div>
@@ -116,7 +116,7 @@
                                 {% if prayer.is_publicly_shared %}<p class="support-text">{% if prayer.support_count %}{{ prayer.support_count }}명이 함께 기도 중입니다.{% else %}아직 함께 기도 중인 교인은 없습니다.{% endif %}</p>{% endif %}
                                 <div class="prayer-edit-actions">
                                     <button type="submit" class="action-button">저장</button>
-                                    <button type="submit" class="action-button action-button-danger" formaction="{% url 'core:delete_prayer_request' prayer.id %}" formnovalidate data-confirm-delete="true" data-delete-label="{{ prayer.title|default:'이 기도제목' }}">삭제</button>
+                                    <button type="submit" class="action-button action-button-danger" formaction="{% url 'core:delete_prayer_request' prayer.id %}" formnovalidate data-confirm-delete="true" data-delete-label="{{ prayer.content|striptags|truncatechars:40|default:'이 기도제목' }}">삭제</button>
                                 </div>
                             </form>
                         </details>
@@ -152,7 +152,6 @@
                     {% for prayer in public_prayer_requests %}
                         <article class="content-card prayer-public-card">
                             <div class="prayer-public-head">
-                                {% if prayer.title != prayer.content %}<strong>{{ prayer.title }}</strong>{% endif %}
                                 <span class="prayer-status prayer-status-{{ prayer.status }}">{{ prayer.get_status_display }}</span>
                             </div>
                             <p class="support-text">{% if prayer.is_anonymous_public %}익명 ·{% else %}{{ prayer.user.first_name|default:prayer.user.username }} ·{% endif %} {{ prayer.updated_at|date:"Y-m-d" }}</p>
@@ -194,7 +193,6 @@
                     {% for prayer in testimony_prayer_requests %}
                         <article class="content-card prayer-testimony-card">
                             <div class="prayer-public-head">
-                                {% if prayer.title != prayer.testimony_note %}<strong>{{ prayer.title }}</strong>{% endif %}
                                 <span class="prayer-status prayer-status-answered">응답받음</span>
                             </div>
                             <p class="support-text">{% if prayer.is_anonymous_public %}익명 ·{% else %}{{ prayer.user.first_name|default:prayer.user.username }} ·{% endif %} {{ prayer.answered_at|date:"Y-m-d" }}</p>
