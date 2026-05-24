@@ -2898,6 +2898,37 @@ a {
     box-shadow: 0 10px 20px rgba(109, 74, 46, 0.06);
 }
 
+.prayer-list-switcher {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.prayer-list-switcher-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    padding: 0 12px;
+    border-radius: 18px;
+    background: rgba(255, 250, 242, 0.82);
+    border: 1px solid rgba(139, 92, 59, 0.12);
+    color: var(--accent);
+    font-size: 0.92rem;
+    font-weight: 800;
+    line-height: 1.2;
+    text-decoration: none;
+    text-align: center;
+    box-shadow: 0 12px 24px rgba(62, 42, 21, 0.06);
+}
+
+.prayer-list-switcher-link.is-active {
+    background: linear-gradient(180deg, rgba(139, 92, 59, 0.18), rgba(255, 248, 238, 0.94));
+    color: #6c4328;
+    border-color: rgba(139, 92, 59, 0.18);
+}
+
 .prayer-section-head {
     display: flex;
     align-items: center;
@@ -3007,6 +3038,36 @@ a {
 .prayer-section-panel-testimony .prayer-section-badge {
     background: rgba(31, 135, 76, 0.12);
     color: #1f6e3f;
+}
+
+.prayer-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+}
+
+.prayer-pagination-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: rgba(255, 250, 242, 0.86);
+    border: 1px solid rgba(139, 92, 59, 0.14);
+    color: var(--accent);
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.prayer-pagination-status {
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-weight: 700;
 }
 
 .prayer-overview-card strong {
@@ -3970,6 +4031,10 @@ a {
         min-height: 40px;
         padding: 0 15px;
         font-size: 0.86rem;
+    }
+
+    .prayer-list-switcher {
+        grid-template-columns: 1fr;
     }
 
     .prayer-section-head {

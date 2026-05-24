@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import AuthenticationForm
+from django.core.paginator import Paginator
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.mail import send_mail
 from django.db import transaction
@@ -499,6 +500,15 @@ def _build_home_context(request):
     my_prayer_requests = []
     public_prayer_requests = []
     testimony_prayer_requests = []
+    my_prayer_total_count = 0
+    public_prayer_total_count = 0
+    testimony_prayer_total_count = 0
+    active_prayer_view = request.GET.get("prayer_view", "mine")
+    if active_prayer_view not in {"mine", "public", "testimony"}:
+        active_prayer_view = "mine"
+    my_prayer_page_obj = None
+    public_prayer_page_obj = None
+    testimony_prayer_page_obj = None
     if sermon:
         highlight_choices = list(sermon.highlight_choices.all())
         if request.user.is_authenticated:
@@ -559,9 +569,10 @@ def _build_home_context(request):
                 .values("prayer_request_id")
             )
         }
-        my_prayer_requests = list(
-            PrayerRequest.objects.filter(user=request.user).order_by("-updated_at", "-created_at", "-id")
-        )
+        my_prayer_queryset = PrayerRequest.objects.filter(user=request.user).order_by("-updated_at", "-created_at", "-id")
+        my_prayer_total_count = my_prayer_queryset.count()
+        my_prayer_page_obj = Paginator(my_prayer_queryset, 5).get_page(request.GET.get("page_mine"))
+        my_prayer_requests = list(my_prayer_page_obj.object_list)
         for prayer in my_prayer_requests:
             prayer.support_count = my_prayer_support_counts.get(prayer.id, 0)
             prayer.supported_by_me = prayer.id in my_prayer_support_me
@@ -574,7 +585,7 @@ def _build_home_context(request):
                 .values("prayer_request_id")
             )
         }
-        public_prayer_requests = list(
+        public_prayer_queryset = (
             PrayerRequest.objects.filter(is_public=True, user__userprofile__church=active_church)
             .exclude(user=request.user)
             .annotate(support_count=Count("companions", distinct=True))
@@ -588,12 +599,16 @@ def _build_home_context(request):
                 ),
                 "-updated_at",
                 "-created_at",
-            )[:8]
+            )
         )
+        public_prayer_total_count = public_prayer_queryset.count()
+        public_prayer_page_obj = Paginator(public_prayer_queryset, 6).get_page(request.GET.get("page_public"))
+        public_prayer_requests = list(public_prayer_page_obj.object_list)
         for prayer in public_prayer_requests:
             prayer.supported_by_me = prayer.id in supported_public_ids
         _hydrate_prayer_scripture_recommendations(public_prayer_requests)
-        testimony_prayer_requests = list(
+
+        testimony_prayer_queryset = (
             PrayerRequest.objects.filter(
                 is_public=True,
                 status=PrayerRequestStatus.ANSWERED,
@@ -601,8 +616,11 @@ def _build_home_context(request):
             )
             .exclude(testimony_note="")
             .select_related("user")
-            .order_by("-answered_at", "-updated_at", "-created_at")[:6]
+            .order_by("-answered_at", "-updated_at", "-created_at")
         )
+        testimony_prayer_total_count = testimony_prayer_queryset.count()
+        testimony_prayer_page_obj = Paginator(testimony_prayer_queryset, 6).get_page(request.GET.get("page_testimony"))
+        testimony_prayer_requests = list(testimony_prayer_page_obj.object_list)
         _hydrate_prayer_scripture_recommendations(testimony_prayer_requests)
     weekly_base_max_points = (QUIZ_POINTS + REFLECTION_POINTS + MISSION_POINTS + DAILY_COMPLETION_POINTS) * 5
     weekly_total_max_points = weekly_base_max_points + WEEKLY_COMPLETION_POINTS
@@ -642,9 +660,16 @@ def _build_home_context(request):
         "active_feedback": active_feedback,
         "open_prayer_id": open_prayer_id,
         "prayer_tab_enabled": prayer_tab_enabled,
+        "active_prayer_view": active_prayer_view,
         "my_prayer_requests": my_prayer_requests,
+        "my_prayer_total_count": my_prayer_total_count,
+        "my_prayer_page_obj": my_prayer_page_obj,
         "public_prayer_requests": public_prayer_requests,
+        "public_prayer_total_count": public_prayer_total_count,
+        "public_prayer_page_obj": public_prayer_page_obj,
         "testimony_prayer_requests": testimony_prayer_requests,
+        "testimony_prayer_total_count": testimony_prayer_total_count,
+        "testimony_prayer_page_obj": testimony_prayer_page_obj,
         "prayer_status_choices": PrayerRequestStatus.choices,
         "prayer_visibility_choices": _build_prayer_visibility_options(),
     }
@@ -1217,7 +1242,7 @@ def create_prayer_request_view(request):
         request,
         tab="prayer",
         anchor=f"prayer-request-{prayer_request.pk}",
-        extra_params={"open_prayer": prayer_request.pk},
+        extra_params={"open_prayer": prayer_request.pk, "prayer_view": "mine"},
     )
 
 
@@ -1274,6 +1299,7 @@ def update_prayer_request_view(request, pk):
         request,
         tab="prayer",
         anchor="my-prayer-list",
+        extra_params={"prayer_view": "mine"},
     )
 
 
@@ -1288,7 +1314,7 @@ def delete_prayer_request_view(request, pk):
     prayer_title = prayer_request.title
     prayer_request.delete()
     messages.success(request, f"'{prayer_title}' 기도제목을 삭제했습니다.")
-    return _redirect_home(request, tab="prayer", anchor="my-prayer-list")
+    return _redirect_home(request, tab="prayer", anchor="my-prayer-list", extra_params={"prayer_view": "mine"})
 
 
 @login_required
@@ -1310,7 +1336,7 @@ def join_prayer_request_view(request, pk):
         messages.success(request, "함께 기도하기로 표시했습니다.")
     else:
         messages.success(request, "이미 함께 기도 중으로 표시되어 있습니다.")
-    return _redirect_home(request, tab="prayer", anchor="public-prayer-list")
+    return _redirect_home(request, tab="prayer", anchor="public-prayer-list", extra_params={"prayer_view": "public"})
 
 
 @login_required

@@ -174,6 +174,37 @@
             box-shadow: 0 10px 20px rgba(109, 74, 46, 0.06);
         }
 
+        .prayer-list-switcher {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .prayer-list-switcher-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 46px;
+            padding: 0 12px;
+            border-radius: 18px;
+            background: rgba(255, 250, 242, 0.82);
+            border: 1px solid rgba(139, 92, 59, 0.12);
+            color: #8b5c3b;
+            font-size: 0.92rem;
+            font-weight: 800;
+            line-height: 1.2;
+            text-decoration: none;
+            text-align: center;
+            box-shadow: 0 12px 24px rgba(62, 42, 21, 0.06);
+        }
+
+        .prayer-list-switcher-link.is-active {
+            background: linear-gradient(180deg, rgba(139, 92, 59, 0.18), rgba(255, 248, 238, 0.94));
+            color: #6c4328;
+            border-color: rgba(139, 92, 59, 0.18);
+        }
+
         .prayer-section-head {
             display: flex;
             align-items: center;
@@ -283,6 +314,36 @@
         .prayer-section-panel-testimony .prayer-section-badge {
             background: rgba(31, 135, 76, 0.12);
             color: #1f6e3f;
+        }
+
+        .prayer-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 18px;
+            flex-wrap: wrap;
+        }
+
+        .prayer-pagination-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 38px;
+            padding: 0 14px;
+            border-radius: 999px;
+            background: rgba(255, 250, 242, 0.86);
+            border: 1px solid rgba(139, 92, 59, 0.14);
+            color: #8b5c3b;
+            font-size: 0.88rem;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .prayer-pagination-status {
+            color: #7f6b58;
+            font-size: 0.9rem;
+            font-weight: 700;
         }
 
         .prayer-create-details {
@@ -692,6 +753,10 @@
                 min-height: 40px;
                 padding: 0 15px;
                 font-size: 0.86rem;
+            }
+
+            .prayer-list-switcher {
+                grid-template-columns: 1fr;
             }
 
             .prayer-section-head {
@@ -1283,17 +1348,17 @@
                             <div class="three-column prayer-overview-grid">
                                 <article class="content-card prayer-overview-card">
                                     <h3>내 기도</h3>
-                                    <strong>{{ my_prayer_requests|length }}개</strong>
+                                    <strong>{{ my_prayer_total_count }}개</strong>
                                     <p>개인적으로 붙잡고 있는 기도제목과 상태를 정리할 수 있습니다.</p>
                                 </article>
                                 <article class="content-card prayer-overview-card">
                                     <h3>다 함께 기도해요</h3>
-                                    <strong>{{ public_prayer_requests|length }}개</strong>
+                                    <strong>{{ public_prayer_total_count }}개</strong>
                                     <p>다른 성도가 함께 기도해 주시길 바라며 공개한 기도제목입니다.</p>
                                 </article>
                                 <article class="content-card prayer-overview-card">
                                     <h3>응답 간증</h3>
-                                    <strong>{{ testimony_prayer_requests|length }}개</strong>
+                                    <strong>{{ testimony_prayer_total_count }}개</strong>
                                     <p>응답받은 기도는 간증과 결과 메모로 남길 수 있습니다.</p>
                                 </article>
                             </div>
@@ -1345,12 +1410,34 @@
                                     <button type="submit" class="action-button">저장</button>
                                 </form>
                             </details>
+
+                            <div class="prayer-list-switcher" role="tablist" aria-label="기도 목록 보기 전환">
+                                <a
+                                    class="prayer-list-switcher-link{% if active_prayer_view == 'mine' %} is-active{% endif %}"
+                                    href="?tab=prayer&prayer_view=mine#my-prayer-list"
+                                    role="tab"
+                                    aria-selected="{% if active_prayer_view == 'mine' %}true{% else %}false{% endif %}"
+                                >내 기도</a>
+                                <a
+                                    class="prayer-list-switcher-link{% if active_prayer_view == 'public' %} is-active{% endif %}"
+                                    href="?tab=prayer&prayer_view=public#public-prayer-list"
+                                    role="tab"
+                                    aria-selected="{% if active_prayer_view == 'public' %}true{% else %}false{% endif %}"
+                                >함께 기도</a>
+                                <a
+                                    class="prayer-list-switcher-link{% if active_prayer_view == 'testimony' %} is-active{% endif %}"
+                                    href="?tab=prayer&prayer_view=testimony#prayer-testimony-list"
+                                    role="tab"
+                                    aria-selected="{% if active_prayer_view == 'testimony' %}true{% else %}false{% endif %}"
+                                >응답 간증</a>
+                            </div>
                         {% else %}
                             <p class="empty">기도제목 등록과 기도 상태 관리는 로그인 후 이용할 수 있습니다. <a href="{{ login_url }}">로그인하기</a></p>
                         {% endif %}
                     </section>
 
                     {% if request.user.is_authenticated %}
+                        {% if active_prayer_view == "mine" %}
                         <section class="panel prayer-section-panel prayer-section-panel-mine" id="my-prayer-list">
                             <div class="panel-header">
                                 <div class="prayer-section-head">
@@ -1504,11 +1591,24 @@
                                         </details>
                                     {% endfor %}
                                 </div>
+                                {% if my_prayer_page_obj and my_prayer_page_obj.paginator.num_pages > 1 %}
+                                    <nav class="prayer-pagination" aria-label="내 기도 페이지 이동">
+                                        {% if my_prayer_page_obj.has_previous %}
+                                            <a class="prayer-pagination-link" href="?tab=prayer&prayer_view=mine&page_mine={{ my_prayer_page_obj.previous_page_number }}#my-prayer-list">이전</a>
+                                        {% endif %}
+                                        <span class="prayer-pagination-status">{{ my_prayer_page_obj.number }} / {{ my_prayer_page_obj.paginator.num_pages }}</span>
+                                        {% if my_prayer_page_obj.has_next %}
+                                            <a class="prayer-pagination-link" href="?tab=prayer&prayer_view=mine&page_mine={{ my_prayer_page_obj.next_page_number }}#my-prayer-list">다음</a>
+                                        {% endif %}
+                                    </nav>
+                                {% endif %}
                             {% else %}
                                 <p class="empty">아직 등록한 기도제목이 없습니다.</p>
                             {% endif %}
                         </section>
+                        {% endif %}
 
+                        {% if active_prayer_view == "public" %}
                         <section class="panel prayer-section-panel prayer-section-panel-public" id="public-prayer-list">
                             <div class="panel-header">
                                 <div class="prayer-section-head">
@@ -1552,11 +1652,24 @@
                                         </article>
                                     {% endfor %}
                                 </div>
+                                {% if public_prayer_page_obj and public_prayer_page_obj.paginator.num_pages > 1 %}
+                                    <nav class="prayer-pagination" aria-label="함께 기도 페이지 이동">
+                                        {% if public_prayer_page_obj.has_previous %}
+                                            <a class="prayer-pagination-link" href="?tab=prayer&prayer_view=public&page_public={{ public_prayer_page_obj.previous_page_number }}#public-prayer-list">이전</a>
+                                        {% endif %}
+                                        <span class="prayer-pagination-status">{{ public_prayer_page_obj.number }} / {{ public_prayer_page_obj.paginator.num_pages }}</span>
+                                        {% if public_prayer_page_obj.has_next %}
+                                            <a class="prayer-pagination-link" href="?tab=prayer&prayer_view=public&page_public={{ public_prayer_page_obj.next_page_number }}#public-prayer-list">다음</a>
+                                        {% endif %}
+                                    </nav>
+                                {% endif %}
                             {% else %}
                                 <p class="empty">지금은 함께 나눌 공개 기도제목이 없습니다.</p>
                             {% endif %}
                         </section>
+                        {% endif %}
 
+                        {% if active_prayer_view == "testimony" %}
                         <section class="panel prayer-section-panel prayer-section-panel-testimony" id="prayer-testimony-list">
                             <div class="panel-header">
                                 <div class="prayer-section-head">
@@ -1590,10 +1703,22 @@
                                         </article>
                                     {% endfor %}
                                 </div>
+                                {% if testimony_prayer_page_obj and testimony_prayer_page_obj.paginator.num_pages > 1 %}
+                                    <nav class="prayer-pagination" aria-label="응답 간증 페이지 이동">
+                                        {% if testimony_prayer_page_obj.has_previous %}
+                                            <a class="prayer-pagination-link" href="?tab=prayer&prayer_view=testimony&page_testimony={{ testimony_prayer_page_obj.previous_page_number }}#prayer-testimony-list">이전</a>
+                                        {% endif %}
+                                        <span class="prayer-pagination-status">{{ testimony_prayer_page_obj.number }} / {{ testimony_prayer_page_obj.paginator.num_pages }}</span>
+                                        {% if testimony_prayer_page_obj.has_next %}
+                                            <a class="prayer-pagination-link" href="?tab=prayer&prayer_view=testimony&page_testimony={{ testimony_prayer_page_obj.next_page_number }}#prayer-testimony-list">다음</a>
+                                        {% endif %}
+                                    </nav>
+                                {% endif %}
                             {% else %}
                                 <p class="empty">아직 공개된 응답 간증이 없습니다.</p>
                             {% endif %}
                         </section>
+                        {% endif %}
                     {% endif %}
                 </section>
                 {% endif %}
