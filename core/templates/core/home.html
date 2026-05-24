@@ -143,40 +143,9 @@
             line-height: 1.7;
         }
 
-        .prayer-quick-nav {
-            display: flex;
-            gap: 10px;
-            margin-top: 18px;
-            padding: 4px 2px 2px;
-            overflow-x: auto;
-            scrollbar-width: none;
-        }
-
-        .prayer-quick-nav::-webkit-scrollbar {
-            display: none;
-        }
-
-        .prayer-quick-link {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 38px;
-            padding: 0 14px;
-            border-radius: 999px;
-            background: rgba(255, 250, 242, 0.86);
-            border: 1px solid rgba(139, 92, 59, 0.14);
-            color: #8b5c3b;
-            font-size: 0.88rem;
-            font-weight: 700;
-            line-height: 1;
-            white-space: nowrap;
-            text-decoration: none;
-            box-shadow: 0 10px 20px rgba(109, 74, 46, 0.06);
-        }
-
         .prayer-list-switcher {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 10px;
             margin-top: 18px;
         }
@@ -191,7 +160,7 @@
             background: rgba(255, 250, 242, 0.82);
             border: 1px solid rgba(139, 92, 59, 0.12);
             color: #8b5c3b;
-            font-size: 0.92rem;
+            font-size: 0.88rem;
             font-weight: 800;
             line-height: 1.2;
             text-decoration: none;
@@ -200,9 +169,10 @@
         }
 
         .prayer-list-switcher-link.is-active {
-            background: linear-gradient(180deg, rgba(139, 92, 59, 0.18), rgba(255, 248, 238, 0.94));
-            color: #6c4328;
-            border-color: rgba(139, 92, 59, 0.18);
+            background: linear-gradient(180deg, #a06d47, #8b5c3b);
+            color: #fffaf2;
+            border-color: rgba(139, 92, 59, 0.24);
+            box-shadow: 0 14px 28px rgba(109, 74, 46, 0.18);
         }
 
         .prayer-section-head {
@@ -346,83 +316,17 @@
             font-weight: 700;
         }
 
-        .prayer-create-details {
-            padding: 0;
-            overflow: hidden;
+        .prayer-create-form {
+            padding: 0 20px 20px;
+        }
+
+        .prayer-create-form-card {
+            margin-top: 16px;
+            padding: 20px;
             border-radius: 22px;
             background: linear-gradient(180deg, rgba(157, 109, 71, 0.12), rgba(255, 250, 242, 0.9));
             border: 1px solid rgba(157, 109, 71, 0.18);
             box-shadow: 0 18px 36px rgba(109, 74, 46, 0.08);
-        }
-
-        .prayer-create-summary {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 18px 20px;
-            cursor: pointer;
-            list-style: none;
-            background: transparent;
-            border: 0;
-            outline: 0;
-        }
-
-        .prayer-create-summary::-webkit-details-marker {
-            display: none !important;
-        }
-
-        summary.prayer-create-summary::marker {
-            content: "";
-            font-size: 0;
-        }
-
-        .prayer-create-summary-copy {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            min-width: 0;
-        }
-
-        .prayer-create-summary-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 36px;
-            height: 36px;
-            border-radius: 999px;
-            background: rgba(139, 92, 59, 0.12);
-            color: #8b5c3b;
-            font-size: 1.85rem;
-            font-weight: 400;
-            line-height: 1;
-            flex-shrink: 0;
-        }
-
-        .prayer-create-summary strong {
-            display: block;
-            margin: 0 0 4px;
-            color: #201913;
-            font-family: "Noto Serif KR", serif;
-            font-size: 1.08rem;
-            line-height: 1.35;
-        }
-
-        .prayer-create-summary small {
-            color: #7f6b58;
-            font-size: 0.84rem;
-            line-height: 1.5;
-        }
-
-        .prayer-create-summary-hint {
-            color: #8b5c3b;
-            font-size: 0.95rem;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-
-        .prayer-create-form {
-            padding: 0 20px 20px;
         }
 
         .prayer-request-card {
@@ -743,20 +647,16 @@
                 grid-template-columns: 1fr;
             }
 
-            .prayer-quick-nav {
-                margin-top: 16px;
-                margin-inline: -4px;
-                padding-inline: 4px;
-            }
-
-            .prayer-quick-link {
-                min-height: 40px;
-                padding: 0 15px;
-                font-size: 0.86rem;
-            }
-
             .prayer-list-switcher {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+            }
+
+            .prayer-list-switcher-link {
+                min-height: 44px;
+                padding: 0 6px;
+                font-size: 0.9rem;
+                border-radius: 16px;
             }
 
             .prayer-section-head {
@@ -1363,74 +1263,68 @@
                                 </article>
                             </div>
 
-                            <nav class="prayer-quick-nav" aria-label="기도 탭 빠른 이동">
-                                <a class="prayer-quick-link" href="#prayer-create-card">새 기도 등록</a>
-                                <a class="prayer-quick-link" href="#my-prayer-list">내 기도</a>
-                                <a class="prayer-quick-link" href="#public-prayer-list">다 함께 기도해요</a>
-                                <a class="prayer-quick-link" href="#prayer-testimony-list">응답 간증</a>
-                            </nav>
-
-                            <details class="content-card prayer-create-card prayer-create-details" style="display:block;width:100%;margin-top:18px;padding:0;overflow:hidden;border-radius:22px;box-sizing:border-box;position:relative;z-index:0;background:linear-gradient(180deg, rgba(157,109,71,0.12), rgba(255,250,242,0.9));border:1px solid rgba(157,109,71,0.18);box-shadow:0 18px 36px rgba(109,74,46,0.08);">
-                                <summary class="prayer-create-summary" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px;cursor:pointer;list-style:none;box-sizing:border-box;width:100%;background:transparent;border:0;outline:0;">
-                                    <span style="display:none;" aria-hidden="true"></span>
-                                    <div class="prayer-create-summary-copy" style="display:flex;align-items:center;gap:14px;min-width:0;flex:1 1 auto;">
-                                        <span class="prayer-create-summary-badge" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:999px;background:rgba(139,92,59,0.12);color:#8b5c3b;font-size:1.85rem;font-weight:400;line-height:1;flex-shrink:0;">+</span>
-                                        <span style="display:block;min-width:0;">
-                                            <strong style="display:block;margin:0 0 4px;color:#201913;font-family:'Noto Serif KR',serif;font-size:1.08rem;line-height:1.35;">새 기도 등록</strong>
-                                            <small style="display:block;color:#7f6b58;font-size:0.84rem;line-height:1.5;">기도제목이 생기면 여기에서 바로 적어 보세요.</small>
-                                        </span>
-                                    </div>
-                                    <small class="prayer-create-summary-hint" style="display:inline-block;flex:0 0 auto;color:#8b5c3b;font-size:0.95rem;font-weight:700;line-height:1.5;white-space:nowrap;">열어서 작성하기</small>
-                                </summary>
-                                <form method="post" action="{% url 'core:create_prayer_request' %}" class="action-form prayer-create-form" style="padding:0 20px 20px;">
-                                    {% csrf_token %}
-                                    <textarea id="prayer-create-content" name="content" rows="3" placeholder="기도제목을 바로 적어 주세요. 예: 아버지 수술 회복을 위해 기도 부탁드립니다."></textarea>
-                                    <div class="voice-entry-toolbar prayer-voice-toolbar">
-                                        <button
-                                            type="button"
-                                            class="voice-input-button voice-input-button-secondary prayer-voice-button"
-                                            data-voice-selector="#prayer-create-content"
-                                            data-voice-label-id="prayer-create-voice-status"
-                                            data-idle-label="🎤 말로 입력"
-                                            data-listening-label="■ 녹음 중"
-                                        >🎤 말로 입력</button>
-                                        <span id="prayer-create-voice-status" class="voice-entry-status" aria-live="polite"></span>
-                                    </div>
-                                    <div class="choice-group prayer-visibility-group">
-                                        {% for option in prayer_visibility_choices %}
-                                            <label class="choice-option prayer-privacy-option">
-                                                <input type="radio" name="visibility" value="{{ option.value }}" {% if option.value == "private" %}checked{% endif %}>
-                                                <span>
-                                                    <strong>{{ option.label }}</strong>
-                                                    <small>{{ option.description }}</small>
-                                                </span>
-                                            </label>
-                                        {% endfor %}
-                                    </div>
-                                    <button type="submit" class="action-button">저장</button>
-                                </form>
-                            </details>
-
-                            <div class="prayer-list-switcher" role="tablist" aria-label="기도 목록 보기 전환">
+                            <div class="prayer-list-switcher" role="tablist" aria-label="기도 목록 보기 전환" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+                                <a
+                                    class="prayer-list-switcher-link{% if active_prayer_view == 'create' %} is-active{% endif %}"
+                                    href="?tab=prayer&prayer_view=create#prayer-create-card"
+                                    role="tab"
+                                    aria-selected="{% if active_prayer_view == 'create' %}true{% else %}false{% endif %}"
+                                    style="width:100%;min-width:0;"
+                                >새 기도 등록</a>
                                 <a
                                     class="prayer-list-switcher-link{% if active_prayer_view == 'mine' %} is-active{% endif %}"
                                     href="?tab=prayer&prayer_view=mine#my-prayer-list"
                                     role="tab"
                                     aria-selected="{% if active_prayer_view == 'mine' %}true{% else %}false{% endif %}"
+                                    style="width:100%;min-width:0;"
                                 >내 기도</a>
                                 <a
                                     class="prayer-list-switcher-link{% if active_prayer_view == 'public' %} is-active{% endif %}"
                                     href="?tab=prayer&prayer_view=public#public-prayer-list"
                                     role="tab"
                                     aria-selected="{% if active_prayer_view == 'public' %}true{% else %}false{% endif %}"
+                                    style="width:100%;min-width:0;"
                                 >함께 기도</a>
                                 <a
                                     class="prayer-list-switcher-link{% if active_prayer_view == 'testimony' %} is-active{% endif %}"
                                     href="?tab=prayer&prayer_view=testimony#prayer-testimony-list"
                                     role="tab"
                                     aria-selected="{% if active_prayer_view == 'testimony' %}true{% else %}false{% endif %}"
+                                    style="width:100%;min-width:0;"
                                 >응답 간증</a>
                             </div>
+
+                            {% if active_prayer_view == "create" %}
+                                <section class="content-card prayer-create-card prayer-create-form-card">
+                                    <form method="post" action="{% url 'core:create_prayer_request' %}" class="action-form prayer-create-form" style="padding:0;">
+                                        {% csrf_token %}
+                                        <textarea id="prayer-create-content" name="content" rows="3" placeholder="기도제목을 바로 적어 주세요. 예: 아버지 수술 회복을 위해 기도 부탁드립니다."></textarea>
+                                        <div class="voice-entry-toolbar prayer-voice-toolbar">
+                                            <button
+                                                type="button"
+                                                class="voice-input-button voice-input-button-secondary prayer-voice-button"
+                                                data-voice-selector="#prayer-create-content"
+                                                data-voice-label-id="prayer-create-voice-status"
+                                                data-idle-label="🎤 말로 입력"
+                                                data-listening-label="■ 녹음 중"
+                                            >🎤 말로 입력</button>
+                                            <span id="prayer-create-voice-status" class="voice-entry-status" aria-live="polite"></span>
+                                        </div>
+                                        <div class="choice-group prayer-visibility-group">
+                                            {% for option in prayer_visibility_choices %}
+                                                <label class="choice-option prayer-privacy-option">
+                                                    <input type="radio" name="visibility" value="{{ option.value }}" {% if option.value == "private" %}checked{% endif %}>
+                                                    <span>
+                                                        <strong>{{ option.label }}</strong>
+                                                        <small>{{ option.description }}</small>
+                                                    </span>
+                                                </label>
+                                            {% endfor %}
+                                        </div>
+                                        <button type="submit" class="action-button">저장</button>
+                                    </form>
+                                </section>
+                            {% endif %}
                         {% else %}
                             <p class="empty">기도제목 등록과 기도 상태 관리는 로그인 후 이용할 수 있습니다. <a href="{{ login_url }}">로그인하기</a></p>
                         {% endif %}

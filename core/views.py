@@ -504,7 +504,7 @@ def _build_home_context(request):
     public_prayer_total_count = 0
     testimony_prayer_total_count = 0
     active_prayer_view = request.GET.get("prayer_view", "mine")
-    if active_prayer_view not in {"mine", "public", "testimony"}:
+    if active_prayer_view not in {"create", "mine", "public", "testimony"}:
         active_prayer_view = "mine"
     my_prayer_page_obj = None
     public_prayer_page_obj = None
@@ -1211,10 +1211,10 @@ def create_prayer_request_view(request):
 
     if len(content) < 5:
         messages.error(request, "기도제목 내용을 조금 더 적어 주세요.")
-        return _redirect_home(request, tab="prayer", anchor="prayer-create-card")
+        return _redirect_home(request, tab="prayer", anchor="prayer-create-card", extra_params={"prayer_view": "create"})
     if visibility not in valid_visibilities:
         messages.error(request, "공개 방식을 다시 선택해 주세요.")
-        return _redirect_home(request, tab="prayer", anchor="prayer-create-card")
+        return _redirect_home(request, tab="prayer", anchor="prayer-create-card", extra_params={"prayer_view": "create"})
 
     prayer_request = PrayerRequest.objects.create(
         user=request.user,
