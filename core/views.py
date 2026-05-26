@@ -836,6 +836,19 @@ def _user_report_matches_challenge(report, challenge):
     return latest_week_start == challenge.week_start.isoformat()
 
 
+def _user_report_is_fresh_for_challenge(report, user, challenge):
+    if not report or not challenge:
+        return bool(report)
+    latest_entry_at = (
+        PointLedger.objects.filter(user=user, challenge=challenge)
+        .aggregate(last=Max("created_at"))
+        .get("last")
+    )
+    if latest_entry_at is None:
+        return True
+    return latest_entry_at <= report.generated_at
+
+
 def _is_pastor_user(user):
     if not user.is_authenticated:
         return False
@@ -1914,6 +1927,8 @@ def pastor_reports_view(request):
         cached_report = None if force_refresh else _get_cached_user_participation_report(profile.user)
         if cached_report and not _user_report_matches_challenge(cached_report, selected_challenge):
             cached_report = None
+        if cached_report and not _user_report_is_fresh_for_challenge(cached_report, profile.user, selected_challenge):
+            cached_report = None
         member_reports.append(cached_report or sync_user_participation_report(profile.user))
 
     return render(
@@ -1953,6 +1968,8 @@ def pastor_members_view(request):
     for profile in profiles:
         cached_report = None if force_refresh else _get_cached_user_participation_report(profile.user)
         if cached_report and not _user_report_matches_challenge(cached_report, reference_challenge):
+            cached_report = None
+        if cached_report and not _user_report_is_fresh_for_challenge(cached_report, profile.user, reference_challenge):
             cached_report = None
         all_reports.append(cached_report or sync_user_participation_report(profile.user))
 
