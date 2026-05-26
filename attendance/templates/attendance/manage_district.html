@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ district.name }} 관리</title>
+    <style>
+        body { margin:0; font-family: Georgia, "Noto Sans KR", serif; color:#23170f; background:linear-gradient(180deg, #fbf4e9 0%, #f5eee1 100%); }
+        .shell { max-width:1120px; margin:0 auto; padding:24px 16px 56px; }
+        .topbar, .nav, .form-row, .stack { display:flex; flex-wrap:wrap; gap:10px; }
+        .topbar, .nav { margin-bottom:16px; }
+        .topbar a, .nav a, .link-pill, button {
+            text-decoration:none; color:#23170f; padding:12px 18px; border-radius:999px; background:#fffaf2; border:1px solid #dfcfbb; box-shadow:0 10px 24px rgba(133,96,52,.08); font-weight:700; font:inherit;
+        }
+        .nav a.is-active, button.primary { background:#a56a3b; color:#fff8ef; border-color:#a56a3b; cursor:pointer; }
+        button { cursor:pointer; }
+        .hero, .panel { background:#fffaf2; border:1px solid rgba(165,106,59,.14); border-radius:26px; padding:24px; box-shadow:0 24px 60px rgba(133,96,52,.10); }
+        .hero { margin-bottom:20px; }
+        h1, h2 { margin:0 0 10px; }
+        h1 { font-size:40px; }
+        h2 { font-size:26px; }
+        p, .muted { color:#6f5e4f; line-height:1.7; }
+        .layout { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+        .field { margin-bottom:14px; }
+        .field label { display:block; font-weight:700; margin-bottom:6px; }
+        .field input, .field select {
+            width:100%; padding:12px 14px; border-radius:14px; border:1px solid #dfcfbb; font:inherit; background:#fff;
+        }
+        .row-card { padding:16px 0; border-bottom:1px solid #efe2d0; }
+        .row-card:last-child { border-bottom:none; }
+        .sub-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+        .errorlist { color:#b8572b; margin:6px 0 0; padding-left:18px; }
+        @media (max-width: 900px) { .layout { grid-template-columns:1fr; } }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <div class="topbar">
+            <a href="{% url 'attendance:manage' %}">조직 관리로 돌아가기</a>
+            <a href="{{ home_url }}">사용자 화면</a>
+            <a href="{{ logout_url }}">로그아웃</a>
+        </div>
+        <div class="nav">
+            <a href="{% url 'attendance:dashboard' %}">출석 대시보드</a>
+            <a href="{% url 'attendance:reports' %}">출석 리포트</a>
+            <a href="{% url 'attendance:manage' %}" class="is-active">조직 관리</a>
+        </div>
+
+        <section class="hero">
+            <h1>{{ district.name }} 교구 관리</h1>
+            <p>교구 이름과 순서, 교구장, 속 목록을 이 화면에서 바로 수정할 수 있습니다.</p>
+        </section>
+
+        <section class="layout">
+            <article class="panel">
+                <h2>교구 정보</h2>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_district">
+                    {% for field in district_form %}
+                        <div class="field">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {{ field.errors }}
+                        </div>
+                    {% endfor %}
+                    <button type="submit" class="primary">교구 정보 저장</button>
+                </form>
+
+                <h2 style="margin-top:24px;">교구장</h2>
+                {% for leader, form in leader_forms %}
+                    <div class="row-card">
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="save_leader:{{ leader.id }}">
+                            {% for field in form %}
+                                <div class="field">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </div>
+                            {% endfor %}
+                            <div class="sub-actions">
+                                <button type="submit" class="primary">교구장 저장</button>
+                            </div>
+                        </form>
+                        <form method="post" style="margin-top:8px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_leader:{{ leader.id }}">
+                            <button type="submit">교구장 삭제</button>
+                        </form>
+                    </div>
+                {% empty %}
+                    <p class="muted">등록된 교구장이 없습니다.</p>
+                {% endfor %}
+
+                <h2 style="margin-top:24px;">교구장 추가</h2>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_leader">
+                    {% for field in add_leader_form %}
+                        <div class="field">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {{ field.errors }}
+                        </div>
+                    {% endfor %}
+                    <button type="submit" class="primary">교구장 추가</button>
+                </form>
+            </article>
+
+            <article class="panel">
+                <h2>속 목록</h2>
+                {% for group in groups %}
+                    <div class="row-card">
+                        <strong>{{ group.name }}</strong>
+                        <div class="muted">속장 {% if group.leader %}{{ group.leader.name }}{% else %}미지정{% endif %} · 속원 {{ group.member_total }}명</div>
+                        <div class="sub-actions">
+                            <a class="link-pill" href="{% url 'attendance:manage_group' group.id %}">이 속 관리하기</a>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p class="muted">등록된 속이 없습니다.</p>
+                {% endfor %}
+
+                <h2 style="margin-top:24px;">속 추가</h2>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_group">
+                    {% for field in add_group_form %}
+                        <div class="field">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {{ field.errors }}
+                        </div>
+                    {% endfor %}
+                    <button type="submit" class="primary">속 추가</button>
+                </form>
+            </article>
+        </section>
+    </div>
+</body>
+</html>

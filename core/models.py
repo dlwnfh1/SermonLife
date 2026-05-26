@@ -644,6 +644,7 @@ class UserProfile(models.Model):
     points = models.IntegerField(default=0)
     streak_days = models.IntegerField(default=0)
     can_use_audio_transcriber = models.BooleanField(default=False)
+    can_check_attendance = models.BooleanField(default=False)
 
     def __str__(self):
         return self.user.get_username()

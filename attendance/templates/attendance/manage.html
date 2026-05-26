@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>출석 조직 관리</title>
+    <style>
+        body { margin:0; font-family: Georgia, "Noto Sans KR", serif; color:#23170f; background:linear-gradient(180deg, #fbf4e9 0%, #f5eee1 100%); }
+        .shell { max-width:1120px; margin:0 auto; padding:24px 16px 56px; }
+        .topbar, .nav { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; }
+        .topbar a, .nav a, .quick-link {
+            text-decoration:none; color:#23170f; padding:12px 18px; border-radius:999px; background:#fffaf2; border:1px solid #dfcfbb; box-shadow:0 10px 24px rgba(133,96,52,.08); font-weight:700;
+        }
+        .nav a.is-active, .quick-link.primary { background:#a56a3b; color:#fff8ef; border-color:#a56a3b; }
+        .hero, .panel { background:#fffaf2; border:1px solid rgba(165,106,59,.14); border-radius:26px; padding:24px; box-shadow:0 24px 60px rgba(133,96,52,.10); }
+        .hero { margin-bottom:20px; }
+        h1 { font-size:42px; margin:0 0 8px; }
+        h2 { margin:0 0 14px; font-size:28px; }
+        p { color:#6f5e4f; line-height:1.7; }
+        .summary { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:14px; margin-bottom:20px; }
+        .summary .card { background:#f7ecdd; border-radius:20px; padding:18px; }
+        .summary strong { display:block; font-size:34px; margin-top:8px; }
+        .grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+        .row-link {
+            display:block; padding:16px 0; border-bottom:1px solid #efe2d0; text-decoration:none; color:#23170f;
+        }
+        .row-link:last-child { border-bottom:none; }
+        .muted { color:#6f5e4f; font-size:14px; margin-top:6px; }
+        .quick-links { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+        @media (max-width: 900px) {
+            .summary, .grid { grid-template-columns:1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <div class="topbar">
+            <a href="{{ home_url }}">사용자 화면</a>
+            <a href="{{ logout_url }}">로그아웃</a>
+        </div>
+        <div class="nav">
+            <a href="{% url 'attendance:dashboard' %}">출석 대시보드</a>
+            <a href="{% url 'attendance:reports' %}">출석 리포트</a>
+            <a href="{% url 'attendance:manage' %}" class="is-active">조직 관리</a>
+        </div>
+
+        <section class="hero">
+            <h1>조직 관리</h1>
+            <p>이제 어드민으로만 이동하지 않고, 이 화면 안에서 교구를 눌러 들어가며 속과 속원, 교구장, 속장을 수정할 수 있습니다. 어드민 바로가기는 필요할 때만 보조 수단으로 남겨둡니다.</p>
+            <div class="quick-links">
+                <a href="{{ admin_district_url }}" class="quick-link primary">어드민 교구 관리</a>
+                <a href="{{ admin_group_url }}" class="quick-link">어드민 속 관리</a>
+                <a href="{{ admin_member_url }}" class="quick-link">어드민 속원 관리</a>
+                <a href="{{ admin_session_url }}" class="quick-link">어드민 주일 출석표</a>
+            </div>
+        </section>
+
+        <section class="summary">
+            <div class="card">
+                <div>교구</div>
+                <strong>{{ district_count }}</strong>
+            </div>
+            <div class="card">
+                <div>속</div>
+                <strong>{{ group_count }}</strong>
+            </div>
+            <div class="card">
+                <div>속원</div>
+                <strong>{{ member_count }}</strong>
+            </div>
+            <div class="card">
+                <div>교구장 연결</div>
+                <strong>{{ district_leader_count }}</strong>
+            </div>
+        </section>
+
+        <section class="grid">
+            <article class="panel">
+                <h2>교구 현황</h2>
+                {% for district in district_page %}
+                    <a class="row-link" href="{% url 'attendance:manage_district' district.id %}">
+                        <strong>{{ district.name }}</strong>
+                        <div class="muted">속 {{ district.group_total }}개 · 속원 {{ district.member_total }}명{% if not district.is_active %} · 비활성{% endif %}</div>
+                    </a>
+                {% empty %}
+                    <div class="muted">등록된 교구가 없습니다.</div>
+                {% endfor %}
+            </article>
+            <article class="panel">
+                <h2>속 현황</h2>
+                {% for group in group_page %}
+                    <a class="row-link" href="{% url 'attendance:manage_group' group.id %}">
+                        <strong>{{ group.name }}</strong>
+                        <div class="muted">{{ group.district.name }} · 속장 {% if group.leader %}{{ group.leader.name }}{% else %}미지정{% endif %} · 속원 {{ group.member_total }}명</div>
+                    </a>
+                {% empty %}
+                    <div class="muted">등록된 속이 없습니다.</div>
+                {% endfor %}
+            </article>
+        </section>
+    </div>
+</body>
+</html>

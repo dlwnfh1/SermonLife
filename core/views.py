@@ -812,6 +812,30 @@ def _get_cached_user_participation_report(user):
         return None
 
 
+def _get_default_report_challenge(available_challenges, scope_church):
+    if not available_challenges:
+        return None
+    current_public = WeeklyChallenge.get_current_public_challenge(church=scope_church)
+    if current_public:
+        for challenge in available_challenges:
+            if challenge.pk == current_public.pk:
+                return challenge
+    for challenge in available_challenges:
+        if challenge.sermon and challenge.sermon.is_published:
+            return challenge
+    return available_challenges[0]
+
+
+def _user_report_matches_challenge(report, challenge):
+    if not report or not challenge:
+        return bool(report)
+    recent_rows = report.recent_week_rows or []
+    if not recent_rows:
+        return False
+    latest_week_start = recent_rows[0].get("week_start")
+    return latest_week_start == challenge.week_start.isoformat()
+
+
 def _is_pastor_user(user):
     if not user.is_authenticated:
         return False
@@ -1854,7 +1878,7 @@ def pastor_reports_view(request):
             selected_challenge = None
 
     if selected_challenge is None and available_challenges:
-        selected_challenge = available_challenges[1] if len(available_challenges) > 1 else available_challenges[0]
+        selected_challenge = _get_default_report_challenge(available_challenges, scope_church)
 
     weekly_report = _get_cached_or_sync_challenge_report(
         selected_challenge,
@@ -1888,6 +1912,8 @@ def pastor_reports_view(request):
     member_reports = []
     for profile in top_profiles:
         cached_report = None if force_refresh else _get_cached_user_participation_report(profile.user)
+        if cached_report and not _user_report_matches_challenge(cached_report, selected_challenge):
+            cached_report = None
         member_reports.append(cached_report or sync_user_participation_report(profile.user))
 
     return render(
@@ -1914,6 +1940,11 @@ def pastor_reports_view(request):
 def pastor_members_view(request):
     scope_church = _get_access_scope_church(request.user)
     force_refresh = _should_refresh_reports(request)
+    challenge_queryset = WeeklyChallenge.objects.select_related("sermon")
+    if scope_church is not None:
+        challenge_queryset = challenge_queryset.filter(sermon__church=scope_church)
+    available_challenges = list(challenge_queryset.order_by("-week_start", "-id"))
+    reference_challenge = _get_default_report_challenge(available_challenges, scope_church)
     profile_queryset = UserProfile.objects.select_related("user")
     if scope_church is not None:
         profile_queryset = profile_queryset.filter(church=scope_church)
@@ -1921,6 +1952,8 @@ def pastor_members_view(request):
     all_reports = []
     for profile in profiles:
         cached_report = None if force_refresh else _get_cached_user_participation_report(profile.user)
+        if cached_report and not _user_report_matches_challenge(cached_report, reference_challenge):
+            cached_report = None
         all_reports.append(cached_report or sync_user_participation_report(profile.user))
 
     search_query = (request.GET.get("q") or "").strip().lower()

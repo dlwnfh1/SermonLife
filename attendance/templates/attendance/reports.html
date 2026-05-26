@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>출석 리포트</title>
+    <style>
+        body { margin: 0; font-family: Georgia, "Noto Sans KR", serif; color: #23170f; background: linear-gradient(180deg, #fbf4e9 0%, #f5eee1 100%); }
+        .shell { max-width: 1100px; margin: 0 auto; padding: 24px 16px 56px; }
+        .topbar, .nav { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; }
+        .topbar a, .nav a, .session-link, .pager a {
+            text-decoration:none; color:#23170f; padding:12px 18px; border-radius:999px; background:#fffaf2; border:1px solid #dfcfbb; box-shadow:0 10px 24px rgba(133,96,52,.08); font-weight:700;
+        }
+        .nav a.is-active { background:#a56a3b; color:#fff8ef; border-color:#a56a3b; }
+        .panel { background:#fffaf2; border:1px solid rgba(165,106,59,.14); border-radius:26px; padding:24px; box-shadow:0 24px 60px rgba(133,96,52,.10); }
+        h1 { font-size:42px; margin:0 0 10px; }
+        p { color:#6f5e4f; line-height:1.7; }
+        .session-links { display:flex; flex-wrap:wrap; gap:10px; margin:20px 0; }
+        table { width:100%; border-collapse:collapse; margin-top:18px; background:white; border-radius:20px; overflow:hidden; }
+        th, td { padding:14px 12px; text-align:left; border-bottom:1px solid #efe2d0; }
+        th { background:#f6ebdb; }
+        .pager { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:18px; }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <div class="topbar">
+            <a href="{{ home_url }}">사용자 화면</a>
+            <a href="{{ logout_url }}">로그아웃</a>
+        </div>
+        <div class="nav">
+            <a href="{% url 'attendance:dashboard' %}">출석 대시보드</a>
+            <a href="{% url 'attendance:reports' %}" class="is-active">출석 리포트</a>
+            {% if can_manage_attendance %}
+                <a href="{% url 'attendance:manage' %}">조직 관리</a>
+            {% endif %}
+        </div>
+        <section class="panel">
+            <h1>출석 리포트</h1>
+            <p>주일별로 교구와 속의 출석 현황을 표로 보는 화면입니다. 지금은 속 단위 집계가 먼저 보이도록 구성되어 있습니다.</p>
+
+            <div class="session-links">
+                {% for session in available_sessions %}
+                    <a class="session-link" href="{% url 'attendance:reports' %}?session={{ session.id }}">{{ session.worship_date|date:"m/d" }}</a>
+                {% endfor %}
+            </div>
+
+            {% if selected_session %}
+                <p><strong>{{ selected_session.title }}</strong> 기준 집계입니다.</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>교구</th>
+                            <th>속</th>
+                            <th>출석</th>
+                            <th>온라인</th>
+                            <th>결석</th>
+                            <th>사유</th>
+                            <th>합계</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in page_obj %}
+                            <tr>
+                                <td>{{ row.district_name }}</td>
+                                <td>{{ row.group_name }}</td>
+                                <td>{{ row.present }}</td>
+                                <td>{{ row.online }}</td>
+                                <td>{{ row.absent }}</td>
+                                <td>{{ row.excused }}</td>
+                                <td>{{ row.total }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="7">아직 집계할 출석 기록이 없습니다.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="pager">
+                    <div>
+                        {% if page_obj.has_previous %}
+                            <a href="?session={{ selected_session.id }}&page={{ page_obj.previous_page_number }}">이전</a>
+                        {% endif %}
+                    </div>
+                    <div>{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</div>
+                    <div>
+                        {% if page_obj.has_next %}
+                            <a href="?session={{ selected_session.id }}&page={{ page_obj.next_page_number }}">다음</a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <p>주일 출석표가 아직 없습니다.</p>
+            {% endif %}
+        </section>
+    </div>
+</body>
+</html>

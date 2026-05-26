@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ group.name }} 관리</title>
+    <style>
+        body { margin:0; font-family: Georgia, "Noto Sans KR", serif; color:#23170f; background:linear-gradient(180deg, #fbf4e9 0%, #f5eee1 100%); }
+        .shell { max-width:1120px; margin:0 auto; padding:24px 16px 56px; }
+        .topbar, .nav, .sub-actions { display:flex; flex-wrap:wrap; gap:10px; }
+        .topbar, .nav { margin-bottom:16px; }
+        .topbar a, .nav a, button {
+            text-decoration:none; color:#23170f; padding:12px 18px; border-radius:999px; background:#fffaf2; border:1px solid #dfcfbb; box-shadow:0 10px 24px rgba(133,96,52,.08); font-weight:700; font:inherit;
+        }
+        .nav a.is-active, button.primary { background:#a56a3b; color:#fff8ef; border-color:#a56a3b; cursor:pointer; }
+        button { cursor:pointer; }
+        .hero, .panel { background:#fffaf2; border:1px solid rgba(165,106,59,.14); border-radius:26px; padding:24px; box-shadow:0 24px 60px rgba(133,96,52,.10); }
+        .hero { margin-bottom:20px; }
+        h1, h2 { margin:0 0 10px; }
+        h1 { font-size:40px; }
+        h2 { font-size:26px; }
+        p, .muted { color:#6f5e4f; line-height:1.7; }
+        .layout { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+        .field { margin-bottom:14px; }
+        .field label { display:block; font-weight:700; margin-bottom:6px; }
+        .field input, .field select, .field textarea {
+            width:100%; padding:12px 14px; border-radius:14px; border:1px solid #dfcfbb; font:inherit; background:#fff;
+        }
+        .field textarea { min-height:80px; resize:vertical; }
+        .row-card { padding:16px 0; border-bottom:1px solid #efe2d0; }
+        .row-card:last-child { border-bottom:none; }
+        .errorlist { color:#b8572b; margin:6px 0 0; padding-left:18px; }
+        .hint {
+            margin-top: 10px;
+            padding: 12px 14px;
+            border-radius: 16px;
+            background: #f7ecdd;
+            color: #6f5e4f;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        @media (max-width: 900px) { .layout { grid-template-columns:1fr; } }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <div class="topbar">
+            <a href="{% url 'attendance:manage_district' group.district.id %}">{{ group.district.name }} 교구로 돌아가기</a>
+            <a href="{% url 'attendance:manage' %}">조직 관리로 돌아가기</a>
+            <a href="{{ home_url }}">사용자 화면</a>
+            <a href="{{ logout_url }}">로그아웃</a>
+        </div>
+        <div class="nav">
+            <a href="{% url 'attendance:dashboard' %}">출석 대시보드</a>
+            <a href="{% url 'attendance:reports' %}">출석 리포트</a>
+            <a href="{% url 'attendance:manage' %}" class="is-active">조직 관리</a>
+        </div>
+
+        <section class="hero">
+            <h1>{{ group.district.name }} · {{ group.name }} 관리</h1>
+            <p>이 속의 기본 정보와 속장, 속원 목록을 여기서 직접 수정할 수 있습니다.</p>
+        </section>
+
+        <section class="layout">
+            <article class="panel">
+                <h2>속 정보</h2>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_group">
+                    {% for field in group_form %}
+                        <div class="field">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {{ field.errors }}
+                        </div>
+                    {% endfor %}
+                    <div class="hint">
+                        속장은 별도 유저를 직접 고르는 방식이 아니라, 아래 속원 목록에서 링크된 유저를 먼저 연결한 뒤 그 속원 중에서 선택합니다.
+                    </div>
+                    <button type="submit" class="primary" style="margin-top:14px;">속 정보 저장</button>
+                </form>
+            </article>
+
+            <article class="panel">
+                <h2>속원 추가</h2>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_member">
+                    {% for field in add_member_form %}
+                        <div class="field">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {{ field.errors }}
+                        </div>
+                    {% endfor %}
+                    <button type="submit" class="primary">속원 추가</button>
+                </form>
+            </article>
+        </section>
+
+        <section class="panel" style="margin-top:18px;">
+            <h2>속원 목록</h2>
+            {% for member, form in member_forms %}
+                <div class="row-card">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="save_member:{{ member.id }}">
+                        {% for field in form %}
+                            <div class="field">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {{ field.errors }}
+                            </div>
+                        {% endfor %}
+                        <div class="sub-actions">
+                            <button type="submit" class="primary">속원 저장</button>
+                            {% if group.leader_id == member.id %}
+                                <span class="muted">현재 속장입니다.</span>
+                            {% endif %}
+                        </div>
+                    </form>
+                    <form method="post" style="margin-top:8px;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete_member:{{ member.id }}">
+                        <button type="submit">속원 삭제</button>
+                    </form>
+                </div>
+            {% empty %}
+                <p class="muted">등록된 속원이 없습니다.</p>
+            {% endfor %}
+        </section>
+    </div>
+</body>
+</html>
