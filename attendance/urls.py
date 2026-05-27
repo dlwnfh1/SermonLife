@@ -7,7 +7,11 @@ from .views import (
     attendance_force_open_toggle_view,
     attendance_group_manage_view,
     attendance_manage_view,
+    attendance_report_hub_view,
     attendance_reports_view,
+    attendance_seed_demo_view,
+    attendance_weekly_pdf_email_view,
+    attendance_weekly_pdf_view,
 )
 
 app_name = "attendance"
@@ -16,7 +20,11 @@ urlpatterns = [
     path("", attendance_dashboard_view, name="dashboard"),
     path("check/", attendance_check_view, name="check"),
     path("force-open-toggle/", attendance_force_open_toggle_view, name="force_open_toggle"),
+    path("seed-demo/", attendance_seed_demo_view, name="seed_demo"),
     path("reports/", attendance_reports_view, name="reports"),
+    path("report-hub/", attendance_report_hub_view, name="report_hub"),
+    path("report-hub/weekly-pdf/", attendance_weekly_pdf_view, name="weekly_pdf"),
+    path("report-hub/weekly-pdf-email/", attendance_weekly_pdf_email_view, name="weekly_pdf_email"),
     path("manage/", attendance_manage_view, name="manage"),
     path("manage/district/<int:district_id>/", attendance_district_manage_view, name="manage_district"),
     path("manage/group/<int:group_id>/", attendance_group_manage_view, name="manage_group"),

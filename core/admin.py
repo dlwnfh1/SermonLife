@@ -1036,10 +1036,10 @@ class ChurchAdmin(admin.ModelAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "church", "member_role", "can_use_audio_transcriber", "can_check_attendance", "points", "streak_days")
+    list_display = ("user", "church", "member_role", "can_use_audio_transcriber", "can_manage_attendance", "can_check_attendance", "points", "streak_days")
     search_fields = ("user__username", "member_role", "church__name", "church__slug")
-    list_filter = ("church", "member_role", "can_use_audio_transcriber", "can_check_attendance")
-    list_editable = ("can_use_audio_transcriber", "can_check_attendance")
+    list_filter = ("church", "member_role", "can_use_audio_transcriber", "can_manage_attendance", "can_check_attendance")
+    list_editable = ("can_use_audio_transcriber", "can_manage_attendance", "can_check_attendance")
 
 
 @admin.register(PastorNotificationRecipient)

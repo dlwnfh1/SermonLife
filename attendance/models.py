@@ -46,6 +46,14 @@ class AttendanceGroup(models.Model):
         related_name="groups",
     )
     name = models.CharField(max_length=120)
+    guide = models.ForeignKey(
+        "attendance.AttendanceMember",
+        on_delete=models.SET_NULL,
+        related_name="guided_groups",
+        null=True,
+        blank=True,
+        verbose_name="인도자",
+    )
     leader = models.ForeignKey(
         "attendance.AttendanceMember",
         on_delete=models.SET_NULL,
@@ -167,9 +175,11 @@ class AttendanceSession(models.Model):
     @classmethod
     def get_or_create_current(cls, church, user=None, reference_date=None):
         today = reference_date or timezone.localdate()
+        days_since_sunday = (today.weekday() + 1) % 7
+        worship_date = today - timezone.timedelta(days=days_since_sunday)
         session, created = cls.objects.get_or_create(
             church=church,
-            worship_date=today,
+            worship_date=worship_date,
             defaults={"created_by": user},
         )
         return session, created

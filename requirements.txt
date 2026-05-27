@@ -5,6 +5,7 @@ defusedxml==0.7.1
 Django==5.2.12
 idna==3.11
 requests==2.32.5
+reportlab==4.5.1
 sqlparse==0.5.5
 tzdata==2025.3
 urllib3==2.6.3

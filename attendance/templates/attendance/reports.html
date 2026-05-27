@@ -3,95 +3,260 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>출석 리포트</title>
+    <title>출석 현황</title>
     <style>
-        body { margin: 0; font-family: Georgia, "Noto Sans KR", serif; color: #23170f; background: linear-gradient(180deg, #fbf4e9 0%, #f5eee1 100%); }
-        .shell { max-width: 1100px; margin: 0 auto; padding: 24px 16px 56px; }
-        .topbar, .nav { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; }
-        .topbar a, .nav a, .session-link, .pager a {
-            text-decoration:none; color:#23170f; padding:12px 18px; border-radius:999px; background:#fffaf2; border:1px solid #dfcfbb; box-shadow:0 10px 24px rgba(133,96,52,.08); font-weight:700;
+        :root {
+            --ink: #23170f;
+            --muted: #6f5e4f;
+            --line: #dfcfbb;
+            --accent: #a56a3b;
+            --accent-strong: #8c5630;
+            --danger: #b64b45;
+            --danger-soft: #f8d7d3;
+            --soft: rgba(165, 106, 59, .12);
         }
-        .nav a.is-active { background:#a56a3b; color:#fff8ef; border-color:#a56a3b; }
-        .panel { background:#fffaf2; border:1px solid rgba(165,106,59,.14); border-radius:26px; padding:24px; box-shadow:0 24px 60px rgba(133,96,52,.10); }
-        h1 { font-size:42px; margin:0 0 10px; }
-        p { color:#6f5e4f; line-height:1.7; }
-        .session-links { display:flex; flex-wrap:wrap; gap:10px; margin:20px 0; }
-        table { width:100%; border-collapse:collapse; margin-top:18px; background:white; border-radius:20px; overflow:hidden; }
-        th, td { padding:14px 12px; text-align:left; border-bottom:1px solid #efe2d0; }
-        th { background:#f6ebdb; }
-        .pager { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:18px; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Georgia, "Noto Sans KR", serif;
+            color: var(--ink);
+            background: linear-gradient(180deg, #fbf4e9 0%, #f5eee1 100%);
+        }
+        .shell { max-width: 1120px; margin: 0 auto; padding: 24px 16px 56px; }
+        .topbar, .filter-row, .session-links, .pager { display: flex; flex-wrap: wrap; gap: 10px; }
+        .topbar { margin-bottom: 16px; }
+        .topbar a, .topbar .user-pill, .chip-link, .pager a {
+            display:inline-flex; align-items:center; justify-content:center; text-decoration: none; color: var(--ink); padding: 12px 18px; min-height:48px; border-radius: 999px; background: #fffaf2; border: 1px solid var(--line); box-shadow: 0 10px 24px rgba(133, 96, 52, .08); font-weight: 700;
+        }
+        .topbar a.is-active, .chip-link.is-active { background: var(--accent); color: #fff8ef; border-color: var(--accent); }
+        .topbar .user-pill { background: rgba(165, 106, 59, .10); border-color: rgba(165, 106, 59, .18); color: var(--accent-strong); }
+        .panel { background: #fffaf2; border: 1px solid rgba(165, 106, 59, .14); border-radius: 26px; padding: 24px; box-shadow: 0 24px 60px rgba(133, 96, 52, .10); }
+        h1 { font-size: clamp(34px, 5vw, 42px); margin: 0 0 10px; }
+        h2 { font-size: 28px; margin: 0 0 12px; }
+        p { color: var(--muted); line-height: 1.7; }
+        .section-label {
+            display: inline-flex; align-items: center; padding: 8px 14px; border-radius: 999px; background: var(--soft); color: var(--accent-strong); font-size: 13px; font-weight: 700; margin-bottom: 14px;
+        }
+        .filter-row, .session-links { margin: 20px 0; }
+        table {
+            width: 100%; border-collapse: collapse; margin-top: 18px; background: white; border-radius: 20px; overflow: hidden;
+        }
+        th, td { padding: 14px 12px; text-align: left; border-bottom: 1px solid #efe2d0; }
+        th { background: #f6ebdb; }
+        tbody tr:hover { background: #fcf6ed; }
+        .row-link {
+            color: var(--accent-strong); font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 999px; background: rgba(165, 106, 59, .08); border: 1px solid rgba(165, 106, 59, .16);
+        }
+        .row-link::after { content: "›"; font-size: 18px; line-height: 1; }
+        .count-absent { color: var(--danger); font-weight: 800; }
+        .detail-panel { margin-top: 24px; padding-top: 24px; border-top: 1px solid #ead9c5; }
+        .roster-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 12px;
+        }
+        .roster-item {
+            display: flex; align-items: center; justify-content: flex-start; gap: 10px; min-height: 46px; padding: 10px 12px; border-radius: 14px; background: #fffdfa; border: 1px solid rgba(165, 106, 59, .18); box-shadow: 0 4px 10px rgba(133, 96, 52, .05);
+        }
+        .roster-main { min-width: 0; }
+        .roster-name { font-weight: 700; line-height: 1.3; word-break: keep-all; }
+        .roster-meta { color: var(--muted); font-size: 13px; margin-top: 2px; }
+        .status-pill {
+            display: inline-flex; align-items: center; justify-content: center; min-width: 52px; padding: 7px 12px; border-radius: 999px; background: rgba(255, 255, 255, .96); border: 1px solid rgba(165, 106, 59, .18); color: #5f5042; font-size: 13px; font-weight: 700; flex-shrink: 0;
+        }
+        .status-pill.is-absent { color: var(--danger); border-color: rgba(182, 75, 69, .38); background: linear-gradient(180deg, #ffe7e3 0%, #f7c9c3 100%); }
+        .pager { justify-content: space-between; align-items: center; margin-top: 18px; }
+        @media (max-width: 900px) {
+            .pager { justify-content: center; }
+            table, thead, tbody, th, td, tr { display: block; }
+            table {
+                background: transparent;
+                margin-top: 14px;
+            }
+            thead { display: none; }
+            tbody {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+            }
+            tr {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 8px;
+                align-content: start;
+                padding: 12px 10px;
+                border: 1px solid rgba(165, 106, 59, .16);
+                border-radius: 16px;
+                background: #fffdfa;
+                box-shadow: 0 8px 18px rgba(133, 96, 52, .06);
+            }
+            td {
+                border: 0;
+                padding: 0;
+                min-width: 0;
+            }
+            td:first-child {
+                grid-column: 1 / -1;
+            }
+            td:first-child::before {
+                display: none;
+            }
+            td::before {
+                content: attr(data-label);
+                display: block;
+                font-size: 11px;
+                font-weight: 700;
+                color: var(--accent-strong);
+                margin-bottom: 2px;
+            }
+            .row-link {
+                width: 100%;
+                justify-content: center;
+                padding: 7px 8px;
+                font-size: 14px;
+            }
+            .roster-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 8px;
+            }
+            .roster-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+                min-height: 0;
+                padding: 10px;
+            }
+            .roster-name {
+                font-size: 14px;
+            }
+            .roster-meta {
+                font-size: 11px;
+                line-height: 1.4;
+            }
+            .status-pill {
+                min-width: 0;
+                padding: 5px 9px;
+                font-size: 11px;
+            }
+        }
+        @media (max-width: 640px) {
+            .shell { padding:18px 12px 40px; }
+            .topbar { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); }
+            .topbar a, .topbar .user-pill, .chip-link { width:100%; padding:12px 10px; text-align:center; }
+            .filter-row { display:none; }
+            .roster-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+        @media (max-width: 360px) {
+            tbody {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 420px) {
+            .roster-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
     </style>
 </head>
 <body>
     <div class="shell">
         <div class="topbar">
-            <a href="{{ home_url }}">사용자 화면</a>
+            <a href="{{ home_url }}">Word &amp; Life</a>
+            <a href="{% url 'attendance:dashboard' %}" class="is-active">출석 대시보드</a>
+            <a href="{% url 'attendance:report_hub' %}">리포트</a>
+            <a href="{% url 'attendance:manage' %}">교구/속 관리</a>
+            <span class="user-pill">{{ request.user.get_username }}</span>
             <a href="{{ logout_url }}">로그아웃</a>
         </div>
-        <div class="nav">
-            <a href="{% url 'attendance:dashboard' %}">출석 대시보드</a>
-            <a href="{% url 'attendance:reports' %}" class="is-active">출석 리포트</a>
-            {% if can_manage_attendance %}
-                <a href="{% url 'attendance:manage' %}">조직 관리</a>
-            {% endif %}
-        </div>
+
         <section class="panel">
-            <h1>출석 리포트</h1>
-            <p>주일별로 교구와 속의 출석 현황을 표로 보는 화면입니다. 지금은 속 단위 집계가 먼저 보이도록 구성되어 있습니다.</p>
+            <span class="section-label">최근 주일 출석 현황</span>
+            <h1>
+                {% if selected_group %}
+                    {{ selected_group.name }} 속원별 출석 현황
+                {% elif selected_district %}
+                    {{ selected_district.name }} 교구 전체 출석 현황
+                {% else %}
+                    전체 교구 속별 출석 현황
+                {% endif %}
+            </h1>
+            <p>최근 주일 출석표를 기준으로 속별 집계 결과를 보여줍니다.</p>
+
+            {% if available_districts %}
+                <div class="filter-row">
+                    <a class="chip-link {% if not selected_district %}is-active{% endif %}" href="{% url 'attendance:reports' %}{% if selected_session %}?session={{ selected_session.id }}{% endif %}">전교인 전체 보기</a>
+                    <a class="chip-link" href="{% url 'attendance:dashboard' %}">교구별로 보기</a>
+                    {% for district in available_districts %}
+                        <a class="chip-link {% if selected_district and selected_district.id == district.id %}is-active{% endif %}" href="{% url 'attendance:reports' %}?district={{ district.id }}{% if selected_session %}&session={{ selected_session.id }}{% endif %}">{{ district.name }}</a>
+                    {% endfor %}
+                </div>
+            {% endif %}
 
             <div class="session-links">
                 {% for session in available_sessions %}
-                    <a class="session-link" href="{% url 'attendance:reports' %}?session={{ session.id }}">{{ session.worship_date|date:"m/d" }}</a>
+                    <a class="chip-link {% if selected_session and selected_session.id == session.id %}is-active{% endif %}" href="{% url 'attendance:reports' %}?session={{ session.id }}{% if selected_district %}&district={{ selected_district.id }}{% endif %}{% if selected_group %}&group={{ selected_group.id }}{% endif %}">{{ session.worship_date|date:"m/d" }}</a>
                 {% endfor %}
             </div>
 
             {% if selected_session %}
                 <p><strong>{{ selected_session.title }}</strong> 기준 집계입니다.</p>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>교구</th>
-                            <th>속</th>
-                            <th>출석</th>
-                            <th>온라인</th>
-                            <th>결석</th>
-                            <th>사유</th>
-                            <th>합계</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in page_obj %}
+                {% if selected_district or selected_group %}
+                    <table>
+                        <thead>
                             <tr>
-                                <td>{{ row.district_name }}</td>
-                                <td>{{ row.group_name }}</td>
-                                <td>{{ row.present }}</td>
-                                <td>{{ row.online }}</td>
-                                <td>{{ row.absent }}</td>
-                                <td>{{ row.excused }}</td>
-                                <td>{{ row.total }}</td>
+                                {% if not selected_district %}
+                                    <th>교구</th>
+                                {% endif %}
+                                <th>속</th>
+                                <th>출석</th>
+                                <th>결석</th>
+                                <th>합계</th>
                             </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in page_obj %}
+                                <tr>
+                                    {% if not selected_district %}
+                                        <td data-label="교구">{{ row.district_name }}</td>
+                                    {% endif %}
+                                    <td data-label="속">
+                                        <a class="row-link" href="{% url 'attendance:reports' %}?group={{ row.group_id }}{% if selected_district %}&district={{ selected_district.id }}{% endif %}{% if selected_session %}&session={{ selected_session.id }}{% endif %}">{{ row.group_name }}</a>
+                                    </td>
+                                    <td data-label="출석">{{ row.present }}</td>
+                                    <td data-label="결석"><span class="count-absent">{{ row.absent }}</span></td>
+                                    <td data-label="합계">{{ row.total }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="{% if selected_district %}4{% else %}5{% endif %}">아직 집계된 출석 기록이 없습니다.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+
+                <div class="detail-panel">
+                    <h2>{{ detail_title }}</h2>
+                    <div class="roster-grid">
+                        {% for row in member_rows %}
+                            <div class="roster-item">
+                                <div class="roster-main">
+                                    <div class="roster-name">{{ row.member_name }}</div>
+                                    <div class="roster-meta">
+                                        {% if not selected_group %}
+                                            {{ row.district_name }} · {{ row.group_name }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <span class="status-pill {% if row.status != 'present' %}is-absent{% endif %}">
+                                    {% if row.status == "present" %}출석{% else %}결석{% endif %}
+                                </span>
+                            </div>
                         {% empty %}
-                            <tr>
-                                <td colspan="7">아직 집계할 출석 기록이 없습니다.</td>
-                            </tr>
+                            <div class="roster-item">상세 출석 기록이 없습니다.</div>
                         {% endfor %}
-                    </tbody>
-                </table>
-                <div class="pager">
-                    <div>
-                        {% if page_obj.has_previous %}
-                            <a href="?session={{ selected_session.id }}&page={{ page_obj.previous_page_number }}">이전</a>
-                        {% endif %}
-                    </div>
-                    <div>{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</div>
-                    <div>
-                        {% if page_obj.has_next %}
-                            <a href="?session={{ selected_session.id }}&page={{ page_obj.next_page_number }}">다음</a>
-                        {% endif %}
                     </div>
                 </div>
-            {% else %}
-                <p>주일 출석표가 아직 없습니다.</p>
             {% endif %}
         </section>
     </div>

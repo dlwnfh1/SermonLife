@@ -5,87 +5,342 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ group.name }} 관리</title>
     <style>
-        body { margin:0; font-family: Georgia, "Noto Sans KR", serif; color:#23170f; background:linear-gradient(180deg, #fbf4e9 0%, #f5eee1 100%); }
-        .shell { max-width:1120px; margin:0 auto; padding:24px 16px 56px; }
-        .topbar, .nav, .sub-actions { display:flex; flex-wrap:wrap; gap:10px; }
-        .topbar, .nav { margin-bottom:16px; }
-        .topbar a, .nav a, button {
-            text-decoration:none; color:#23170f; padding:12px 18px; border-radius:999px; background:#fffaf2; border:1px solid #dfcfbb; box-shadow:0 10px 24px rgba(133,96,52,.08); font-weight:700; font:inherit;
+        :root {
+            --ink: #23170f;
+            --muted: #6f5e4f;
+            --line: #dfcfbb;
+            --soft: #f7ecdd;
+            --accent: #a56a3b;
+            --accent-strong: #8c5630;
+            --bg: linear-gradient(180deg, #fbf4e9 0%, #f5eee1 100%);
         }
-        .nav a.is-active, button.primary { background:#a56a3b; color:#fff8ef; border-color:#a56a3b; cursor:pointer; }
-        button { cursor:pointer; }
-        .hero, .panel { background:#fffaf2; border:1px solid rgba(165,106,59,.14); border-radius:26px; padding:24px; box-shadow:0 24px 60px rgba(133,96,52,.10); }
-        .hero { margin-bottom:20px; }
-        h1, h2 { margin:0 0 10px; }
-        h1 { font-size:40px; }
-        h2 { font-size:26px; }
-        p, .muted { color:#6f5e4f; line-height:1.7; }
-        .layout { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
-        .field { margin-bottom:14px; }
-        .field label { display:block; font-weight:700; margin-bottom:6px; }
-        .field input, .field select, .field textarea {
-            width:100%; padding:12px 14px; border-radius:14px; border:1px solid #dfcfbb; font:inherit; background:#fff;
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Georgia, "Noto Sans KR", serif;
+            color: var(--ink);
+            background: var(--bg);
         }
-        .field textarea { min-height:80px; resize:vertical; }
-        .row-card { padding:16px 0; border-bottom:1px solid #efe2d0; }
-        .row-card:last-child { border-bottom:none; }
-        .errorlist { color:#b8572b; margin:6px 0 0; padding-left:18px; }
-        .hint {
+        .shell {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 24px 16px 56px;
+        }
+        .topbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .topbar a,
+        .topbar .user-pill,
+        button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: var(--ink);
+            padding: 12px 18px;
+            min-height: 48px;
+            border-radius: 999px;
+            background: #fffaf2;
+            border: 1px solid var(--line);
+            box-shadow: 0 10px 24px rgba(133, 96, 52, .08);
+            font-weight: 700;
+            font: inherit;
+        }
+        .topbar a.is-active,
+        button.primary {
+            background: var(--accent);
+            color: #fff8ef;
+            border-color: var(--accent);
+            cursor: pointer;
+        }
+        .topbar .user-pill {
+            background: rgba(165, 106, 59, .10);
+            border-color: rgba(165, 106, 59, .18);
+            color: var(--accent-strong);
+        }
+        button { cursor: pointer; }
+        .hero,
+        .panel {
+            background: #fffaf2;
+            border: 1px solid rgba(165, 106, 59, .14);
+            border-radius: 26px;
+            padding: 24px;
+            box-shadow: 0 24px 60px rgba(133, 96, 52, .10);
+        }
+        .hero {
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            margin: 0 0 10px;
+        }
+        h1 { font-size: 40px; }
+        h2 { font-size: 24px; }
+        .hero-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(340px, 0.95fr);
+            gap: 18px;
+            align-items: start;
+        }
+        .hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
             margin-top: 10px;
-            padding: 12px 14px;
-            border-radius: 16px;
-            background: #f7ecdd;
-            color: #6f5e4f;
-            font-size: 14px;
-            line-height: 1.6;
         }
-        @media (max-width: 900px) { .layout { grid-template-columns:1fr; } }
+        .hero-actions a {
+            text-decoration: none;
+            color: var(--ink);
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: #f5e7d4;
+            border: 1px solid var(--line);
+            font-weight: 700;
+        }
+        .hero-details {
+            background: #f8efe2;
+            border: 1px solid #ead8c1;
+            border-radius: 22px;
+            padding: 18px;
+        }
+        .hero-details form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .hero-details-row {
+            display: grid;
+            grid-template-columns: 76px 1fr;
+            gap: 12px;
+            align-items: center;
+        }
+        .hero-details-row label {
+            font-weight: 700;
+            color: #7a4e2c;
+        }
+        .hero-details-row select {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            font: inherit;
+            background: #fff;
+        }
+        .field-grid {
+            display: grid;
+            grid-template-columns: 0.95fr 1.35fr 0.95fr auto;
+            gap: 12px;
+            align-items: end;
+        }
+        .field {
+            margin-bottom: 14px;
+        }
+        .field label {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .field input,
+        .field select {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            font: inherit;
+            background: #fff;
+        }
+        .member-grid-header {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr .95fr auto;
+            gap: 12px;
+            align-items: center;
+            padding: 0 6px 10px;
+            color: #86664d;
+            font-size: 14px;
+            font-weight: 700;
+            border-bottom: 1px solid #efe2d0;
+        }
+        .member-grid-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-top: 14px;
+        }
+        .member-grid-row {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr .95fr auto;
+            gap: 12px;
+            align-items: start;
+            padding: 18px;
+            border: 1px solid #ead8c1;
+            border-radius: 20px;
+            background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,236,221,.82));
+            box-shadow: 0 12px 28px rgba(133,96,52,.06);
+        }
+        .member-grid-row .field {
+            margin: 0;
+        }
+        .member-grid-row .field label {
+            display: none;
+        }
+        .member-grid-row .field input,
+        .member-grid-row .field select {
+            padding: 11px 13px;
+            border-radius: 12px;
+        }
+        .member-name-block {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 0;
+        }
+        .member-name-block .field input {
+            font-weight: 700;
+        }
+        .member-mobile-label {
+            display: none;
+            color: #86664d;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .member-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+            min-width: 110px;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 7px 12px;
+            border-radius: 999px;
+            background: #efe0ce;
+            color: #7a4e2c;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .delete-button {
+            background: #fff;
+            color: #9a4b35;
+            border-color: #e6c7bb;
+            box-shadow: none;
+        }
+        .footer-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 18px;
+        }
+        .empty-state {
+            padding: 18px 0 4px;
+            color: var(--muted);
+        }
+        .errorlist {
+            color: #b8572b;
+            margin: 6px 0 0;
+            padding-left: 18px;
+        }
+        @media (max-width: 900px) {
+            .hero-layout,
+            .field-grid {
+                grid-template-columns: 1fr;
+            }
+            .hero-details-row {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+            .member-grid-header {
+                display: none;
+            }
+            .member-grid-row {
+                grid-template-columns: 1fr;
+                gap: 12px;
+                padding: 16px;
+            }
+            .member-mobile-label {
+                display: block;
+            }
+            .member-meta {
+                align-items: flex-start;
+                flex-direction: row;
+                flex-wrap: wrap;
+                min-width: 0;
+            }
+            .footer-actions {
+                justify-content: stretch;
+            }
+            .footer-actions button,
+            .field-grid .field:last-child button {
+                width: 100%;
+            }
+        }
+        @media (max-width: 640px) {
+            .shell {
+                padding: 18px 12px 40px;
+            }
+            .topbar {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .topbar a,
+            .topbar .user-pill,
+            button {
+                width: 100%;
+                padding: 12px 10px;
+                text-align: center;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="shell">
         <div class="topbar">
-            <a href="{% url 'attendance:manage_district' group.district.id %}">{{ group.district.name }} 교구로 돌아가기</a>
-            <a href="{% url 'attendance:manage' %}">조직 관리로 돌아가기</a>
-            <a href="{{ home_url }}">사용자 화면</a>
-            <a href="{{ logout_url }}">로그아웃</a>
-        </div>
-        <div class="nav">
+            <a href="{{ home_url }}">Word &amp; Life</a>
             <a href="{% url 'attendance:dashboard' %}">출석 대시보드</a>
-            <a href="{% url 'attendance:reports' %}">출석 리포트</a>
-            <a href="{% url 'attendance:manage' %}" class="is-active">조직 관리</a>
+            <a href="{% url 'attendance:report_hub' %}">리포트</a>
+            <a href="{% url 'attendance:manage' %}" class="is-active">교구/속 관리</a>
+            <span class="user-pill">{{ request.user.get_username }}</span>
+            <a href="{{ logout_url }}">로그아웃</a>
         </div>
 
         <section class="hero">
-            <h1>{{ group.district.name }} · {{ group.name }} 관리</h1>
-            <p>이 속의 기본 정보와 속장, 속원 목록을 여기서 직접 수정할 수 있습니다.</p>
+            <div class="hero-layout">
+                <div>
+                    <h1>{{ group.district.name }} {{ group.name }} · {{ members|length }}명</h1>
+                    <div class="hero-actions">
+                        <a href="{% url 'attendance:manage_district' group.district.id %}">{{ group.district.name }} 교구로 돌아가기</a>
+                        <a href="{% url 'attendance:manage' %}">교구 목록으로 돌아가기</a>
+                    </div>
+                </div>
+                <div class="hero-details">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="update_group">
+                        {% for field in group_form %}
+                            <div class="hero-details-row">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                <div>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                        <button type="submit" class="primary">속 정보 저장</button>
+                    </form>
+                </div>
+            </div>
         </section>
 
-        <section class="layout">
-            <article class="panel">
-                <h2>속 정보</h2>
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="update_group">
-                    {% for field in group_form %}
-                        <div class="field">
-                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                            {{ field }}
-                            {{ field.errors }}
-                        </div>
-                    {% endfor %}
-                    <div class="hint">
-                        속장은 별도 유저를 직접 고르는 방식이 아니라, 아래 속원 목록에서 링크된 유저를 먼저 연결한 뒤 그 속원 중에서 선택합니다.
-                    </div>
-                    <button type="submit" class="primary" style="margin-top:14px;">속 정보 저장</button>
-                </form>
-            </article>
-
-            <article class="panel">
-                <h2>속원 추가</h2>
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="add_member">
+        <section class="panel">
+            <h2>속원 추가</h2>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_member">
+                <div class="field-grid">
                     {% for field in add_member_form %}
                         <div class="field">
                             <label for="{{ field.id_for_label }}">{{ field.label }}</label>
@@ -93,41 +348,79 @@
                             {{ field.errors }}
                         </div>
                     {% endfor %}
-                    <button type="submit" class="primary">속원 추가</button>
-                </form>
-            </article>
+                    <div class="field" style="display:flex; align-items:flex-end; margin:0;">
+                        <button type="submit" class="primary" style="width:100%;">속원 추가</button>
+                    </div>
+                </div>
+            </form>
         </section>
 
         <section class="panel" style="margin-top:18px;">
             <h2>속원 목록</h2>
-            {% for member, form in member_forms %}
-                <div class="row-card">
-                    <form method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="save_member:{{ member.id }}">
-                        {% for field in form %}
-                            <div class="field">
-                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                {{ field }}
-                                {{ field.errors }}
+            {% if member_forms %}
+                <div class="member-grid-header">
+                    <div>이름</div>
+                    <div>링크된 유저</div>
+                    <div>연락처</div>
+                    <div>관리</div>
+                </div>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="save_members">
+                    <div class="member-grid-list">
+                        {% for member, form in member_forms %}
+                            <div class="member-grid-row">
+                                <div class="member-name-block">
+                                    <div class="field">
+                                        <span class="member-mobile-label">이름</span>
+                                        {{ form.name }}
+                                        {{ form.name.errors }}
+                                    </div>
+                                    <div class="member-meta">
+                                        {% if group.guide_id == member.id %}
+                                            <span class="badge">현재 인도자</span>
+                                        {% endif %}
+                                        {% if group.leader_id == member.id %}
+                                            <span class="badge">현재 속장</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <span class="member-mobile-label">링크된 유저</span>
+                                    {{ form.linked_user }}
+                                    {{ form.linked_user.errors }}
+                                </div>
+                                <div class="field">
+                                    <span class="member-mobile-label">연락처</span>
+                                    {{ form.phone }}
+                                    {{ form.phone.errors }}
+                                </div>
+                                <div class="member-meta">
+                                    <span class="member-mobile-label">관리</span>
+                                    <button type="submit" form="delete-member-{{ member.id }}" class="delete-button">삭제</button>
+                                    {% for hidden in form.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+                                    {% if form.non_field_errors %}
+                                        <div class="errorlist">{{ form.non_field_errors }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
                         {% endfor %}
-                        <div class="sub-actions">
-                            <button type="submit" class="primary">속원 저장</button>
-                            {% if group.leader_id == member.id %}
-                                <span class="muted">현재 속장입니다.</span>
-                            {% endif %}
-                        </div>
-                    </form>
-                    <form method="post" style="margin-top:8px;">
+                    </div>
+                    <div class="footer-actions">
+                        <button type="submit" class="primary">속원 정보 한 번에 저장</button>
+                    </div>
+                </form>
+                {% for member, form in member_forms %}
+                    <form id="delete-member-{{ member.id }}" method="post" style="display:none;">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="delete_member:{{ member.id }}">
-                        <button type="submit">속원 삭제</button>
                     </form>
-                </div>
-            {% empty %}
-                <p class="muted">등록된 속원이 없습니다.</p>
-            {% endfor %}
+                {% endfor %}
+            {% else %}
+                <p class="empty-state">등록된 속원이 아직 없습니다.</p>
+            {% endif %}
         </section>
     </div>
 </body>

@@ -3,130 +3,332 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ district.name }} 관리</title>
+    <title>{{ district.name }} 교구</title>
     <style>
-        body { margin:0; font-family: Georgia, "Noto Sans KR", serif; color:#23170f; background:linear-gradient(180deg, #fbf4e9 0%, #f5eee1 100%); }
-        .shell { max-width:1120px; margin:0 auto; padding:24px 16px 56px; }
-        .topbar, .nav, .form-row, .stack { display:flex; flex-wrap:wrap; gap:10px; }
-        .topbar, .nav { margin-bottom:16px; }
-        .topbar a, .nav a, .link-pill, button {
-            text-decoration:none; color:#23170f; padding:12px 18px; border-radius:999px; background:#fffaf2; border:1px solid #dfcfbb; box-shadow:0 10px 24px rgba(133,96,52,.08); font-weight:700; font:inherit;
+        :root {
+            --ink: #23170f;
+            --muted: #6f5e4f;
+            --line: #dfcfbb;
+            --soft: #f7ecdd;
+            --accent: #a56a3b;
+            --accent-strong: #8c5630;
+            --bg: linear-gradient(180deg, #fbf4e9 0%, #f5eee1 100%);
         }
-        .nav a.is-active, button.primary { background:#a56a3b; color:#fff8ef; border-color:#a56a3b; cursor:pointer; }
-        button { cursor:pointer; }
-        .hero, .panel { background:#fffaf2; border:1px solid rgba(165,106,59,.14); border-radius:26px; padding:24px; box-shadow:0 24px 60px rgba(133,96,52,.10); }
-        .hero { margin-bottom:20px; }
-        h1, h2 { margin:0 0 10px; }
-        h1 { font-size:40px; }
-        h2 { font-size:26px; }
-        p, .muted { color:#6f5e4f; line-height:1.7; }
-        .layout { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
-        .field { margin-bottom:14px; }
-        .field label { display:block; font-weight:700; margin-bottom:6px; }
-        .field input, .field select {
-            width:100%; padding:12px 14px; border-radius:14px; border:1px solid #dfcfbb; font:inherit; background:#fff;
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Georgia, "Noto Sans KR", serif;
+            color: var(--ink);
+            background: var(--bg);
         }
-        .row-card { padding:16px 0; border-bottom:1px solid #efe2d0; }
-        .row-card:last-child { border-bottom:none; }
-        .sub-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-        .errorlist { color:#b8572b; margin:6px 0 0; padding-left:18px; }
-        @media (max-width: 900px) { .layout { grid-template-columns:1fr; } }
+        .shell {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 24px 16px 56px;
+        }
+        .topbar,
+        .sub-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .topbar {
+            margin-bottom: 16px;
+        }
+        .topbar a,
+        .topbar .user-pill,
+        .link-pill,
+        button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: var(--ink);
+            padding: 12px 18px;
+            min-height: 48px;
+            border-radius: 999px;
+            background: #fffaf2;
+            border: 1px solid var(--line);
+            box-shadow: 0 10px 24px rgba(133,96,52,.08);
+            font-weight: 700;
+            font: inherit;
+        }
+        .topbar a.is-active,
+        button.primary {
+            background: var(--accent);
+            color: #fff8ef;
+            border-color: var(--accent);
+            cursor: pointer;
+        }
+        .topbar .user-pill {
+            background: rgba(165,106,59,.10);
+            border-color: rgba(165,106,59,.18);
+            color: var(--accent-strong);
+        }
+        button { cursor: pointer; }
+        .hero,
+        .panel,
+        .group-card {
+            background: #fffaf2;
+            border: 1px solid rgba(165,106,59,.14);
+            border-radius: 26px;
+            box-shadow: 0 24px 60px rgba(133,96,52,.10);
+        }
+        .hero,
+        .panel {
+            padding: 24px;
+        }
+        .hero {
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            margin: 0 0 10px;
+        }
+        h1 { font-size: 40px; }
+        h2 { font-size: 26px; }
+        .hero-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(420px, 1fr);
+            gap: 18px;
+            align-items: start;
+        }
+        .hero-details {
+            background: #f8efe2;
+            border: 1px solid #ead8c1;
+            border-radius: 22px;
+            padding: 18px;
+        }
+        .hero-details form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .leader-header,
+        .leader-row {
+            display: grid;
+            grid-template-columns: 1fr 1.1fr;
+            gap: 12px;
+            align-items: center;
+        }
+        .leader-header {
+            color: #86664d;
+            font-size: 14px;
+            font-weight: 700;
+            padding: 0 4px 2px;
+        }
+        .leader-row input,
+        .leader-row select {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            font: inherit;
+            background: #fff;
+        }
+        .field-grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 12px;
+            align-items: end;
+        }
+        .field {
+            margin-bottom: 14px;
+        }
+        .field label {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .field input,
+        .field select {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            font: inherit;
+            background: #fff;
+        }
+        .group-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+            margin-top: 14px;
+        }
+        .group-card {
+            display: block;
+            padding: 20px;
+            text-decoration: none;
+            color: inherit;
+            background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(247, 236, 221, .92));
+            transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+        }
+        .group-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(165,106,59,.24);
+            box-shadow: 0 18px 38px rgba(133,96,52,.12);
+        }
+        .group-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 14px;
+        }
+        .group-name {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .group-meta {
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.7;
+        }
+        .group-leaders {
+            margin-top: 10px;
+            color: var(--accent-strong);
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1.6;
+        }
+        .group-arrow {
+            min-width: 44px;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: var(--soft);
+            color: var(--accent-strong);
+            font-size: 22px;
+            font-weight: 700;
+        }
+        .muted {
+            color: var(--muted);
+            line-height: 1.7;
+        }
+        .empty-state {
+            padding: 20px;
+            border-radius: 22px;
+            background: var(--soft);
+            color: var(--muted);
+        }
+        .errorlist {
+            color: #b8572b;
+            margin: 6px 0 0;
+            padding-left: 18px;
+        }
+        @media (max-width: 900px) {
+            .hero-layout,
+            .field-grid,
+            .group-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 640px) {
+            .shell {
+                padding: 18px 12px 40px;
+            }
+            .topbar {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .topbar a,
+            .topbar .user-pill,
+            .link-pill,
+            button {
+                width: 100%;
+                padding: 12px 10px;
+                text-align: center;
+            }
+            .leader-header {
+                display: none;
+            }
+            .leader-row {
+                grid-template-columns: minmax(92px, 0.9fr) minmax(0, 1.1fr);
+                gap: 10px;
+                align-items: stretch;
+            }
+            .leader-row input,
+            .leader-row select {
+                min-height: 44px;
+                padding: 10px 12px;
+                font-size: 14px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="shell">
         <div class="topbar">
-            <a href="{% url 'attendance:manage' %}">조직 관리로 돌아가기</a>
-            <a href="{{ home_url }}">사용자 화면</a>
-            <a href="{{ logout_url }}">로그아웃</a>
-        </div>
-        <div class="nav">
+            <a href="{{ home_url }}">Word &amp; Life</a>
             <a href="{% url 'attendance:dashboard' %}">출석 대시보드</a>
-            <a href="{% url 'attendance:reports' %}">출석 리포트</a>
-            <a href="{% url 'attendance:manage' %}" class="is-active">조직 관리</a>
+            <a href="{% url 'attendance:report_hub' %}">리포트</a>
+            <a href="{% url 'attendance:manage' %}" class="is-active">교구/속 관리</a>
+            <span class="user-pill">{{ request.user.get_username }}</span>
+            <a href="{{ logout_url }}">로그아웃</a>
         </div>
 
         <section class="hero">
-            <h1>{{ district.name }} 교구 관리</h1>
-            <p>교구 이름과 순서, 교구장, 속 목록을 이 화면에서 바로 수정할 수 있습니다.</p>
+            <div class="hero-layout">
+                <div>
+                    <h1>{{ district.name }} 교구 · {{ district.member_total }}명</h1>
+                    <div class="sub-actions">
+                        <a class="link-pill" href="{% url 'attendance:manage' %}">교구 목록으로 돌아가기</a>
+                    </div>
+                </div>
+                <div class="hero-details">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="update_district">
+                        <div class="leader-header">
+                            <div>이름</div>
+                            <div>링크된 유저</div>
+                        </div>
+                        {% for leader_form in leader_forms %}
+                            <div class="leader-row">
+                                {% for field in leader_form %}
+                                    <div>
+                                        {{ field }}
+                                        {{ field.errors }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                        <button type="submit" class="primary">교구장 저장</button>
+                    </form>
+                </div>
+            </div>
         </section>
 
-        <section class="layout">
-            <article class="panel">
-                <h2>교구 정보</h2>
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="update_district">
-                    {% for field in district_form %}
-                        <div class="field">
-                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                            {{ field }}
-                            {{ field.errors }}
-                        </div>
-                    {% endfor %}
-                    <button type="submit" class="primary">교구 정보 저장</button>
-                </form>
-
-                <h2 style="margin-top:24px;">교구장</h2>
-                {% for leader, form in leader_forms %}
-                    <div class="row-card">
-                        <form method="post">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="save_leader:{{ leader.id }}">
-                            {% for field in form %}
-                                <div class="field">
-                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                    {{ field }}
-                                    {{ field.errors }}
+        <section class="panel">
+            <h2>속 목록</h2>
+            {% if groups %}
+                <div class="group-grid">
+                    {% for group in groups %}
+                        <a class="group-card" href="{% url 'attendance:manage_group' group.id %}">
+                            <div class="group-head">
+                                <div>
+                                    <div class="group-name">{{ group.name }}</div>
+                                    <div class="group-meta">속원 {{ group.member_total }}명</div>
+                                    <div class="group-leaders">
+                                        인도자 {% if group.guide %}{{ group.guide.name }}{% else %}미지정{% endif %}
+                                        · 속장 {% if group.leader %}{{ group.leader.name }}{% else %}미지정{% endif %}
+                                    </div>
                                 </div>
-                            {% endfor %}
-                            <div class="sub-actions">
-                                <button type="submit" class="primary">교구장 저장</button>
+                                <span class="group-arrow">›</span>
                             </div>
-                        </form>
-                        <form method="post" style="margin-top:8px;">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="delete_leader:{{ leader.id }}">
-                            <button type="submit">교구장 삭제</button>
-                        </form>
-                    </div>
-                {% empty %}
-                    <p class="muted">등록된 교구장이 없습니다.</p>
-                {% endfor %}
-
-                <h2 style="margin-top:24px;">교구장 추가</h2>
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="add_leader">
-                    {% for field in add_leader_form %}
-                        <div class="field">
-                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                            {{ field }}
-                            {{ field.errors }}
-                        </div>
+                        </a>
                     {% endfor %}
-                    <button type="submit" class="primary">교구장 추가</button>
-                </form>
-            </article>
+                </div>
+            {% else %}
+                <div class="empty-state">등록된 속이 없습니다.</div>
+            {% endif %}
 
-            <article class="panel">
-                <h2>속 목록</h2>
-                {% for group in groups %}
-                    <div class="row-card">
-                        <strong>{{ group.name }}</strong>
-                        <div class="muted">속장 {% if group.leader %}{{ group.leader.name }}{% else %}미지정{% endif %} · 속원 {{ group.member_total }}명</div>
-                        <div class="sub-actions">
-                            <a class="link-pill" href="{% url 'attendance:manage_group' group.id %}">이 속 관리하기</a>
-                        </div>
-                    </div>
-                {% empty %}
-                    <p class="muted">등록된 속이 없습니다.</p>
-                {% endfor %}
-
-                <h2 style="margin-top:24px;">속 추가</h2>
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="add_group">
+            <h2 style="margin-top:24px;">속 추가</h2>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_group">
+                <div class="field-grid">
                     {% for field in add_group_form %}
                         <div class="field">
                             <label for="{{ field.id_for_label }}">{{ field.label }}</label>
@@ -134,9 +336,11 @@
                             {{ field.errors }}
                         </div>
                     {% endfor %}
-                    <button type="submit" class="primary">속 추가</button>
-                </form>
-            </article>
+                    <div class="field" style="display:flex; align-items:flex-end; margin:0;">
+                        <button type="submit" class="primary" style="width:100%;">속 추가</button>
+                    </div>
+                </div>
+            </form>
         </section>
     </div>
 </body>
