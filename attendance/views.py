@@ -757,7 +757,7 @@ def attendance_check_view(request):
             records_to_create = []
             updated_count = 0
             for member in members:
-                status = _normalize_attendance_status(request.POST.get(f"status_{member.pk}") or AttendanceStatus.ABSENT)
+                status = _normalize_attendance_status(request.POST.get(f"status_{member.pk}") or AttendanceStatus.PRESENT)
                 note = (request.POST.get(f"note_{member.pk}") or "").strip()
                 record = record_map.get(member.pk)
                 if record is None:
@@ -804,7 +804,7 @@ def attendance_check_view(request):
         member_rows.append(
             {
                 "member": member,
-                "status": _normalize_attendance_status(record.status) if record else AttendanceStatus.ABSENT,
+                "status": _normalize_attendance_status(record.status) if record else AttendanceStatus.PRESENT,
                 "note": record.note if record else "",
             }
         )
