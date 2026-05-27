@@ -1056,6 +1056,7 @@ def attendance_report_hub_view(request):
     streak_rows = []
     weekly_rows = []
     weekly_member_rows = []
+    weekly_member_sections = []
     personal_member = None
     personal_rows = []
     personal_last_present = None
