@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.core.mail import EmailMessage
-from django.db.models import Count, Q
+from django.db.models import Count, Max, Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
