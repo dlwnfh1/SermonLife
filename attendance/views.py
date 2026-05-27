@@ -1538,25 +1538,30 @@ def attendance_manage_view(request):
         return guard
 
     church = _get_scope_church(request.user)
-    if request.method == "POST":
-        action = request.POST.get("action")
-        if action == "add_district":
-            district_form = AttendanceDistrictForm(request.POST)
-            if district_form.is_valid():
-                district = district_form.save(commit=False)
-                district.church = church
+    district_form = AttendanceDistrictForm(request.POST or None)
+    if request.method == "POST" and request.POST.get("action") == "add_district":
+        if district_form.is_valid():
+            district = district_form.save(commit=False)
+            district.name = (district.name or "").strip()
+            district.church = church
+            if AttendanceDistrict.objects.filter(church=church, name=district.name).exists():
+                district_form.add_error("name", "같은 이름의 교구가 이미 있습니다.")
+            else:
                 next_sort = (
                     AttendanceDistrict.objects.filter(church=church).aggregate(max_sort=Max("sort_order")).get("max_sort")
                     or 0
                 )
                 district.sort_order = next_sort + 1
                 district.save()
+                if district.name == "교구장":
+                    AttendanceGroup.objects.get_or_create(
+                        church=church,
+                        district=district,
+                        name="교구장",
+                        defaults={"sort_order": 1, "is_active": True},
+                    )
                 messages.success(request, "교구를 추가했습니다.")
                 return redirect("attendance:manage_district", district_id=district.id)
-        else:
-            district_form = AttendanceDistrictForm()
-    else:
-        district_form = AttendanceDistrictForm()
 
     district_count = AttendanceDistrict.objects.filter(church=church).exclude(name="교구장").count()
     group_count = AttendanceGroup.objects.filter(church=church).exclude(district__name="교구장").count()
