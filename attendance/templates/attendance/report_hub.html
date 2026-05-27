@@ -9,38 +9,33 @@
             --ink: #23170f;
             --muted: #6f5e4f;
             --line: #dfcfbb;
+            --panel: rgba(255, 250, 241, 0.94);
             --accent: #a56a3b;
             --accent-strong: #8c5630;
             --danger: #b64b45;
             --danger-soft: #f8d7d3;
-            --panel: rgba(255, 250, 241, 0.94);
-            --success-soft: rgba(93, 136, 86, .12);
             --success-ink: #4f7450;
+            --success-soft: rgba(93, 136, 86, .10);
             --bg: linear-gradient(180deg, #fbf4e9 0%, #f5eee1 100%);
         }
-
         * { box-sizing: border-box; }
-
         body {
             margin: 0;
             font-family: Georgia, "Noto Sans KR", serif;
             color: var(--ink);
             background: var(--bg);
         }
-
         .shell {
             max-width: 1080px;
             margin: 0 auto;
             padding: 24px 22px 56px;
         }
-
         .topbar {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
             margin-bottom: 16px;
         }
-
         .topbar a,
         .topbar .user-pill,
         .back-link,
@@ -60,64 +55,56 @@
             font: inherit;
             font-weight: 700;
         }
-
         .topbar a.is-active,
         .submit-button {
             background: var(--accent);
             color: #fff8ef;
             border-color: var(--accent);
         }
-
         .topbar .user-pill {
             background: rgba(165, 106, 59, .10);
             border-color: rgba(165, 106, 59, .18);
             color: var(--accent-strong);
         }
-
         .panel,
         .report-card,
-        .result-card,
-        .streak-card,
         .summary-card,
         .weekly-card,
+        .result-card,
+        .streak-card,
         .roster-section {
             background: var(--panel);
             border: 1px solid rgba(165, 106, 59, .14);
             box-shadow: 0 20px 48px rgba(133, 96, 52, .09);
         }
-
         .panel {
             border-radius: 28px;
             padding: 24px;
         }
-
-        h1 {
-            margin: 0;
-            font-size: clamp(34px, 5vw, 46px);
+        h1 { margin: 0; font-size: clamp(34px, 5vw, 46px); }
+        h2 { margin: 0; font-size: clamp(24px, 3vw, 30px); }
+        h3 { margin: 0; font-size: 20px; }
+        p { margin: 0; color: var(--muted); line-height: 1.7; }
+        .section { margin-top: 22px; }
+        .section-head,
+        .detail-header,
+        .roster-section-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            gap: 16px;
         }
-
-        h2 {
-            margin: 0;
-            font-size: clamp(24px, 3vw, 30px);
+        .detail-header { margin-bottom: 18px; }
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
         }
-
-        h3 {
-            margin: 0;
-            font-size: 20px;
-        }
-
-        p {
-            margin: 0;
-            color: var(--muted);
-            line-height: 1.7;
-        }
-
         .report-cards {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 18px;
         }
-
         .report-card {
             display: block;
             border-radius: 28px;
@@ -126,43 +113,18 @@
             text-decoration: none;
             transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
         }
-
         .report-card:hover,
         .weekly-card:hover {
             transform: translateY(-2px);
             border-color: rgba(165, 106, 59, .28);
             box-shadow: 0 28px 64px rgba(133, 96, 52, .12);
         }
-
         .report-card strong {
             display: block;
             margin-bottom: 12px;
             font-size: 28px;
         }
-
-        .report-card.is-danger strong {
-            color: var(--danger);
-        }
-
-        .detail-header,
-        .section-head,
-        .roster-section-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: end;
-            gap: 16px;
-        }
-
-        .detail-header {
-            margin-bottom: 18px;
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
+        .report-card.is-danger strong { color: var(--danger); }
         .filter-form {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr)) auto auto;
@@ -170,7 +132,6 @@
             align-items: end;
             margin-bottom: 24px;
         }
-
         .field label {
             display: block;
             margin-bottom: 8px;
@@ -178,7 +139,6 @@
             font-size: 14px;
             font-weight: 700;
         }
-
         .field select,
         .field input[type="text"] {
             width: 100%;
@@ -190,11 +150,6 @@
             color: var(--ink);
             font: inherit;
         }
-
-        .section {
-            margin-top: 22px;
-        }
-
         .summary-grid,
         .absent-list,
         .streak-list,
@@ -204,65 +159,58 @@
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 14px 16px;
         }
-
         .summary-card {
             border-radius: 20px;
             padding: 18px;
         }
-
         .summary-card strong {
             display: block;
             margin-top: 10px;
             font-size: 32px;
             color: var(--accent-strong);
         }
-
-        .summary-card.is-danger strong {
-            color: var(--danger);
-        }
-
+        .summary-card.is-danger strong { color: var(--danger); }
         .weekly-card {
             display: block;
             border-radius: 20px;
             padding: 18px;
             color: inherit;
             text-decoration: none;
-            transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
         }
-
-        .weekly-card p {
-            margin-top: 6px;
-        }
-
+        .weekly-card p { margin-top: 6px; }
         .weekly-badges {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
             margin-top: 12px;
         }
-
-        .weekly-badge {
+        .weekly-badge,
+        .status-pill,
+        .absent-badge,
+        .streak-badge {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             padding: 7px 12px;
             border-radius: 999px;
-            background: rgba(93, 136, 86, .10);
-            border: 1px solid rgba(93, 136, 86, .18);
-            color: var(--success-ink);
-            font-size: 12px;
-            font-weight: 700;
+            font-size: 13px;
+            font-weight: 800;
             white-space: nowrap;
         }
-
+        .weekly-badge,
+        .status-pill {
+            background: var(--success-soft);
+            border: 1px solid rgba(93, 136, 86, .18);
+            color: var(--success-ink);
+        }
         .weekly-badge.is-danger,
+        .status-pill.is-absent,
         .absent-badge,
         .streak-badge {
             background: var(--danger-soft);
-            border-color: rgba(182, 75, 69, .28);
+            border: 1px solid rgba(182, 75, 69, .28);
             color: var(--danger);
         }
-
         .card-link-hint {
             display: inline-flex;
             align-items: center;
@@ -275,72 +223,52 @@
             font-size: 12px;
             font-weight: 800;
         }
-
         .result-card,
         .streak-card {
             display: flex;
             align-items: center;
-            justify-content: flex-start;
             gap: 10px;
             min-height: 52px;
             padding: 12px 14px;
             border-radius: 14px;
             background: #fffdfa;
         }
-
-        .absent-badge,
-        .streak-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 8px 12px;
-            border-radius: 999px;
-            font-size: 13px;
-            font-weight: 800;
-            white-space: nowrap;
-        }
-
         .result-name,
-        .streak-name {
+        .streak-name,
+        .roster-name {
             font-size: 17px;
             font-weight: 700;
             line-height: 1.3;
         }
-
         .result-meta,
-        .streak-meta {
+        .streak-meta,
+        .roster-meta {
             margin-top: 2px;
             color: var(--muted);
             font-size: 13px;
         }
-
         .roster-sections {
             display: grid;
             gap: 18px;
         }
-
         .roster-section {
             border-radius: 24px;
             padding: 18px;
         }
-
         .roster-section-subtitle {
             color: var(--accent-strong);
             font-size: 14px;
             font-weight: 700;
             white-space: nowrap;
         }
-
         .roster-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 12px 14px;
         }
-
         .roster-item {
             display: flex;
             align-items: center;
-            justify-content: flex-start;
             gap: 10px;
             min-height: 48px;
             padding: 10px 12px;
@@ -349,46 +277,7 @@
             border: 1px solid rgba(165, 106, 59, .12);
             box-shadow: 0 4px 10px rgba(133, 96, 52, .05);
         }
-
-        .roster-main {
-            min-width: 0;
-        }
-
-        .roster-name {
-            font-size: 17px;
-            font-weight: 700;
-            line-height: 1.3;
-            word-break: keep-all;
-        }
-
-        .roster-meta {
-            margin-top: 2px;
-            color: var(--muted);
-            font-size: 13px;
-        }
-
-        .status-pill {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 52px;
-            padding: 7px 12px;
-            border-radius: 999px;
-            background: rgba(93, 136, 86, .10);
-            border: 1px solid rgba(93, 136, 86, .18);
-            color: var(--success-ink);
-            font-size: 13px;
-            font-weight: 800;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-
-        .status-pill.is-absent {
-            color: var(--danger);
-            border-color: rgba(182, 75, 69, .32);
-            background: #ffe7e3;
-        }
-
+        .roster-main { min-width: 0; }
         .search-match-link {
             display: block;
             padding: 12px 14px;
@@ -399,13 +288,11 @@
             text-decoration: none;
             box-shadow: 0 6px 16px rgba(133, 96, 52, .06);
         }
-
         .search-match-link strong {
             display: block;
             font-size: 17px;
             margin-bottom: 4px;
         }
-
         .empty-state {
             padding: 20px;
             border-radius: 18px;
@@ -413,20 +300,10 @@
             border: 1px dashed rgba(165, 106, 59, .26);
             color: var(--muted);
         }
-
         @media (max-width: 900px) {
-            .shell {
-                padding: 18px 14px 42px;
-            }
-
-            .report-cards {
-                grid-template-columns: 1fr;
-            }
-
-            .filter-form {
-                grid-template-columns: 1fr 1fr;
-            }
-
+            .shell { padding: 18px 14px 42px; }
+            .report-cards { grid-template-columns: 1fr; }
+            .filter-form { grid-template-columns: 1fr 1fr; }
             .summary-grid,
             .absent-list,
             .streak-list,
@@ -436,29 +313,20 @@
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
-
         @media (max-width: 640px) {
             .topbar {
                 display: grid;
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
-
-            .filter-form {
-                grid-template-columns: 1fr;
-            }
-
+            .filter-form { grid-template-columns: 1fr; }
             .summary-grid,
             .streak-list,
             .search-match-list,
-            .weekly-grid {
-                grid-template-columns: 1fr;
-            }
-
+            .weekly-grid { grid-template-columns: 1fr; }
             .absent-list {
                 grid-template-columns: repeat(3, minmax(0, 1fr));
                 gap: 8px;
             }
-
             .result-card {
                 flex-direction: column;
                 align-items: flex-start;
@@ -466,47 +334,22 @@
                 min-height: 0;
                 padding: 10px;
             }
-
-            .result-name {
-                font-size: 14px;
-                line-height: 1.3;
-            }
-
-            .result-meta {
-                font-size: 11px;
-                line-height: 1.4;
-            }
-
-            .absent-badge {
-                padding: 6px 10px;
-                font-size: 12px;
-            }
-
+            .result-name { font-size: 14px; }
+            .result-meta { font-size: 11px; }
+            .absent-badge { padding: 6px 10px; font-size: 12px; }
             .roster-grid {
                 grid-template-columns: repeat(3, minmax(0, 1fr));
                 gap: 8px;
             }
-
             .roster-item {
                 flex-direction: column;
                 align-items: flex-start;
-                justify-content: flex-start;
                 gap: 6px;
                 min-height: 0;
                 padding: 10px;
             }
-
-            .roster-name {
-                font-size: 14px;
-                line-height: 1.3;
-            }
-
-            .status-pill {
-                min-width: 0;
-                padding: 6px 10px;
-                font-size: 12px;
-            }
-
+            .roster-name { font-size: 14px; }
+            .status-pill { min-width: 0; padding: 6px 10px; font-size: 12px; }
             .roster-section-head,
             .detail-header,
             .section-head {
@@ -515,7 +358,6 @@
                 gap: 8px;
             }
         }
-
         @media (max-width: 420px) {
             .absent-list,
             .roster-grid {
@@ -543,19 +385,19 @@
                 <div class="report-cards">
                     <a class="report-card" href="{% url 'attendance:report_hub' %}?report=weekly">
                         <strong>주간 출석 현황</strong>
-                        <p>특정 주일 기준으로 전교인, 교구, 속 단위의 출석 현황과 상세 명단을 다시 확인합니다.</p>
+                        <p>특정 주일 기준으로 전교인, 교구, 속 단위 출석 현황과 상세 명단을 다시 확인합니다.</p>
                     </a>
                     <a class="report-card is-danger" href="{% url 'attendance:report_hub' %}?report=absent">
                         <strong>결석자 리포트</strong>
-                        <p>특정 주일의 결석자를 교구와 속 기준으로 빠르게 모아 봅니다.</p>
+                        <p>특정 주일의 결석자만 교구와 속 기준으로 모아 빠르게 확인합니다.</p>
                     </a>
                     <a class="report-card" href="{% url 'attendance:report_hub' %}?report=personal">
                         <strong>개인별 리포트</strong>
-                        <p>교구, 속, 이름 검색으로 한 사람의 최근 출석 이력을 확인합니다.</p>
+                        <p>교구, 속, 이름 검색으로 한 사람의 최근 출석 이력과 연속 결석 상태를 확인합니다.</p>
                     </a>
                     <a class="report-card is-danger" href="{% url 'attendance:report_hub' %}?report=streak">
                         <strong>연속 결석자</strong>
-                        <p>가장 최근 주일을 기준으로 연속 결석 중인 교인을 주수별로 확인합니다.</p>
+                        <p>가장 최근 주일을 기준으로 2주 이상 연속 결석 중인 교인을 주수별로 확인합니다.</p>
                     </a>
                 </div>
             {% else %}
@@ -630,8 +472,8 @@
                         </div>
                         <div class="field">
                             <label for="member">교인 선택</label>
-                            <select id="member" name="member" data-autosubmit="member">
-                                <option value="">교인을 선택해 주세요</option>
+                            <select id="member" name="member">
+                                <option value="">교인을 선택하세요</option>
                                 {% for member in personal_member_options %}
                                     <option value="{{ member.id }}" {% if personal_member and personal_member.id == member.id %}selected{% endif %}>{{ member.name }}</option>
                                 {% endfor %}
@@ -665,7 +507,7 @@
                         </div>
 
                         {% if selected_group %}
-                            <div class="roster-grid">
+                            <div class="roster-grid section">
                                 {% for row in weekly_member_rows %}
                                     <div class="roster-item">
                                         <div class="roster-main">
@@ -676,12 +518,12 @@
                                         </span>
                                     </div>
                                 {% empty %}
-                                    <div class="empty-state">해당 속의 출석 기록이 없습니다.</div>
+                                    <div class="empty-state">표시할 속원 출석 정보가 없습니다.</div>
                                 {% endfor %}
                             </div>
                         {% else %}
                             {% if selected_district %}
-                                <div class="weekly-grid">
+                                <div class="weekly-grid section">
                                     {% for row in weekly_rows %}
                                         <a class="weekly-card" href="{% url 'attendance:report_hub' %}?report=weekly&session={{ selected_session.id }}&district={{ selected_district.id }}&group={{ row.id }}">
                                             <strong>{{ row.name }}</strong>
@@ -695,53 +537,52 @@
                                             <span class="card-link-hint">눌러서 속원별 상세 보기 ›</span>
                                         </a>
                                     {% empty %}
-                                        <div class="empty-state">선택한 주일의 출석 집계가 없습니다.</div>
+                                        <div class="empty-state">선택한 교구의 속 출석 현황이 없습니다.</div>
                                     {% endfor %}
                                 </div>
                             {% endif %}
 
                             {% if weekly_member_sections %}
-                                <div class="section">
+                                <div class="section roster-sections">
                                     {% if selected_district %}
                                         <div class="section-head">
                                             <h2>{{ selected_district.name }} 교구 전체 출석 상세</h2>
                                         </div>
                                     {% endif %}
-                                    <div class="roster-sections">
-                                        {% for section in weekly_member_sections %}
-                                            <div class="roster-section">
-                                                <div class="roster-section-head">
-                                                    <h3>{{ section.title }}</h3>
-                                                    <span class="roster-section-subtitle">{{ section.subtitle }}</span>
-                                                </div>
-                                                <div class="roster-grid">
-                                                    {% for row in section.rows %}
-                                                        <div class="roster-item">
-                                                            <div class="roster-main">
-                                                                <div class="roster-name">{{ row.member_name }}</div>
-                                                            </div>
-                                                            <span class="status-pill {% if row.status != 'present' %}is-absent{% endif %}">
-                                                                {% if row.status == 'present' %}출석{% else %}결석{% endif %}
-                                                            </span>
-                                                        </div>
-                                                    {% endfor %}
-                                                </div>
+                                    {% for section in weekly_member_sections %}
+                                        <section class="roster-section">
+                                            <div class="roster-section-head">
+                                                <h3>{{ section.title }}</h3>
+                                                <span class="roster-section-subtitle">{{ section.subtitle }}</span>
                                             </div>
-                                        {% endfor %}
-                                    </div>
+                                            <div class="roster-grid section">
+                                                {% for row in section.rows %}
+                                                    <div class="roster-item">
+                                                        <div class="roster-main">
+                                                            <div class="roster-name">{{ row.member_name }}</div>
+                                                        </div>
+                                                        <span class="status-pill {% if row.status != 'present' %}is-absent{% endif %}">
+                                                            {% if row.status == 'present' %}출석{% else %}결석{% endif %}
+                                                        </span>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </section>
+                                    {% endfor %}
                                 </div>
                             {% endif %}
                         {% endif %}
                     </div>
                 {% elif selected_report == "absent" %}
-                    <div class="summary-grid">
-                        <article class="summary-card is-danger">
-                            <h3>결석자 수</h3>
-                            <strong>{{ absent_rows|length }}</strong>
-                        </article>
+                    <div class="section">
+                        <div class="summary-grid">
+                            <div class="summary-card is-danger">
+                                <span>결석자 수</span>
+                                <strong>{{ absent_rows|length }}</strong>
+                            </div>
+                        </div>
                     </div>
                     <div class="section">
-                        <h2>결석자 명단</h2>
                         {% if absent_rows %}
                             <div class="absent-list">
                                 {% for row in absent_rows %}
@@ -755,14 +596,14 @@
                                 {% endfor %}
                             </div>
                         {% else %}
-                            <div class="empty-state">선택한 조건에 결석자가 없습니다.</div>
+                            <div class="empty-state">선택한 조건에 해당하는 결석자가 없습니다.</div>
                         {% endif %}
                     </div>
                 {% elif selected_report == "streak" %}
                     <div class="section">
                         <h2>{% if selected_min_weeks == 5 %}5주 이상 연속 결석자{% else %}{{ selected_min_weeks }}주 연속 결석자{% endif %}</h2>
                         {% if streak_rows %}
-                            <div class="streak-list">
+                            <div class="streak-list section">
                                 {% for row in streak_rows %}
                                     <div class="streak-card">
                                         <span class="streak-badge">{{ row.streak_weeks }}주</span>
@@ -774,14 +615,14 @@
                                 {% endfor %}
                             </div>
                         {% else %}
-                            <div class="empty-state">현재 조건에 맞는 연속 결석자가 없습니다.</div>
+                            <div class="empty-state">조건에 맞는 연속 결석자가 없습니다.</div>
                         {% endif %}
                     </div>
                 {% elif selected_report == "personal" %}
                     {% if personal_search_matches %}
                         <div class="section">
-                            <h2>이름 검색 결과</h2>
-                            <div class="search-match-list">
+                            <h2>검색 결과</h2>
+                            <div class="search-match-list section">
                                 {% for member in personal_search_matches %}
                                     <a class="search-match-link" href="{% url 'attendance:report_hub' %}?report=personal{% if selected_district %}&district={{ selected_district.id }}{% endif %}{% if selected_group %}&group={{ selected_group.id }}{% endif %}&member={{ member.id }}">
                                         <strong>{{ member.name }}</strong>
@@ -793,23 +634,23 @@
                     {% endif %}
 
                     {% if personal_member %}
-                        <div class="summary-grid">
-                            <article class="summary-card">
-                                <h3>소속</h3>
+                        <div class="section summary-grid">
+                            <div class="summary-card">
+                                <span>소속</span>
                                 <strong>{{ personal_member.group.district.name }}</strong>
                                 <p>{{ personal_member.group.name }}</p>
-                            </article>
-                            <article class="summary-card">
-                                <h3>마지막 출석일</h3>
+                            </div>
+                            <div class="summary-card">
+                                <span>마지막 출석일</span>
                                 <strong>{% if personal_last_present %}{{ personal_last_present|date:"Y-m-d" }}{% else %}없음{% endif %}</strong>
-                            </article>
-                            <article class="summary-card is-danger">
-                                <h3>현재 연속 결석</h3>
+                            </div>
+                            <div class="summary-card is-danger">
+                                <span>현재 연속 결석</span>
                                 <strong>{{ personal_current_streak }}주</strong>
-                            </article>
+                            </div>
                         </div>
+
                         <div class="section">
-                            <h2>최근 8주 출석 이력</h2>
                             {% if personal_rows %}
                                 <div class="roster-grid">
                                     {% for row in personal_rows %}
@@ -824,11 +665,11 @@
                                     {% endfor %}
                                 </div>
                             {% else %}
-                                <div class="empty-state">선택한 교인의 출석 이력이 없습니다.</div>
+                                <div class="empty-state">표시할 개인 출석 기록이 없습니다.</div>
                             {% endif %}
                         </div>
                     {% elif not personal_search_matches %}
-                        <div class="empty-state">교구와 속을 고른 뒤 교인을 선택하거나, 이름으로 바로 찾아주세요.</div>
+                        <div class="empty-state">교구/속을 선택하거나 이름으로 교인을 찾아 주세요.</div>
                     {% endif %}
                 {% endif %}
             {% endif %}
@@ -836,26 +677,27 @@
     </div>
 
     <script>
-        document.querySelectorAll("[data-autosubmit]").forEach(function (element) {
-            element.addEventListener("change", function () {
-                const form = element.form;
-                if (!form) {
-                    return;
-                }
+        document.querySelectorAll("[data-autosubmit]").forEach((element) => {
+            element.addEventListener("change", () => {
+                const form = document.getElementById("report-filter-form");
+                if (!form) return;
+
                 if (element.dataset.autosubmit === "district") {
-                    const group = form.querySelector("select[name='group']");
-                    const member = form.querySelector("select[name='member']");
-                    const search = form.querySelector("input[name='member_search']");
-                    if (group) group.value = "";
-                    if (member) member.value = "";
-                    if (search) search.value = "";
+                    const groupField = document.getElementById("group");
+                    const memberField = document.getElementById("member");
+                    const memberSearchField = document.getElementById("member_search");
+                    if (groupField) groupField.value = "";
+                    if (memberField) memberField.value = "";
+                    if (memberSearchField) memberSearchField.value = "";
                 }
+
                 if (element.dataset.autosubmit === "group") {
-                    const member = form.querySelector("select[name='member']");
-                    const search = form.querySelector("input[name='member_search']");
-                    if (member) member.value = "";
-                    if (search) search.value = "";
+                    const memberField = document.getElementById("member");
+                    const memberSearchField = document.getElementById("member_search");
+                    if (memberField) memberField.value = "";
+                    if (memberSearchField) memberSearchField.value = "";
                 }
+
                 form.submit();
             });
         });
