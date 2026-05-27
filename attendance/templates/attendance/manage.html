@@ -81,8 +81,8 @@
         }
         .summary-card strong {
             display: block;
-            font-size: clamp(28px, 4vw, 40px);
             margin-top: 10px;
+            font-size: clamp(28px, 4vw, 40px);
         }
         .panel {
             border-radius: 28px;
@@ -104,6 +104,46 @@
             color: var(--muted);
             line-height: 1.8;
             margin: 0;
+        }
+        .add-row {
+            margin-bottom: 20px;
+        }
+        .add-row form {
+            display: flex;
+            gap: 10px;
+            align-items: end;
+        }
+        .field {
+            display: grid;
+            gap: 6px;
+            flex: 1;
+        }
+        .field label {
+            color: var(--muted);
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .field input {
+            width: 100%;
+            min-height: 48px;
+            padding: 12px 16px;
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            background: #fff;
+            font: inherit;
+            color: var(--ink);
+        }
+        .add-row button {
+            min-height: 48px;
+            padding: 0 18px;
+            border: 1px solid var(--accent);
+            border-radius: 999px;
+            background: var(--accent);
+            color: #fff8ef;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 24px rgba(133, 96, 52, .08);
         }
         .district-list {
             display: grid;
@@ -214,6 +254,10 @@
             .district-list {
                 grid-template-columns: 1fr;
             }
+            .add-row form {
+                flex-direction: column;
+                align-items: stretch;
+            }
         }
     </style>
 </head>
@@ -250,7 +294,19 @@
         <section class="panel">
             <div class="panel-head">
                 <h2>교구 목록</h2>
-                <p class="panel-copy">교구를 누르면 해당 교구의 교구장, 속 목록, 속원 관리 화면으로 바로 들어갑니다.</p>
+                <p class="panel-copy">교구를 누르면 해당 교구의 교구장, 속 목록, 속원 관리 화면으로 들어갑니다.</p>
+            </div>
+
+            <div class="add-row">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_district">
+                    <div class="field">
+                        <label for="{{ district_form.name.id_for_label }}">교구 추가</label>
+                        {{ district_form.name }}
+                    </div>
+                    <button type="submit">교구 추가</button>
+                </form>
             </div>
 
             <div class="district-list">

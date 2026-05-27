@@ -1538,8 +1538,28 @@ def attendance_manage_view(request):
         return guard
 
     church = _get_scope_church(request.user)
-    district_count = AttendanceDistrict.objects.filter(church=church).count()
-    group_count = AttendanceGroup.objects.filter(church=church).count()
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "add_district":
+            district_form = AttendanceDistrictForm(request.POST)
+            if district_form.is_valid():
+                district = district_form.save(commit=False)
+                district.church = church
+                next_sort = (
+                    AttendanceDistrict.objects.filter(church=church).aggregate(max_sort=Max("sort_order")).get("max_sort")
+                    or 0
+                )
+                district.sort_order = next_sort + 1
+                district.save()
+                messages.success(request, "교구를 추가했습니다.")
+                return redirect("attendance:manage_district", district_id=district.id)
+        else:
+            district_form = AttendanceDistrictForm()
+    else:
+        district_form = AttendanceDistrictForm()
+
+    district_count = AttendanceDistrict.objects.filter(church=church).exclude(name="교구장").count()
+    group_count = AttendanceGroup.objects.filter(church=church).exclude(district__name="교구장").count()
     member_count = AttendanceMember.objects.filter(church=church).count()
     district_leader_count = AttendanceDistrictLeader.objects.filter(district__church=church).count()
 
@@ -1572,6 +1592,7 @@ def attendance_manage_view(request):
             "member_count": member_count,
             "district_leader_count": district_leader_count,
             "district_page": district_page,
+            "district_form": district_form,
             "group_page": group_page,
             "admin_district_url": reverse("admin:attendance_attendancedistrict_changelist"),
             "admin_group_url": reverse("admin:attendance_attendancegroup_changelist"),
