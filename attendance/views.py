@@ -354,7 +354,7 @@ def _build_weekly_pdf_document(church, selected_session, group_queryset, selecte
 
 
 def _can_force_open_attendance(user):
-    return bool(user.is_authenticated and (user.is_superuser or user.is_staff))
+    return bool(user.is_authenticated and user.username == "admin")
 
 
 def _has_attendance_check_override(user):
