@@ -564,6 +564,35 @@ def _get_remembered_attendance_selection(request, church):
     return district, group
 
 
+def _get_check_screen_remembered_selection(request, church):
+    district_id = request.session.get(_ATTENDANCE_LAST_DISTRICT_SESSION_KEY)
+    group_id = request.session.get(_ATTENDANCE_LAST_GROUP_SESSION_KEY)
+
+    district = None
+    group = None
+
+    if district_id:
+        district = AttendanceDistrict.objects.filter(
+            church=church,
+            is_active=True,
+            pk=district_id,
+        ).first()
+
+    if group_id:
+        group = (
+            AttendanceGroup.objects.filter(
+                church=church,
+                is_active=True,
+                district__is_active=True,
+                pk=group_id,
+            )
+            .select_related("district")
+            .first()
+        )
+
+    return district, group
+
+
 def _get_attendance_pin_group(request, church):
     group_id = request.session.get(_ATTENDANCE_PIN_GROUP_SESSION_KEY)
     verified_at_raw = request.session.get(_ATTENDANCE_PIN_VERIFIED_AT_SESSION_KEY)
@@ -848,7 +877,7 @@ def attendance_check_view(request):
     control = _get_attendance_control(church)
     attendance_check_day = _is_attendance_check_day(request, church)
     can_force_attendance_open = _can_force_open_attendance(request.user)
-    remembered_district, remembered_group = _get_remembered_attendance_selection(request, church)
+    remembered_district, remembered_group = _get_check_screen_remembered_selection(request, church)
 
     if request.GET.get("reset") == "1":
         _clear_attendance_pin_session(request)
@@ -859,6 +888,13 @@ def attendance_check_view(request):
         is_active=True,
     ).exclude(name="교구장").order_by("sort_order", "name", "id")
     district_cards = list(district_queryset)
+    special_district = (
+        AttendanceDistrict.objects.filter(church=church, is_active=True, name="교구장")
+        .order_by("sort_order", "name", "id")
+        .first()
+    )
+    if special_district and all(d.pk != special_district.pk for d in district_cards):
+        district_cards.append(special_district)
 
     selected_district = None
     district_id = request.POST.get("district") or request.GET.get("district")
