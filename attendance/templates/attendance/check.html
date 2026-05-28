@@ -226,6 +226,58 @@
             border: 1px solid rgba(165, 106, 59, 0.14);
             color: var(--muted);
         }
+        .confirm-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(33, 22, 13, 0.38);
+            z-index: 1000;
+        }
+        .confirm-overlay.is-open {
+            display: flex;
+        }
+        .confirm-dialog {
+            width: min(100%, 420px);
+            background: #fffaf2;
+            border: 1px solid rgba(165, 106, 59, 0.16);
+            border-radius: 24px;
+            box-shadow: 0 24px 60px rgba(33, 22, 13, 0.22);
+            padding: 24px;
+        }
+        .confirm-dialog h3 {
+            margin: 0 0 10px;
+            font-size: 1.4rem;
+        }
+        .confirm-dialog p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+        .confirm-actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 18px;
+        }
+        .confirm-actions button {
+            width: 100%;
+            min-height: 48px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.92);
+            color: var(--ink);
+        }
+        .confirm-actions .confirm-submit {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff8ef;
+        }
         @media (max-width: 900px) {
             .form-actions {
                 flex-direction: column;
@@ -338,7 +390,7 @@
 
         <section class="panel">
             {% if selected_group %}
-                <form method="post" onsubmit="return confirm('현재 선택한 출석 상태를 제출하시겠습니까? 다시 제출하는 경우에도 기존 내용이 새 내용으로 바뀝니다.');">
+                <form method="post" data-attendance-submit-form>
                     {% csrf_token %}
                     <input type="hidden" name="group" value="{{ selected_group.id }}">
 
@@ -383,5 +435,58 @@
             {% endif %}
         </section>
     </div>
+
+    <div class="confirm-overlay" id="attendanceConfirmOverlay" aria-hidden="true">
+        <div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="attendanceConfirmTitle">
+            <h3 id="attendanceConfirmTitle">출석을 제출할까요?</h3>
+            <p>현재 선택한 출석 상태를 제출합니다. 다시 제출하면 기존 내용은 새 내용으로 바뀝니다.</p>
+            <div class="confirm-actions">
+                <button type="button" id="attendanceConfirmCancel">취소</button>
+                <button type="button" class="confirm-submit" id="attendanceConfirmOk">제출하기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const form = document.querySelector("[data-attendance-submit-form]");
+            const overlay = document.getElementById("attendanceConfirmOverlay");
+            const cancelButton = document.getElementById("attendanceConfirmCancel");
+            const okButton = document.getElementById("attendanceConfirmOk");
+            if (!form || !overlay || !cancelButton || !okButton) {
+                return;
+            }
+
+            let confirmed = false;
+
+            form.addEventListener("submit", function (event) {
+                if (confirmed) {
+                    return;
+                }
+                event.preventDefault();
+                overlay.classList.add("is-open");
+                overlay.setAttribute("aria-hidden", "false");
+            });
+
+            cancelButton.addEventListener("click", function () {
+                overlay.classList.remove("is-open");
+                overlay.setAttribute("aria-hidden", "true");
+            });
+
+            okButton.addEventListener("click", function () {
+                confirmed = true;
+                overlay.classList.remove("is-open");
+                overlay.setAttribute("aria-hidden", "true");
+                form.requestSubmit();
+            });
+
+            overlay.addEventListener("click", function (event) {
+                if (event.target === overlay) {
+                    overlay.classList.remove("is-open");
+                    overlay.setAttribute("aria-hidden", "true");
+                }
+            });
+        })();
+    </script>
 </body>
 </html>
