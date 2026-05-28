@@ -280,7 +280,10 @@ def sync_all_daily_action_reports():
 
 
 def sync_all_user_participation_reports():
-    return [sync_user_participation_report(user) for user in User.objects.filter(is_superuser=False).order_by("username")]
+    return [
+        sync_user_participation_report(user)
+        for user in User.objects.filter(is_superuser=False, userprofile__attendance_only_mode=False).order_by("username")
+    ]
 
 
 def sync_all_content_quality_reports():

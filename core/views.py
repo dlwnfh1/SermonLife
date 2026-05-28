@@ -1956,7 +1956,7 @@ def pastor_reports_view(request):
         force_refresh=force_refresh,
     )
     highlight_summary = _build_highlight_summary(sermon)
-    member_queryset = UserProfile.objects.select_related("user")
+    member_queryset = UserProfile.objects.select_related("user").filter(attendance_only_mode=False)
     if scope_church is not None:
         member_queryset = member_queryset.filter(church=scope_church)
     top_profiles = list(member_queryset.order_by("-points", "user__username")[:20])
@@ -1998,7 +1998,7 @@ def pastor_members_view(request):
         challenge_queryset = challenge_queryset.filter(sermon__church=scope_church)
     available_challenges = list(challenge_queryset.order_by("-week_start", "-id"))
     reference_challenge = _get_default_report_challenge(available_challenges, scope_church)
-    profile_queryset = UserProfile.objects.select_related("user")
+    profile_queryset = UserProfile.objects.select_related("user").filter(attendance_only_mode=False)
     if scope_church is not None:
         profile_queryset = profile_queryset.filter(church=scope_church)
     profiles = list(profile_queryset.order_by("-points", "user__username"))
