@@ -444,7 +444,7 @@
                     <div class="header-actions">
                         {% if selected_report == "weekly" and selected_session %}
                             <a class="back-link" href="{% url 'attendance:weekly_pdf' %}?session={{ selected_session.id }}{% if selected_district %}&district={{ selected_district.id }}{% endif %}{% if selected_group %}&group={{ selected_group.id }}{% endif %}">PDF 다운로드</a>
-                            <a class="back-link" href="{% url 'attendance:weekly_pdf_email' %}?session={{ selected_session.id }}{% if selected_district %}&district={{ selected_district.id }}{% endif %}{% if selected_group %}&group={{ selected_group.id }}{% endif %}">이메일로 보내기</a>
+                            <a class="back-link" href="{% url 'attendance:weekly_pdf_email' %}?session={{ selected_session.id }}{% if selected_district %}&district={{ selected_district.id }}{% endif %}{% if selected_group %}&group={{ selected_group.id }}{% endif %}" onclick="return confirm('현재 보고 있는 출석 현황 PDF를 로그인한 이메일 주소로 보내시겠습니까?');">이메일로 보내기</a>
                         {% endif %}
                         <a class="back-link" href="{% url 'attendance:report_hub' %}">리포트 목록 보기</a>
                     </div>
