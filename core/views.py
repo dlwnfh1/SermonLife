@@ -641,6 +641,8 @@ def _build_home_context(request):
 
     context = {
         "profile": profile,
+        "can_access_attendance": _can_access_attendance_app(request.user),
+        "can_show_attendance_button": _can_show_attendance_button(request.user),
         "active_church": active_church,
         "challenge": challenge,
         "sermon": sermon,
@@ -856,6 +858,29 @@ def _is_pastor_user(user):
         return True
     profile = UserProfile.objects.filter(user=user).first()
     return bool(profile and profile.member_role == "pastor")
+
+
+def _can_access_attendance_app(user):
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser or user.is_staff:
+        return True
+    profile = UserProfile.objects.filter(user=user).only("member_role", "can_manage_attendance").first()
+    if profile and (profile.member_role == "pastor" or profile.can_manage_attendance):
+        return True
+
+    from attendance.models import AttendanceDistrictLeader, AttendanceMember
+
+    if AttendanceDistrictLeader.objects.filter(linked_user=user).exists():
+        return True
+    return AttendanceMember.objects.filter(linked_user=user, led_attendance_groups__isnull=False).exists()
+
+
+def _can_show_attendance_button(user):
+    if not user.is_authenticated:
+        return False
+    profile = UserProfile.objects.filter(user=user).only("can_manage_attendance").first()
+    return bool(profile and profile.can_manage_attendance)
 
 
 def _can_use_audio_transcriber(user):
