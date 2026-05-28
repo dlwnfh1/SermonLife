@@ -1509,9 +1509,19 @@ def attendance_weekly_pdf_email_view(request):
         selected_group=selected_group,
     )
 
+    scope_label = "전교인 전체"
+    if selected_group:
+        scope_label = f"{selected_group.district.name} {selected_group.name}"
+    elif selected_district:
+        scope_label = f"{selected_district.name} 교구"
+
     message = EmailMessage(
-        subject=f"[{church.name}] {selected_session.worship_date:%Y-%m-%d} 주일 출석표",
-        body="현재 보고 있는 주간 출석 현황 PDF를 첨부합니다.",
+        subject=f"[{church.name}] {selected_session.worship_date:%Y-%m-%d} 주일 출석 현황",
+        body=(
+            f"{church.name} {selected_session.worship_date:%Y-%m-%d} 주일 출석 현황 PDF를 보내드립니다.\n\n"
+            f"조회 범위: {scope_label}\n"
+            f"첨부 파일을 확인해 주세요."
+        ),
         from_email=from_email,
         to=[request.user.email],
     )
