@@ -322,6 +322,9 @@
     <div class="shell">
         <div class="topbar">
             {% if attendance_only_mode %}
+                {% if selected_group %}
+                    <span class="user-pill">{{ selected_group.district.name }} {{ selected_group.name }}</span>
+                {% endif %}
                 <a href="{{ logout_url }}">로그아웃</a>
             {% else %}
                 <a href="{{ home_url }}">Word &amp; Life</a>
@@ -355,9 +358,6 @@
             {% if current_session %}
                 <div class="hero-meta">
                     <span>현재 출석표 · {{ current_session.worship_date|date:"Y-m-d" }}</span>
-                    {% if selected_group %}
-                        <span>속원 {{ selected_group.active_member_count }}명{% if selected_group.leader %} · 속장 {{ selected_group.leader.name }}{% endif %}</span>
-                    {% endif %}
                 </div>
             {% endif %}
 
