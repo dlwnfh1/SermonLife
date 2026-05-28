@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.core.mail import EmailMessage
 from django.db.models import Count, Max, Q
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -46,6 +46,55 @@ CHECK_STATUS_CHOICES = (
 )
 _PDF_FONT_NAME = "HYGothic-Medium"
 _PDF_FONT_REGISTERED = False
+
+
+def attendance_pwa_manifest_view(request):
+    return JsonResponse(
+        {
+            "id": "/attendance/check-pwa",
+            "name": "FGMC 주일출석표",
+            "short_name": "주일출석표",
+            "description": "주일 출석을 제출하는 전용 화면입니다.",
+            "start_url": "/attendance/check/",
+            "scope": "/attendance/",
+            "display": "standalone",
+            "background_color": "#fbf3e7",
+            "theme_color": "#a56a3b",
+            "icons": [
+                {
+                    "src": f"{settings.STATIC_URL}core/icons/icon-192.png",
+                    "sizes": "192x192",
+                    "type": "image/png",
+                    "purpose": "any maskable",
+                },
+                {
+                    "src": f"{settings.STATIC_URL}core/icons/icon-512.png",
+                    "sizes": "512x512",
+                    "type": "image/png",
+                    "purpose": "any maskable",
+                },
+            ],
+        }
+    )
+
+
+def attendance_service_worker_view(request):
+    script = """
+self.addEventListener('install', function(event) {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', function(event) {
+  event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('fetch', function() {
+  // no-op service worker for installability within /attendance/ scope
+});
+""".strip()
+    response = HttpResponse(script, content_type="application/javascript; charset=utf-8")
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
 
 
 def _is_pastor_or_admin(user):

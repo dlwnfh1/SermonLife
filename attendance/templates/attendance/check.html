@@ -1,6 +1,13 @@
+{% load static %}
 <!doctype html>
 <html lang="ko">
 <head>
+    <link rel="manifest" href="{% url 'attendance:pwa_manifest' %}">
+    <link rel="apple-touch-icon" href="{% static 'core/icons/apple-touch-icon.png' %}">
+    <meta name="theme-color" content="#a56a3b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="주일출석표">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>출석 체크</title>
@@ -451,6 +458,16 @@
 
     <script>
         (function () {
+            document.title = "주일출석표";
+
+            if ("serviceWorker" in navigator) {
+                window.addEventListener("load", function () {
+                    navigator.serviceWorker.register("{% url 'attendance:service_worker' %}", {
+                        scope: "/attendance/"
+                    }).catch(function () {});
+                });
+            }
+
             const form = document.querySelector("[data-attendance-submit-form]");
             const overlay = document.getElementById("attendanceConfirmOverlay");
             const cancelButton = document.getElementById("attendanceConfirmCancel");

@@ -9,7 +9,9 @@ from .views import (
     attendance_manage_view,
     attendance_report_hub_view,
     attendance_reports_view,
+    attendance_pwa_manifest_view,
     attendance_seed_demo_view,
+    attendance_service_worker_view,
     attendance_weekly_pdf_email_view,
     attendance_weekly_pdf_view,
 )
@@ -19,6 +21,8 @@ app_name = "attendance"
 urlpatterns = [
     path("", attendance_dashboard_view, name="dashboard"),
     path("check/", attendance_check_view, name="check"),
+    path("manifest.json", attendance_pwa_manifest_view, name="pwa_manifest"),
+    path("sw.js", attendance_service_worker_view, name="service_worker"),
     path("force-open-toggle/", attendance_force_open_toggle_view, name="force_open_toggle"),
     path("seed-demo/", attendance_seed_demo_view, name="seed_demo"),
     path("reports/", attendance_reports_view, name="reports"),
