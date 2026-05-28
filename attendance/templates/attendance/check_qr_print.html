@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>출석 QR 인쇄</title>
+    <style>
+        :root {
+            --ink: #23170f;
+            --muted: #6f5e4f;
+            --line: #dfcfbb;
+            --accent: #a56a3b;
+            --accent-strong: #8c5630;
+            --bg: linear-gradient(180deg, #fbf4e9 0%, #f5eee1 100%);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Georgia, "Noto Sans KR", serif;
+            color: var(--ink);
+            background: var(--bg);
+        }
+        .shell {
+            max-width: 920px;
+            margin: 0 auto;
+            padding: 24px 16px 56px;
+        }
+        .topbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        .topbar a,
+        .topbar .user-pill,
+        .actions a,
+        .actions button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 48px;
+            padding: 12px 18px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 10px 24px rgba(133, 96, 52, 0.08);
+            color: var(--ink);
+            text-decoration: none;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .topbar .user-pill {
+            background: rgba(165, 106, 59, 0.10);
+            border-color: rgba(165, 106, 59, 0.18);
+            color: var(--accent-strong);
+        }
+        .card {
+            background: #fffaf2;
+            border: 1px solid rgba(165, 106, 59, 0.14);
+            border-radius: 28px;
+            padding: 28px;
+            box-shadow: 0 24px 60px rgba(133, 96, 52, 0.10);
+        }
+        h1 {
+            margin: 0 0 10px;
+            font-size: clamp(34px, 5vw, 52px);
+        }
+        .copy {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.8;
+        }
+        .qr-layout {
+            display: grid;
+            grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+            gap: 28px;
+            align-items: center;
+            margin-top: 26px;
+        }
+        .qr-box {
+            display: grid;
+            place-items: center;
+            padding: 20px;
+            border-radius: 28px;
+            background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,236,221,.92));
+            border: 1px solid rgba(165, 106, 59, 0.14);
+        }
+        .qr-box img {
+            width: min(100%, 280px);
+            height: auto;
+            display: block;
+        }
+        .steps {
+            display: grid;
+            gap: 14px;
+        }
+        .step {
+            padding: 16px 18px;
+            border-radius: 20px;
+            background: #f8efe2;
+            border: 1px solid #ead8c1;
+        }
+        .step strong {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--accent-strong);
+            font-size: 1rem;
+        }
+        .step p {
+            margin: 0;
+            color: var(--ink);
+            line-height: 1.7;
+        }
+        .link-box {
+            margin-top: 20px;
+            padding: 16px 18px;
+            border-radius: 20px;
+            background: #f8efe2;
+            border: 1px solid #ead8c1;
+        }
+        .link-box code {
+            display: block;
+            margin-top: 8px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: #fff;
+            border: 1px solid var(--line);
+            color: var(--accent-strong);
+            font-size: 0.95rem;
+            word-break: break-all;
+        }
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 24px;
+        }
+        .actions button {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff8ef;
+        }
+        @media (max-width: 760px) {
+            .qr-layout {
+                grid-template-columns: 1fr;
+            }
+            .topbar {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .topbar a,
+            .topbar .user-pill {
+                width: 100%;
+                padding: 12px 10px;
+                text-align: center;
+            }
+        }
+        @media print {
+            body {
+                background: #fff;
+            }
+            .shell {
+                max-width: none;
+                padding: 0;
+            }
+            .topbar,
+            .actions {
+                display: none !important;
+            }
+            .card {
+                border: 0;
+                box-shadow: none;
+                padding: 0;
+            }
+            .qr-box,
+            .step,
+            .link-box {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <div class="topbar">
+            <a href="{{ home_url }}">Word &amp; Life</a>
+            <a href="{% url 'attendance:dashboard' %}">출석 대시보드</a>
+            <a href="{% url 'attendance:report_hub' %}">리포트</a>
+            <a href="{% url 'attendance:manage' %}">교구/속 관리</a>
+            <span class="user-pill">{{ request.user.get_username }}</span>
+            <a href="{{ logout_url }}">로그아웃</a>
+        </div>
+
+        <section class="card">
+            <h1>출석 QR 코드</h1>
+            <p class="copy">{{ active_church.name }} 속장들이 이 QR 코드를 스캔하면 주일출석표 첫 화면으로 바로 들어갑니다. 속장들은 들어간 뒤 자기 교구와 속을 선택하고 PIN을 입력하면 됩니다.</p>
+
+            <div class="qr-layout">
+                <div class="qr-box">
+                    <img src="{{ check_qr_svg_url }}" alt="주일출석표 QR 코드">
+                </div>
+
+                <div>
+                    <div class="steps">
+                        <div class="step">
+                            <strong>1. QR 스캔</strong>
+                            <p>휴대폰 카메라로 QR 코드를 찍으면 주일출석표 화면이 열립니다.</p>
+                        </div>
+                        <div class="step">
+                            <strong>2. 교구와 속 선택</strong>
+                            <p>열린 화면에서 본인 교구와 속을 선택합니다.</p>
+                        </div>
+                        <div class="step">
+                            <strong>3. PIN 입력 후 제출</strong>
+                            <p>속 PIN을 입력하고 출석표를 열어 출석을 제출합니다.</p>
+                        </div>
+                    </div>
+
+                    <div class="link-box">
+                        직접 접속 주소
+                        <code>{{ check_url }}</code>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button type="button" onclick="window.print()">인쇄하기</button>
+                <a href="{{ check_url }}">출석 화면 열기</a>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

@@ -1,5 +1,6 @@
 from datetime import timedelta
 from math import ceil
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib import messages
@@ -12,6 +13,9 @@ from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from reportlab.graphics import renderSVG
+from reportlab.graphics.barcode import qr
+from reportlab.graphics.shapes import Drawing
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfbase import pdfmetrics
@@ -100,6 +104,46 @@ self.addEventListener('fetch', function() {
     response = HttpResponse(script, content_type="application/javascript; charset=utf-8")
     response["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return response
+
+
+def _build_attendance_check_entry_url(request):
+    return request.build_absolute_uri(reverse("attendance:check"))
+
+
+def _build_attendance_qr_svg(url, size=260):
+    widget = qr.QrCodeWidget(url)
+    bounds = widget.getBounds()
+    width = bounds[2] - bounds[0]
+    height = bounds[3] - bounds[1]
+    drawing = Drawing(size, size, transform=[size / width, 0, 0, size / height, 0, 0])
+    drawing.add(widget)
+    return renderSVG.drawToString(drawing)
+
+
+def attendance_check_qr_svg_view(request):
+    svg = _build_attendance_qr_svg(_build_attendance_check_entry_url(request))
+    response = HttpResponse(svg, content_type="image/svg+xml; charset=utf-8")
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
+
+
+@login_required(login_url="core:login")
+def attendance_check_qr_print_view(request):
+    if not _can_access_attendance(request.user):
+        return redirect("attendance:dashboard")
+
+    church = _get_scope_church(request.user)
+    return render(
+        request,
+        "attendance/check_qr_print.html",
+        {
+            "active_church": church,
+            "active_attendance_tab": "manage",
+            "check_url": _build_attendance_check_entry_url(request),
+            "check_qr_svg_url": reverse("attendance:check_qr_svg"),
+            **_build_church_nav_context(church),
+        },
+    )
 
 
 def _is_pastor_or_admin(user):

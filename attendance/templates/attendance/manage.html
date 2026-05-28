@@ -95,6 +95,25 @@
             gap: 16px;
             margin-bottom: 18px;
         }
+        .panel-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .panel-actions a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 46px;
+            padding: 10px 16px;
+            border-radius: 999px;
+            text-decoration: none;
+            color: var(--ink);
+            background: #f5e7d4;
+            border: 1px solid var(--line);
+            font-weight: 700;
+            box-shadow: 0 10px 24px rgba(133, 96, 52, .08);
+        }
         h2 {
             margin: 0;
             font-size: 30px;
@@ -268,6 +287,7 @@
             <a href="{% url 'attendance:dashboard' %}">출석 대시보드</a>
             <a href="{% url 'attendance:report_hub' %}">리포트</a>
             <a href="{% url 'attendance:manage' %}" class="is-active">교구/속 관리</a>
+            <a href="{% url 'attendance:check_qr_print' %}">출석 QR</a>
             <span class="user-pill">{{ request.user.get_username }}</span>
             <a href="{{ logout_url }}">로그아웃</a>
         </div>
