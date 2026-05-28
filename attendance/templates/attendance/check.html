@@ -379,13 +379,15 @@
                 </div>
             {% endif %}
 
-            <div class="group-pills">
-                {% for group in group_cards %}
-                    <a href="{% url 'attendance:check' %}?group={{ group.id }}" class="{% if selected_group and selected_group.id == group.id %}is-active{% endif %}">
-                        {{ group.district.name }} · {{ group.name }}
-                    </a>
-                {% endfor %}
-            </div>
+            {% if not attendance_only_mode %}
+                <div class="group-pills">
+                    {% for group in group_cards %}
+                        <a href="{% url 'attendance:check' %}?group={{ group.id }}" class="{% if selected_group and selected_group.id == group.id %}is-active{% endif %}">
+                            {{ group.district.name }} · {{ group.name }}
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </section>
 
         <section class="panel">
