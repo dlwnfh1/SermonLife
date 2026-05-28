@@ -270,7 +270,6 @@
     <div class="shell">
         <div class="topbar">
             {% if attendance_only_mode %}
-                <span class="user-pill">{{ request.user.get_username }}</span>
                 <a href="{{ logout_url }}">로그아웃</a>
             {% else %}
                 <a href="{{ home_url }}">Word &amp; Life</a>
@@ -304,9 +303,6 @@
             {% if current_session %}
                 <div class="hero-meta">
                     <span>현재 출석표 · {{ current_session.worship_date|date:"Y-m-d" }}</span>
-                    {% if selected_group %}
-                        <span>{{ selected_group.district.name }} · {{ selected_group.name }}</span>
-                    {% endif %}
                     {% if selected_group %}
                         <span>속원 {{ selected_group.active_member_count }}명{% if selected_group.leader %} · 속장 {{ selected_group.leader.name }}{% endif %}</span>
                     {% endif %}
@@ -342,9 +338,6 @@
 
         <section class="panel">
             {% if selected_group %}
-                <h2>{{ selected_group.district.name }} · {{ selected_group.name }} 출석 체크</h2>
-                <p class="panel-copy">각 속원마다 `출석` 또는 `결석`만 선택하고, 필요하면 메모를 남겨 주세요.</p>
-
                 <form method="post" onsubmit="return confirm('현재 선택한 출석 상태를 제출하시겠습니까? 다시 제출하는 경우에도 기존 내용이 새 내용으로 바뀝니다.');">
                     {% csrf_token %}
                     <input type="hidden" name="group" value="{{ selected_group.id }}">
