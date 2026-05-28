@@ -62,6 +62,14 @@ class AttendanceGroup(models.Model):
         blank=True,
         verbose_name="속장",
     )
+    attendance_login_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="attendance_login_groups",
+        null=True,
+        blank=True,
+        verbose_name="출석 전용 로그인",
+    )
     is_active = models.BooleanField(default=True)
     sort_order = models.PositiveIntegerField(default=100)
     created_at = models.DateTimeField(auto_now_add=True)

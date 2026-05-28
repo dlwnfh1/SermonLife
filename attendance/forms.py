@@ -54,11 +54,15 @@ class AttendanceGroupForm(forms.ModelForm):
 
     class Meta:
         model = AttendanceGroup
-        fields = ["guide", "leader"]
+        fields = ["guide", "leader", "attendance_login_user"]
+        labels = {
+            "attendance_login_user": "출석 전용 로그인",
+        }
 
     def __init__(self, *args, group=None, district=None, **kwargs):
         super().__init__(*args, **kwargs)
         target_group = group or (self.instance if getattr(self.instance, "pk", None) else None)
+        target_district = district or (target_group.district if target_group else None)
 
         member_queryset = AttendanceMember.objects.none()
         if target_group:
@@ -69,6 +73,11 @@ class AttendanceGroupForm(forms.ModelForm):
             )
         self.fields["guide"].queryset = member_queryset
         self.fields["leader"].queryset = member_queryset
+        user_queryset = User.objects.all().order_by("username")
+        if target_district is not None:
+            user_queryset = user_queryset.filter(userprofile__church=target_district.church).order_by("username")
+        self.fields["attendance_login_user"].queryset = user_queryset
+        self.fields["attendance_login_user"].required = False
 
 
 class AttendanceGroupCreateForm(forms.ModelForm):

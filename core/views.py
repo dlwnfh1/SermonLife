@@ -883,6 +883,13 @@ def _can_show_attendance_button(user):
     return bool(profile and profile.can_manage_attendance)
 
 
+def _is_attendance_only_user(user):
+    if not user.is_authenticated:
+        return False
+    profile = UserProfile.objects.filter(user=user).only("attendance_only_mode").first()
+    return bool(profile and profile.attendance_only_mode)
+
+
 def _can_use_audio_transcriber(user):
     if not user.is_authenticated:
         return False
@@ -1123,6 +1130,8 @@ def home_view(request, church_slug=None):
     active_church = _resolve_active_church(request, church_slug)
     if not request.user.is_authenticated:
         return redirect(_church_login_url(active_church))
+    if _is_attendance_only_user(request.user):
+        return redirect("attendance:check")
     context = _build_home_context(request)
     if request.GET.get("prayer_partial") == "1" and context.get("active_home_tab") == "prayer" and context.get("prayer_tab_enabled"):
         return render(request, "core/includes/prayer_tab_content.html", context)
@@ -1166,6 +1175,8 @@ def signup_view(request, church_slug=None):
 def login_view(request, church_slug=None):
     active_church = _resolve_active_church(request, church_slug)
     if request.user.is_authenticated:
+        if _is_attendance_only_user(request.user):
+            return redirect("attendance:check")
         return redirect(_church_home_url(_get_user_church(request.user) or active_church))
 
     form = AuthenticationForm(request, data=request.POST or None)
@@ -1179,6 +1190,8 @@ def login_view(request, church_slug=None):
         _set_active_church_session(request, user_church)
         login(request, user)
         messages.success(request, "로그인되었습니다.")
+        if _is_attendance_only_user(user):
+            return redirect("attendance:check")
         return redirect(_church_home_url(user_church))
 
     context = {

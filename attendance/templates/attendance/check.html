@@ -99,6 +99,7 @@
         .flash { padding: 14px 18px; }
         .flash.success { border-color: rgba(31, 122, 71, 0.3); color: var(--ok); }
         .flash.error { border-color: rgba(184, 87, 43, 0.3); color: var(--warn); }
+        .flash.info { border-color: rgba(165, 106, 59, 0.24); color: var(--accent-strong); }
         .layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; }
         .group-pills { margin-top: 18px; }
         .hero-actions { margin-top: 16px; }
@@ -178,12 +179,17 @@
 <body>
     <div class="shell">
         <div class="topbar">
-            <a href="{{ home_url }}">Word &amp; Life</a>
-            <a href="{% url 'attendance:dashboard' %}">출석 대시보드</a>
-            <a href="{% url 'attendance:report_hub' %}">리포트</a>
-            <a href="{% url 'attendance:manage' %}">교구/속 관리</a>
-            <span class="user-pill">{{ request.user.get_username }}</span>
-            <a href="{{ logout_url }}">로그아웃</a>
+            {% if attendance_only_mode %}
+                <span class="user-pill">{{ request.user.get_username }}</span>
+                <a href="{{ logout_url }}">로그아웃</a>
+            {% else %}
+                <a href="{{ home_url }}">Word &amp; Life</a>
+                <a href="{% url 'attendance:dashboard' %}">출석 대시보드</a>
+                <a href="{% url 'attendance:report_hub' %}">리포트</a>
+                <a href="{% url 'attendance:manage' %}">교구/속 관리</a>
+                <span class="user-pill">{{ request.user.get_username }}</span>
+                <a href="{{ logout_url }}">로그아웃</a>
+            {% endif %}
         </div>
 
         {% if messages %}
@@ -196,16 +202,16 @@
 
         <section class="hero">
             <span class="eyebrow">{{ active_church.name }} 출석 체크</span>
-            <h1>속원이 아닌 계정도 예외 권한으로 출석을 입력할 수 있습니다</h1>
+            <h1>{% if attendance_only_mode %}내 속 주일 출석을 제출합니다{% else %}주일 출석을 속 단위로 입력합니다{% endif %}</h1>
             <p class="subcopy">
                 {% if attendance_check_day %}
-                    지금은 출석 체크가 열려 있습니다. 각 속원을 `출석` 또는 `결석`으로 바로 저장할 수 있습니다.
+                    지금은 출석 체크가 열려 있습니다. 각 속원을 `출석` 또는 `결석`으로 표시해 주세요.
                 {% else %}
-                    오늘은 출석 체크가 닫혀 있습니다. 주일이 아니면 읽기 전용으로 보이고, admin/staff가 `출석 강제 공개`를 켜면 평일에도 입력할 수 있습니다.
+                    오늘은 출석 체크가 닫혀 있습니다. 주일이 아니면 읽기 전용으로 보이고, admin이 `출석 강제 공개`를 켜면 평일에도 입력할 수 있습니다.
                 {% endif %}
             </p>
             {% if attendance_test_mode %}
-                <div class="flash" style="margin-top:16px;">로컬 테스트 모드로 주일 출석 체크 화면이 강제로 열려 있습니다.</div>
+                <div class="flash info" style="margin-top:16px;">로컬 테스트 모드로 주일 출석 체크 화면을 강제로 열어 두었습니다.</div>
             {% endif %}
 
             {% if can_force_attendance_open %}
@@ -251,14 +257,14 @@
                         </div>
                     </div>
                 {% else %}
-                    <div class="empty">출석을 입력할 속이 아직 연결되어 있지 않습니다.</div>
+                    <div class="empty">출석 입력에 연결된 속이 아직 없습니다.</div>
                 {% endif %}
             </aside>
 
             <section class="panel">
                 {% if selected_group %}
                     <h2>{{ selected_group.district.name }} · {{ selected_group.name }} 출석 체크</h2>
-                    <p class="panel-copy">각 속원마다 `출석` 또는 `결석`만 선택하고 필요하면 메모를 남겨 주세요.</p>
+                    <p class="panel-copy">각 속원마다 `출석` 또는 `결석`만 선택하고, 필요하면 메모를 남겨 주세요.</p>
 
                     <form method="post">
                         {% csrf_token %}
@@ -276,7 +282,7 @@
                                         {% for status_value, status_label in status_choices %}
                                             <label class="{% if status_value == 'absent' %}absent-option{% endif %}">
                                                 <input type="radio" name="status_{{ row.member.id }}" value="{{ status_value }}" {% if row.status == status_value %}checked{% endif %} {% if not attendance_check_day %}disabled{% endif %}>
-                                                {{ status_label }}
+                                                {% if status_value == 'present' %}출석{% else %}결석{% endif %}
                                             </label>
                                         {% endfor %}
                                     </div>
@@ -291,15 +297,17 @@
                         <div class="form-actions">
                             {% if attendance_check_day %}
                                 <button type="submit">이 속 출석 저장하기</button>
-                            {% else %}
+                            {% elif not attendance_only_mode %}
                                 <a href="{% url 'attendance:reports' %}">최근 출석 현황 보기</a>
                             {% endif %}
-                            <a href="{% url 'attendance:dashboard' %}">대시보드로 돌아가기</a>
+                            {% if not attendance_only_mode %}
+                                <a href="{% url 'attendance:dashboard' %}">대시보드로 돌아가기</a>
+                            {% endif %}
                         </div>
                     </form>
                 {% else %}
                     <h2>선택된 속이 없습니다</h2>
-                    <p class="panel-copy">출석 체크 입력은 기본적으로 속장만 사용할 수 있습니다. 연결된 속이 없으면 교구/속 관리에서 먼저 확인해 주세요.</p>
+                    <p class="panel-copy">이 계정에 연결된 속이 아직 없으면 출석 체크를 제출할 수 없습니다. 교구/속 관리에서 `출석 전용 로그인`이나 속장 연결을 먼저 확인해 주세요.</p>
                 {% endif %}
             </section>
         </section>

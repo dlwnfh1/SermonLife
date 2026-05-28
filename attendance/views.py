@@ -371,6 +371,19 @@ def _has_attendance_manage_override(user):
     return bool(profile and profile.can_manage_attendance)
 
 
+def _is_attendance_only_user(user):
+    if not user.is_authenticated:
+        return False
+    profile = UserProfile.objects.filter(user=user).only("attendance_only_mode").first()
+    return bool(profile and profile.attendance_only_mode)
+
+
+def _redirect_attendance_only_user_to_check(request):
+    if _is_attendance_only_user(request.user):
+        return redirect("attendance:check")
+    return None
+
+
 def _get_scope_church(user):
     scope_church = _get_access_scope_church(user)
     if scope_church is None:
@@ -388,7 +401,7 @@ def _build_attendance_role_context(user, church):
     )
     led_group_ids = list(
         AttendanceGroup.objects.filter(
-            leader__linked_user=user,
+            Q(leader__linked_user=user) | Q(attendance_login_user=user),
             church=church,
             is_active=True,
         ).values_list("id", flat=True)
@@ -409,7 +422,7 @@ def _can_access_attendance(user):
         return True
     if AttendanceDistrictLeader.objects.filter(linked_user=user).exists():
         return True
-    if AttendanceGroup.objects.filter(leader__linked_user=user, is_active=True).exists():
+    if AttendanceGroup.objects.filter(Q(leader__linked_user=user) | Q(attendance_login_user=user), is_active=True).exists():
         return True
     return False
 
@@ -460,6 +473,8 @@ def _scoped_group_queryset(church, role_context):
 
 
 def _ensure_manage_attendance(request):
+    if _is_attendance_only_user(request.user):
+        return redirect("attendance:check")
     if not (_is_pastor_or_admin(request.user) or _has_attendance_manage_override(request.user)):
         messages.info(request, "교구/속 관리는 목회자와 어드민만 사용할 수 있습니다.")
         return redirect("attendance:dashboard")
@@ -525,6 +540,9 @@ def _seed_demo_attendance_data(seed=20260526, present_rate=0.76):
 
 @login_required(login_url="core:login")
 def attendance_dashboard_view(request):
+    guard = _redirect_attendance_only_user_to_check(request)
+    if guard:
+        return guard
     if not _can_access_attendance(request.user):
         return render(
             request,
@@ -695,12 +713,13 @@ def attendance_dashboard_view(request):
 
 @login_required(login_url="core:login")
 def attendance_check_view(request):
-    if not _can_access_attendance(request.user):
+    attendance_only_mode = _is_attendance_only_user(request.user)
+    if not _can_access_attendance(request.user) and not attendance_only_mode:
         return redirect("attendance:dashboard")
 
     church = _get_scope_church(request.user)
     role_context = _build_attendance_role_context(request.user, church)
-    if not _can_submit_attendance(request.user, role_context):
+    if not _can_submit_attendance(request.user, role_context) and not attendance_only_mode:
         messages.info(request, "출석 체크 입력은 기본적으로 속장만 사용할 수 있습니다. 필요하면 어드민이 사용자별 출석 체크 권한을 열 수 있습니다.")
         return redirect("attendance:dashboard")
 
@@ -815,6 +834,7 @@ def attendance_check_view(request):
         {
             "active_church": church,
             "active_attendance_tab": "check",
+            "attendance_only_mode": attendance_only_mode,
             "group_cards": group_cards,
             "selected_group": selected_group,
             "current_session": current_session,
@@ -864,6 +884,9 @@ def attendance_seed_demo_view(request):
 
 @login_required(login_url="core:login")
 def attendance_reports_view(request):
+    guard = _redirect_attendance_only_user_to_check(request)
+    if guard:
+        return guard
     if not _can_access_attendance(request.user):
         return redirect("attendance:dashboard")
 
@@ -1006,6 +1029,9 @@ def attendance_reports_view(request):
 
 @login_required(login_url="core:login")
 def attendance_report_hub_view(request):
+    guard = _redirect_attendance_only_user_to_check(request)
+    if guard:
+        return guard
     if not _can_access_attendance(request.user):
         return redirect("attendance:dashboard")
 
@@ -1319,6 +1345,9 @@ def attendance_report_hub_view(request):
 
 @login_required(login_url="core:login")
 def attendance_weekly_pdf_view(request):
+    guard = _redirect_attendance_only_user_to_check(request)
+    if guard:
+        return guard
     if not _can_access_attendance(request.user):
         return redirect("attendance:dashboard")
 
@@ -1446,6 +1475,9 @@ def attendance_weekly_pdf_view(request):
 
 @login_required(login_url="core:login")
 def attendance_weekly_pdf_email_view(request):
+    guard = _redirect_attendance_only_user_to_check(request)
+    if guard:
+        return guard
     if not _can_access_attendance(request.user):
         return redirect("attendance:dashboard")
 
@@ -1543,6 +1575,9 @@ def attendance_weekly_pdf_email_view(request):
 
 @login_required(login_url="core:login")
 def attendance_manage_view(request):
+    guard = _redirect_attendance_only_user_to_check(request)
+    if guard:
+        return guard
     guard = _ensure_manage_attendance(request)
     if guard:
         return guard

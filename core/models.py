@@ -646,6 +646,7 @@ class UserProfile(models.Model):
     can_use_audio_transcriber = models.BooleanField(default=False)
     can_manage_attendance = models.BooleanField(default=False)
     can_check_attendance = models.BooleanField(default=False)
+    attendance_only_mode = models.BooleanField(default=False)
 
     def __str__(self):
         return self.user.get_username()

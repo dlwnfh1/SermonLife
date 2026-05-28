@@ -47,20 +47,24 @@ class AttendanceDistrictAdmin(admin.ModelAdmin):
 
 @admin.register(AttendanceGroup)
 class AttendanceGroupAdmin(admin.ModelAdmin):
-    list_display = ("name", "church", "district", "group_leader", "is_active", "sort_order", "member_count")
+    list_display = ("name", "church", "district", "group_leader", "attendance_login", "is_active", "sort_order", "member_count")
     list_filter = ("church", "district", "is_active")
-    search_fields = ("name", "district__name", "leader__name", "church__name")
+    search_fields = ("name", "district__name", "leader__name", "attendance_login_user__username", "church__name")
     list_editable = ("is_active", "sort_order")
-    autocomplete_fields = ("leader",)
+    autocomplete_fields = ("leader", "attendance_login_user")
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related("church", "district", "leader").annotate(
+        return super().get_queryset(request).select_related("church", "district", "leader", "attendance_login_user").annotate(
             member_total=Count("members", distinct=True)
         )
 
     @admin.display(description="속장", ordering="leader__name")
     def group_leader(self, obj):
         return obj.leader.name if obj.leader else "-"
+
+    @admin.display(description="출석 전용 로그인", ordering="attendance_login_user__username")
+    def attendance_login(self, obj):
+        return obj.attendance_login_user.username if obj.attendance_login_user else "-"
 
     @admin.display(description="속원 수")
     def member_count(self, obj):
