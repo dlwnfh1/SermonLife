@@ -70,6 +70,12 @@ class AttendanceGroup(models.Model):
         blank=True,
         verbose_name="출석 전용 로그인",
     )
+    attendance_pin = models.CharField(
+        max_length=5,
+        blank=True,
+        verbose_name="출석 PIN",
+        help_text="5자리 숫자 PIN",
+    )
     is_active = models.BooleanField(default=True)
     sort_order = models.PositiveIntegerField(default=100)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -54,9 +54,9 @@ class AttendanceGroupForm(forms.ModelForm):
 
     class Meta:
         model = AttendanceGroup
-        fields = ["guide", "leader", "attendance_login_user"]
+        fields = ["guide", "leader", "attendance_pin"]
         labels = {
-            "attendance_login_user": "출석 전용 로그인",
+            "attendance_pin": "출석 PIN",
         }
 
     def __init__(self, *args, group=None, district=None, **kwargs):
@@ -73,11 +73,21 @@ class AttendanceGroupForm(forms.ModelForm):
             )
         self.fields["guide"].queryset = member_queryset
         self.fields["leader"].queryset = member_queryset
-        user_queryset = User.objects.all().order_by("username")
-        if target_district is not None:
-            user_queryset = user_queryset.filter(userprofile__church=target_district.church).order_by("username")
-        self.fields["attendance_login_user"].queryset = user_queryset
-        self.fields["attendance_login_user"].required = False
+        self.fields["attendance_pin"].required = False
+        self.fields["attendance_pin"].widget.attrs.update(
+            {
+                "inputmode": "numeric",
+                "pattern": r"\d{5}",
+                "maxlength": "5",
+                "placeholder": "예: 13579",
+            }
+        )
+
+    def clean_attendance_pin(self):
+        pin = (self.cleaned_data.get("attendance_pin") or "").strip()
+        if pin and (not pin.isdigit() or len(pin) != 5):
+            raise forms.ValidationError("출석 PIN은 5자리 숫자로 입력해 주세요.")
+        return pin
 
 
 class AttendanceGroupCreateForm(forms.ModelForm):

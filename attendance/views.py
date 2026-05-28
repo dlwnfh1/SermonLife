@@ -46,6 +46,11 @@ CHECK_STATUS_CHOICES = (
 )
 _PDF_FONT_NAME = "HYGothic-Medium"
 _PDF_FONT_REGISTERED = False
+_ATTENDANCE_PIN_GROUP_SESSION_KEY = "attendance_pin_group_id"
+_ATTENDANCE_PIN_VERIFIED_AT_SESSION_KEY = "attendance_pin_verified_at"
+_ATTENDANCE_PIN_TTL = timedelta(hours=12)
+_ATTENDANCE_LAST_DISTRICT_SESSION_KEY = "attendance_last_district_id"
+_ATTENDANCE_LAST_GROUP_SESSION_KEY = "attendance_last_group_id"
 
 
 def attendance_pwa_manifest_view(request):
@@ -511,6 +516,84 @@ def _is_attendance_check_day(request, church):
     )
 
 
+def _get_attendance_check_church(user):
+    if getattr(user, "is_authenticated", False) and _can_access_attendance(user):
+        return _get_scope_church(user)
+    return Church.get_default()
+
+
+def _clear_attendance_pin_session(request):
+    request.session.pop(_ATTENDANCE_PIN_GROUP_SESSION_KEY, None)
+    request.session.pop(_ATTENDANCE_PIN_VERIFIED_AT_SESSION_KEY, None)
+
+
+def _set_attendance_pin_session(request, group):
+    request.session[_ATTENDANCE_PIN_GROUP_SESSION_KEY] = group.pk
+    request.session[_ATTENDANCE_PIN_VERIFIED_AT_SESSION_KEY] = timezone.now().isoformat()
+    request.session[_ATTENDANCE_LAST_DISTRICT_SESSION_KEY] = group.district_id
+    request.session[_ATTENDANCE_LAST_GROUP_SESSION_KEY] = group.pk
+    request.session.modified = True
+
+
+def _get_remembered_attendance_selection(request, church):
+    district_id = request.session.get(_ATTENDANCE_LAST_DISTRICT_SESSION_KEY)
+    group_id = request.session.get(_ATTENDANCE_LAST_GROUP_SESSION_KEY)
+
+    district = None
+    group = None
+
+    if district_id:
+        district = AttendanceDistrict.objects.filter(
+            church=church,
+            is_active=True,
+            pk=district_id,
+        ).exclude(name="교구장").first()
+
+    if group_id:
+        group = (
+            AttendanceGroup.objects.filter(
+                church=church,
+                is_active=True,
+                district__is_active=True,
+                pk=group_id,
+            )
+            .exclude(district__name="교구장")
+            .first()
+        )
+
+    return district, group
+
+
+def _get_attendance_pin_group(request, church):
+    group_id = request.session.get(_ATTENDANCE_PIN_GROUP_SESSION_KEY)
+    verified_at_raw = request.session.get(_ATTENDANCE_PIN_VERIFIED_AT_SESSION_KEY)
+    if not group_id or not verified_at_raw:
+        return None
+
+    try:
+        verified_at = timezone.datetime.fromisoformat(verified_at_raw)
+    except (TypeError, ValueError):
+        _clear_attendance_pin_session(request)
+        return None
+
+    if timezone.is_naive(verified_at):
+        verified_at = timezone.make_aware(verified_at, timezone.get_current_timezone())
+
+    if timezone.now() - verified_at > _ATTENDANCE_PIN_TTL:
+        _clear_attendance_pin_session(request)
+        return None
+
+    group = (
+        AttendanceGroup.objects.filter(church=church, pk=group_id, is_active=True, district__is_active=True)
+        .select_related("district", "guide", "leader")
+        .annotate(active_member_count=Count("members", filter=Q(members__is_active=True), distinct=True))
+        .first()
+    )
+    if group is None:
+        _clear_attendance_pin_session(request)
+    return group
+
+
 def _scoped_group_queryset(church, role_context):
     queryset = AttendanceGroup.objects.filter(church=church, is_active=True)
     if not role_context["has_full_attendance_access"]:
@@ -760,48 +843,88 @@ def attendance_dashboard_view(request):
     )
 
 
-@login_required(login_url="core:login")
 def attendance_check_view(request):
-    attendance_only_mode = _is_attendance_only_user(request.user)
-    if not _can_access_attendance(request.user) and not attendance_only_mode:
-        return redirect("attendance:dashboard")
-
-    church = _get_scope_church(request.user)
-    role_context = _build_attendance_role_context(request.user, church)
-    if not _can_submit_attendance(request.user, role_context) and not attendance_only_mode:
-        messages.info(request, "출석 체크 입력은 기본적으로 속장만 사용할 수 있습니다. 필요하면 어드민이 사용자별 출석 체크 권한을 열 수 있습니다.")
-        return redirect("attendance:dashboard")
-
+    church = _get_attendance_check_church(request.user)
     control = _get_attendance_control(church)
     attendance_check_day = _is_attendance_check_day(request, church)
-    group_queryset = (
-        _scoped_group_queryset(church, role_context)
-        .select_related("district", "guide", "leader")
-        .annotate(active_member_count=Count("members", filter=Q(members__is_active=True), distinct=True))
-        .order_by("district__sort_order", "sort_order", "name")
-    )
-    group_cards = list(group_queryset)
+    can_force_attendance_open = _can_force_open_attendance(request.user)
+    remembered_district, remembered_group = _get_remembered_attendance_selection(request, church)
 
-    selected_group = None
-    selected_group_id = request.POST.get("group") or request.GET.get("group")
-    if selected_group_id:
+    if request.GET.get("reset") == "1":
+        _clear_attendance_pin_session(request)
+        return redirect("attendance:check")
+
+    district_queryset = AttendanceDistrict.objects.filter(
+        church=church,
+        is_active=True,
+    ).exclude(name="교구장").order_by("sort_order", "name", "id")
+    district_cards = list(district_queryset)
+
+    selected_district = None
+    district_id = request.POST.get("district") or request.GET.get("district")
+    if not district_id and remembered_district is not None:
+        district_id = str(remembered_district.pk)
+    if district_id:
         try:
-            selected_group = next(group for group in group_cards if group.pk == int(selected_group_id))
+            selected_district = next(d for d in district_cards if d.pk == int(district_id))
         except (StopIteration, ValueError):
-            selected_group = None
-    if selected_group is None and group_cards:
-        selected_group = group_cards[0]
+            selected_district = None
 
-    if attendance_check_day:
-        today = timezone.localdate()
-        reference_date = today if today.weekday() == 6 else _last_sunday_for(today)
-        current_session, _ = AttendanceSession.get_or_create_current(
-            church,
-            request.user,
-            reference_date=reference_date,
-        )
-    else:
-        current_session = _get_latest_sunday_session(church)
+    pin_group_queryset = AttendanceGroup.objects.filter(
+        church=church,
+        is_active=True,
+        district__is_active=True,
+    ).select_related("district").order_by("district__sort_order", "sort_order", "name", "id")
+    if selected_district is not None:
+        pin_group_queryset = pin_group_queryset.filter(district=selected_district)
+    pin_groups = list(pin_group_queryset)
+    selected_pin_group_id = request.POST.get("group") or request.GET.get("group")
+    if not selected_pin_group_id and remembered_group is not None:
+        if selected_district is None or remembered_group.district_id == selected_district.pk:
+            selected_pin_group_id = str(remembered_group.pk)
+
+    valid_pin_group_ids = {str(group.pk) for group in pin_groups}
+    if selected_pin_group_id not in valid_pin_group_ids:
+        selected_pin_group_id = ""
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "verify_pin":
+            group_id = request.POST.get("group")
+            pin = (request.POST.get("pin") or "").strip()
+            pin_group = (
+                AttendanceGroup.objects.filter(
+                    church=church,
+                    is_active=True,
+                    district__is_active=True,
+                    pk=group_id,
+                )
+                .select_related("district", "guide", "leader")
+                .annotate(active_member_count=Count("members", filter=Q(members__is_active=True), distinct=True))
+                .first()
+            )
+            if pin_group is None:
+                messages.error(request, "먼저 교구와 속을 선택해 주세요.")
+            elif not pin_group.attendance_pin:
+                messages.error(request, "이 속에는 아직 출석 PIN이 설정되어 있지 않습니다.")
+            elif pin_group.attendance_pin != pin:
+                messages.error(request, "PIN 번호가 맞지 않습니다. 다시 확인해 주세요.")
+            else:
+                _set_attendance_pin_session(request, pin_group)
+                return redirect("attendance:check")
+        elif action == "reset_pin_session":
+            _clear_attendance_pin_session(request)
+            return redirect("attendance:check")
+
+    selected_group = _get_attendance_pin_group(request, church)
+
+    today = timezone.localdate()
+    reference_date = today if today.weekday() == 6 else _last_sunday_for(today)
+    current_session, _ = AttendanceSession.get_or_create_current(
+        church,
+        request.user if request.user.is_authenticated else None,
+        reference_date=reference_date,
+    )
 
     members = []
     record_map = {}
@@ -814,57 +937,60 @@ def attendance_check_view(request):
         existing_records = AttendanceRecord.objects.filter(session=current_session, member__in=members)
         record_map = {record.member_id: record for record in existing_records}
 
-    if request.method == "POST":
-        if not attendance_check_day:
-            messages.error(request, "출석 체크는 주일에만 열립니다. 로컬 테스트는 force_attendance_sunday=1 로 확인해 주세요.")
-            return redirect("attendance:check")
+    if request.method == "POST" and request.POST.get("action") == "submit_attendance":
         if selected_group is None:
-            messages.error(request, "출석을 입력할 속을 먼저 선택해 주세요.")
-        else:
-            now = timezone.now()
-            records_to_create = []
-            updated_count = 0
-            for member in members:
-                status = _normalize_attendance_status(request.POST.get(f"status_{member.pk}") or AttendanceStatus.PRESENT)
-                note = (request.POST.get(f"note_{member.pk}") or "").strip()
-                record = record_map.get(member.pk)
-                if record is None:
-                    records_to_create.append(
-                        AttendanceRecord(
-                            session=current_session,
-                            member=member,
-                            status=status,
-                            note=note,
-                            marked_by=request.user,
-                            marked_at=now,
-                        )
+            messages.error(request, "출석을 제출할 속이 선택되지 않았습니다.")
+            return redirect("attendance:check")
+        if not attendance_check_day:
+            messages.error(request, "출석 체크는 주일에만 열립니다. 평일에는 admin 계정으로 강제 공개를 켜야 입력할 수 있습니다.")
+            return redirect("attendance:check")
+
+        now = timezone.now()
+        records_to_create = []
+        updated_count = 0
+        for member in members:
+            status = _normalize_attendance_status(request.POST.get(f"status_{member.pk}") or AttendanceStatus.PRESENT)
+            note = (request.POST.get(f"note_{member.pk}") or "").strip()
+            record = record_map.get(member.pk)
+            if record is None:
+                records_to_create.append(
+                    AttendanceRecord(
+                        session=current_session,
+                        member=member,
+                        status=status,
+                        note=note,
+                        marked_by=request.user if request.user.is_authenticated else None,
+                        marked_at=now,
                     )
-                else:
-                    changed = False
-                    if record.status != status:
-                        record.status = status
-                        changed = True
-                    if record.note != note:
-                        record.note = note
-                        changed = True
-                    if record.marked_by_id != request.user.id:
-                        record.marked_by = request.user
-                        changed = True
-                    if changed or record.marked_at is None:
-                        record.marked_at = now
-                        record.save(update_fields=["status", "note", "marked_by", "marked_at", "updated_at"])
-                        updated_count += 1
-            if records_to_create:
-                AttendanceRecord.objects.bulk_create(records_to_create)
-            saved_total = updated_count + len(records_to_create)
-            if saved_total:
-                messages.success(
-                    request,
-                    f"{selected_group.district.name} {selected_group.name} 출석을 저장했습니다. ({saved_total}명 반영)",
                 )
             else:
-                messages.info(request, "변경된 내용이 없어 기존 출석표를 그대로 유지했습니다.")
-            return redirect(f"{reverse('attendance:check')}?group={selected_group.pk}")
+                changed = False
+                if record.status != status:
+                    record.status = status
+                    changed = True
+                if record.note != note:
+                    record.note = note
+                    changed = True
+                if request.user.is_authenticated and record.marked_by_id != request.user.id:
+                    record.marked_by = request.user
+                    changed = True
+                if changed or record.marked_at is None:
+                    record.marked_at = now
+                    record.save(update_fields=["status", "note", "marked_by", "marked_at", "updated_at"])
+                    updated_count += 1
+
+        if records_to_create:
+            AttendanceRecord.objects.bulk_create(records_to_create)
+
+        saved_total = updated_count + len(records_to_create)
+        if saved_total:
+            messages.success(
+                request,
+                f"{selected_group.district.name} {selected_group.name} 출석을 제출했습니다. ({saved_total}명 반영)",
+            )
+        else:
+            messages.info(request, "변경된 내용이 없어 기존 출석 상태를 그대로 유지했습니다.")
+        return redirect("attendance:check")
 
     member_rows = []
     for member in members:
@@ -883,19 +1009,21 @@ def attendance_check_view(request):
         {
             "active_church": church,
             "active_attendance_tab": "check",
-            "attendance_only_mode": attendance_only_mode,
-            "group_cards": group_cards,
+            "pin_authenticated": selected_group is not None,
+            "district_cards": district_cards,
+            "selected_district": selected_district,
+            "pin_groups": pin_groups,
+            "selected_pin_group_id": int(selected_pin_group_id) if selected_pin_group_id else None,
             "selected_group": selected_group,
             "current_session": current_session,
             "member_rows": member_rows,
             "status_choices": CHECK_STATUS_CHOICES,
-            "can_manage_attendance": role_context["has_full_attendance_access"],
-            "is_attendance_group_leader": bool(role_context["led_group_ids"]),
-            "is_attendance_district_leader": bool(role_context["district_ids"]),
             "attendance_check_day": attendance_check_day,
             "attendance_test_mode": _is_attendance_test_sunday(request),
             "attendance_force_open": control.force_open,
-            "can_force_attendance_open": _can_force_open_attendance(request.user),
+            "can_force_attendance_open": can_force_attendance_open,
+            "show_full_nav": bool(request.user.is_authenticated and _can_access_attendance(request.user)),
+            "logout_url": reverse("core:logout") if request.user.is_authenticated else "",
             **_build_church_nav_context(church),
         },
     )
