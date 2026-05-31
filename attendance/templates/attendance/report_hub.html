@@ -630,6 +630,12 @@
                 {% elif selected_report == "streak" %}
                     <div class="section">
                         <h2>{% if selected_min_weeks == 5 %}5주 이상 연속 결석자{% else %}{{ selected_min_weeks }}주 연속 결석자{% endif %}</h2>
+                        <div class="summary-grid" style="margin-top: 14px;">
+                            <div class="summary-card is-danger">
+                                <span>연속 결석자 수</span>
+                                <strong>{{ streak_rows|length }}</strong>
+                            </div>
+                        </div>
                         {% if streak_rows %}
                             <div class="streak-list section">
                                 {% for row in streak_rows %}
