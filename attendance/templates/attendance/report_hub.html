@@ -437,8 +437,10 @@
                             결석자 리포트
                         {% elif selected_report == "personal" %}
                             개인별 리포트
+                        {% elif selected_report == "streak" %}
+                            {% if selected_min_weeks == 5 %}5주 이상 연속 결석자{% else %}{{ selected_min_weeks }}주 연속 결석자{% endif %} ({{ streak_rows|length }}명)
                         {% else %}
-                            연속 결석자
+                            리포트
                         {% endif %}
                     </h1>
                     <div class="header-actions">
@@ -629,7 +631,6 @@
                     </div>
                 {% elif selected_report == "streak" %}
                     <div class="section">
-                        <h2>{% if selected_min_weeks == 5 %}5주 이상 연속 결석자{% else %}{{ selected_min_weeks }}주 연속 결석자{% endif %} ({{ streak_rows|length }}명)</h2>
                         {% if streak_rows %}
                             <div class="streak-list section">
                                 {% for row in streak_rows %}
