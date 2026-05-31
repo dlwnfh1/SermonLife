@@ -1340,6 +1340,7 @@ def attendance_report_hub_view(request):
     weekly_rows = []
     weekly_member_rows = []
     weekly_member_sections = []
+    weekly_summary = None
     personal_member = None
     personal_rows = []
     personal_last_present = None
@@ -1449,6 +1450,60 @@ def attendance_report_hub_view(request):
 
         for row in weekly_rows:
             row["attendance_rate"] = round((row["present"] / row["total"]) * 100, 1) if row["total"] else 0
+
+        if selected_group:
+            selected_group_members = [member for member in members if member.group_id == selected_group.id]
+            total_count = len(selected_group_members)
+            present_count = 0
+            absent_count = 0
+            pending_count = 0
+            for member in selected_group_members:
+                record = record_map.get(member.id)
+                status = _normalize_attendance_status(record.status) if record else None
+                if status == AttendanceStatus.PRESENT:
+                    present_count += 1
+                elif status == AttendanceStatus.ABSENT:
+                    absent_count += 1
+                else:
+                    pending_count += 1
+            weekly_summary = {
+                "present": present_count,
+                "absent": absent_count,
+                "pending": pending_count,
+                "total": total_count,
+                "attendance_rate": round((present_count / total_count) * 100, 1) if total_count else 0,
+            }
+        elif selected_district:
+            district_row = next((row for row in district_buckets.values() if row["id"] == selected_district.id), None)
+            if district_row:
+                weekly_summary = {
+                    "present": district_row["present"],
+                    "absent": district_row["absent"],
+                    "pending": district_row["pending"],
+                    "total": district_row["total"],
+                    "attendance_rate": round((district_row["present"] / district_row["total"]) * 100, 1) if district_row["total"] else 0,
+                }
+        else:
+            total_count = len(members)
+            present_count = 0
+            absent_count = 0
+            pending_count = 0
+            for member in members:
+                record = record_map.get(member.id)
+                status = _normalize_attendance_status(record.status) if record else None
+                if status == AttendanceStatus.PRESENT:
+                    present_count += 1
+                elif status == AttendanceStatus.ABSENT:
+                    absent_count += 1
+                else:
+                    pending_count += 1
+            weekly_summary = {
+                "present": present_count,
+                "absent": absent_count,
+                "pending": pending_count,
+                "total": total_count,
+                "attendance_rate": round((present_count / total_count) * 100, 1) if total_count else 0,
+            }
 
         detail_members = members
         if selected_group:
@@ -1586,6 +1641,7 @@ def attendance_report_hub_view(request):
             "absent_count": len(absent_rows),
             "streak_rows": streak_rows,
             "weekly_rows": weekly_rows,
+            "weekly_summary": weekly_summary,
             "weekly_member_rows": weekly_member_rows,
             "weekly_member_sections": weekly_member_sections,
             "personal_member": personal_member,

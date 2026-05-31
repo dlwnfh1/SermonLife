@@ -114,6 +114,50 @@
             align-items: end;
             gap: 16px;
         }
+        .headline-metric {
+            min-width: 250px;
+            max-width: 320px;
+            padding: 14px 16px;
+            border-radius: 18px;
+            background: rgba(255, 250, 241, 0.96);
+            border: 1px solid rgba(165, 106, 59, .14);
+            box-shadow: 0 12px 28px rgba(133, 96, 52, .08);
+        }
+        .headline-metric-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 12px;
+        }
+        .headline-metric-label {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .headline-metric-value {
+            color: var(--accent-strong);
+            font-size: 26px;
+            font-weight: 800;
+            line-height: 1;
+        }
+        .headline-metric-meta {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+        .headline-meter {
+            margin-top: 12px;
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            background: #eadfce;
+            overflow: hidden;
+        }
+        .headline-meter-bar {
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #a56a3b 0%, #c1844d 100%);
+        }
         .detail-header { margin-bottom: 18px; }
         .header-actions {
             display: flex;
@@ -377,6 +421,10 @@
                 flex-direction: column;
                 gap: 8px;
             }
+            .headline-metric {
+                min-width: 100%;
+                max-width: none;
+            }
         }
         @media (max-width: 420px) {
             .absent-list,
@@ -522,17 +570,31 @@
                 {% if selected_report == "weekly" %}
                     <div class="section">
                         <div class="section-head">
-                            <h2>
-                                {% if selected_group %}
-                                    {{ selected_group.name }} 속원별 출석 상태
-                                {% elif selected_district %}
-                                    {{ selected_district.name }} 교구 출석 현황
-                                {% else %}
-                                    전교인 전체 출석 현황
+                            <div>
+                                <h2>
+                                    {% if selected_group %}
+                                        {{ selected_group.name }} 속원별 출석 상태
+                                    {% elif selected_district %}
+                                        {{ selected_district.name }} 교구 출석 현황
+                                    {% else %}
+                                        전교인 전체 출석 현황
+                                    {% endif %}
+                                </h2>
+                                {% if selected_session %}
+                                    <p>{{ selected_session.worship_date|date:"Y-m-d" }} 주일 기준</p>
                                 {% endif %}
-                            </h2>
-                            {% if selected_session %}
-                                <p>{{ selected_session.worship_date|date:"Y-m-d" }} 주일 기준</p>
+                            </div>
+                            {% if weekly_summary %}
+                                <div class="headline-metric">
+                                    <div class="headline-metric-top">
+                                        <span class="headline-metric-label">출석률</span>
+                                        <strong class="headline-metric-value">{{ weekly_summary.attendance_rate }}%</strong>
+                                    </div>
+                                    <div class="headline-metric-meta">출석 {{ weekly_summary.present }} / 총원 {{ weekly_summary.total }}</div>
+                                    <div class="headline-meter">
+                                        <div class="headline-meter-bar" style="width: {{ weekly_summary.attendance_rate }}%;"></div>
+                                    </div>
+                                </div>
                             {% endif %}
                         </div>
 
