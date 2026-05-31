@@ -1502,13 +1502,14 @@ def attendance_report_hub_view(request):
                     )
 
         session_ids = []
-        selected_session_found = False
-        for session in all_sessions:
-            session_ids.append(session.id)
-            if session.id == selected_session.id:
-                selected_session_found = True
-                break
-        if selected_session_found and session_ids:
+        if selected_session:
+            start_collecting = False
+            for session in all_sessions:
+                if session.id == selected_session.id:
+                    start_collecting = True
+                if start_collecting:
+                    session_ids.append(session.id)
+        if session_ids:
             streak_record_map = {}
             for record in AttendanceRecord.objects.filter(
                 session_id__in=session_ids,
