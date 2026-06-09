@@ -884,10 +884,8 @@ def _can_show_attendance_button(user):
 
 
 def _is_attendance_only_user(user):
-    if not user.is_authenticated:
-        return False
-    profile = UserProfile.objects.filter(user=user).only("attendance_only_mode").first()
-    return bool(profile and profile.attendance_only_mode)
+    # Deprecated: public PIN entry replaced the old attendance-only login flow.
+    return False
 
 
 def _can_use_audio_transcriber(user):

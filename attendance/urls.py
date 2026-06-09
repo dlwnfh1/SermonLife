@@ -9,6 +9,7 @@ from .views import (
     attendance_force_open_toggle_view,
     attendance_group_manage_view,
     attendance_manage_view,
+    attendance_manual_check_view,
     attendance_report_hub_view,
     attendance_reports_view,
     attendance_pwa_manifest_view,
@@ -23,6 +24,7 @@ app_name = "attendance"
 urlpatterns = [
     path("", attendance_dashboard_view, name="dashboard"),
     path("check/", attendance_check_view, name="check"),
+    path("manual-check/", attendance_manual_check_view, name="manual_check"),
     path("check/qr.svg", attendance_check_qr_svg_view, name="check_qr_svg"),
     path("check/qr-print/", attendance_check_qr_print_view, name="check_qr_print"),
     path("manifest.json", attendance_pwa_manifest_view, name="pwa_manifest"),

@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>수동 출석 체크</title>
+    <style>
+        :root {
+            --ink: #23170f;
+            --muted: #6f5e4f;
+            --line: #dfcfbb;
+            --panel: rgba(255, 250, 241, 0.96);
+            --accent: #a56a3b;
+            --accent-strong: #8c5630;
+            --danger: #b64b45;
+            --danger-soft: #f8d7d3;
+            --success-ink: #4f7450;
+            --success-soft: rgba(93, 136, 86, .10);
+            --pending-bg: #efe7da;
+            --bg: linear-gradient(180deg, #fbf4e9 0%, #f5eee1 100%);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Georgia, "Noto Sans KR", serif;
+            color: var(--ink);
+            background: var(--bg);
+        }
+        .shell {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 24px 16px 56px;
+        }
+        .topbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        .topbar a,
+        .topbar .user-pill,
+        button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 48px;
+            padding: 12px 18px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: var(--panel);
+            box-shadow: 0 10px 24px rgba(133, 96, 52, .08);
+            color: var(--ink);
+            text-decoration: none;
+            font: inherit;
+            font-weight: 700;
+        }
+        .topbar a.is-active,
+        button.primary {
+            background: var(--accent);
+            color: #fff8ef;
+            border-color: var(--accent);
+            cursor: pointer;
+        }
+        .topbar .user-pill {
+            background: rgba(165, 106, 59, .10);
+            border-color: rgba(165, 106, 59, .18);
+            color: var(--accent-strong);
+        }
+        .panel,
+        .hero,
+        .district-card,
+        .group-card,
+        .member-card,
+        .flash {
+            background: var(--panel);
+            border: 1px solid rgba(165, 106, 59, .14);
+            border-radius: 24px;
+            box-shadow: 0 20px 48px rgba(133, 96, 52, .09);
+        }
+        .hero,
+        .panel {
+            padding: 22px;
+        }
+        .hero {
+            margin-bottom: 18px;
+        }
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(30px, 5vw, 44px);
+        }
+        .hero p {
+            margin: 10px 0 0;
+            color: var(--muted);
+            line-height: 1.8;
+        }
+        .hero-meta {
+            margin-top: 14px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .hero-meta span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 40px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(165, 106, 59, .10);
+            color: var(--accent-strong);
+            border: 1px solid rgba(165, 106, 59, .14);
+            font-weight: 700;
+        }
+        .flash-wrap {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .flash {
+            padding: 14px 18px;
+        }
+        .flash.success { color: var(--success-ink); }
+        .flash.info { color: var(--accent-strong); }
+        .flash.error { color: var(--danger); }
+        .panel-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+        .panel-head h2 {
+            margin: 0;
+            font-size: 28px;
+        }
+        .panel-head p {
+            margin: 8px 0 0;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+        .save-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 18px;
+        }
+        .district-list {
+            display: grid;
+            gap: 14px;
+        }
+        details {
+            overflow: hidden;
+        }
+        details > summary {
+            list-style: none;
+            cursor: pointer;
+        }
+        details > summary::-webkit-details-marker {
+            display: none;
+        }
+        .district-card > summary,
+        .group-card > summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding: 18px 20px;
+        }
+        .district-main,
+        .group-main {
+            display: grid;
+            gap: 8px;
+            min-width: 0;
+        }
+        .district-title {
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .group-title {
+            font-size: 22px;
+            font-weight: 700;
+        }
+        .summary-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .summary-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 7px 12px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 800;
+            white-space: nowrap;
+            background: var(--success-soft);
+            border: 1px solid rgba(93, 136, 86, .18);
+            color: var(--success-ink);
+        }
+        .summary-badge.is-danger {
+            background: var(--danger-soft);
+            border-color: rgba(182, 75, 69, .24);
+            color: var(--danger);
+        }
+        .summary-badge.is-pending {
+            background: var(--pending-bg);
+            border-color: rgba(111, 94, 79, .18);
+            color: var(--muted);
+        }
+        .expand-hint {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 42px;
+            min-height: 42px;
+            border-radius: 999px;
+            background: #f5e7d4;
+            color: var(--accent-strong);
+            font-size: 22px;
+            font-weight: 700;
+        }
+        .district-body,
+        .group-body {
+            padding: 0 18px 18px;
+        }
+        .group-list {
+            display: grid;
+            gap: 12px;
+        }
+        .member-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .member-card {
+            padding: 16px;
+        }
+        .member-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .member-name {
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .pending-tag {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: var(--pending-bg);
+            border: 1px solid rgba(111, 94, 79, .18);
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+        .status-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .status-pills label {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 108px;
+            gap: 8px;
+            padding: 11px 16px;
+            border-radius: 999px;
+            border: 1px solid rgba(165, 106, 59, 0.16);
+            background: rgba(255, 255, 255, 0.9);
+            cursor: pointer;
+            font-weight: 700;
+            color: var(--muted);
+        }
+        .status-pills input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .status-pills label.present-option:has(input:checked) {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff8ef;
+        }
+        .status-pills label.absent-option:has(input:checked) {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: #fff6f5;
+        }
+        .note-field {
+            margin-top: 12px;
+        }
+        .note-field input {
+            width: 100%;
+            min-height: 44px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--ink);
+            font: inherit;
+        }
+        @media (max-width: 900px) {
+            .member-list {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 640px) {
+            .shell {
+                padding: 18px 12px 40px;
+            }
+            .topbar {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .district-card > summary,
+            .group-card > summary,
+            .member-head {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .expand-hint {
+                align-self: flex-end;
+            }
+            .status-pills {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .status-pills label {
+                min-width: 0;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <div class="topbar">
+            <a href="{{ home_url }}">Word &amp; Life</a>
+            <a href="{% url 'attendance:dashboard' %}">출석 대시보드</a>
+            <a href="{% url 'attendance:report_hub' %}">리포트</a>
+            <a href="{% url 'attendance:manage' %}">교구/속 관리</a>
+            <a href="{% url 'attendance:manual_check' %}" class="is-active">수동 출석체크</a>
+            <span class="user-pill">{{ request.user.get_username }}</span>
+            <a href="{{ logout_url }}">로그아웃</a>
+        </div>
+
+        {% if messages %}
+            <div class="flash-wrap">
+                {% for message in messages %}
+                    <div class="flash {% if message.tags %}{{ message.tags }}{% endif %}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <section class="hero">
+            <h1>수동 출석체크</h1>
+            <p>각 속에서 PIN으로 제출한 상태를 그대로 반영한 뒤, 필요한 경우 권한자가 전체 교인을 한 화면에서 수동으로 보정할 수 있습니다.</p>
+            <div class="hero-meta">
+                <span>현재 출석표 · {{ current_session.worship_date|date:"Y-m-d" }}</span>
+                <span>{{ active_church.name }}</span>
+            </div>
+        </section>
+
+        <form method="post" class="panel">
+            {% csrf_token %}
+            <div class="panel-head">
+                <div>
+                    <h2>교구별 수동 체크</h2>
+                    <p>교구를 펼치고, 다시 속을 펼치면 전체 교인 출석 상태를 바로 확인하고 수정할 수 있습니다.</p>
+                </div>
+            </div>
+
+            <div class="district-list">
+                {% for district_section in district_sections %}
+                    <details class="district-card" {% if forloop.first %}open{% endif %}>
+                        <summary>
+                            <div class="district-main">
+                                <div class="district-title">{{ district_section.district.name }}</div>
+                                <div class="summary-badges">
+                                    <span class="summary-badge">출석 {{ district_section.summary.present }}</span>
+                                    <span class="summary-badge is-danger">결석 {{ district_section.summary.absent }}</span>
+                                    <span class="summary-badge is-pending">미제출 {{ district_section.summary.pending }}</span>
+                                    <span class="summary-badge">총원 {{ district_section.summary.total }}</span>
+                                </div>
+                            </div>
+                            <span class="expand-hint">⌄</span>
+                        </summary>
+                        <div class="district-body">
+                            <div class="group-list">
+                                {% for group_section in district_section.groups %}
+                                    <details class="group-card">
+                                        <summary>
+                                            <div class="group-main">
+                                                <div class="group-title">{{ group_section.group.name }}</div>
+                                                <div class="summary-badges">
+                                                    <span class="summary-badge">출석 {{ group_section.summary.present }}</span>
+                                                    <span class="summary-badge is-danger">결석 {{ group_section.summary.absent }}</span>
+                                                    <span class="summary-badge is-pending">미제출 {{ group_section.summary.pending }}</span>
+                                                    <span class="summary-badge">총원 {{ group_section.summary.total }}</span>
+                                                </div>
+                                            </div>
+                                            <span class="expand-hint">⌄</span>
+                                        </summary>
+                                        <div class="group-body">
+                                            <div class="member-list">
+                                                {% for row in group_section.rows %}
+                                                    <div class="member-card">
+                                                        <div class="member-head">
+                                                            <div class="member-name">{{ row.member.name }}</div>
+                                                            {% if row.is_pending %}
+                                                                <span class="pending-tag">미제출</span>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="status-pills">
+                                                            <label class="present-option">
+                                                                <input type="radio" name="status_{{ row.member.id }}" value="present" {% if row.status == 'present' %}checked{% endif %}>
+                                                                <span>출석</span>
+                                                            </label>
+                                                            <label class="absent-option">
+                                                                <input type="radio" name="status_{{ row.member.id }}" value="absent" {% if row.status == 'absent' %}checked{% endif %}>
+                                                                <span>결석</span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="note-field">
+                                                            <input type="text" name="note_{{ row.member.id }}" value="{{ row.note }}" placeholder="메모 (선택)">
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </details>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </details>
+                {% endfor %}
+            </div>
+
+            <div class="save-actions">
+                <button type="submit" class="primary">수동 출석 저장하기</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

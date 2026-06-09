@@ -121,6 +121,34 @@
             gap: 16px;
         }
 
+        .summary-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 16px;
+        }
+
+        .summary-action-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 48px;
+            padding: 12px 18px;
+            border-radius: 999px;
+            border: 1px solid var(--accent);
+            background: var(--accent);
+            color: #fff8ef;
+            text-decoration: none;
+            font-weight: 700;
+            box-shadow: 0 12px 28px rgba(133, 96, 52, 0.12);
+            transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+        }
+
+        .summary-action-link:hover {
+            transform: translateY(-1px);
+            background: var(--accent-strong);
+            box-shadow: 0 16px 32px rgba(133, 96, 52, 0.16);
+        }
+
         .summary-card {
             padding: 22px;
         }
@@ -457,6 +485,11 @@
                             </article>
                         </a>
                     </section>
+                    {% if can_manual_check_attendance %}
+                        <div class="summary-actions">
+                            <a class="summary-action-link" href="{% url 'attendance:manual_check' %}">전체 출석 체크</a>
+                        </div>
+                    {% endif %}
                 </div>
             </section>
 

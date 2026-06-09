@@ -470,10 +470,8 @@ def _has_attendance_manage_override(user):
 
 
 def _is_attendance_only_user(user):
-    if not user.is_authenticated:
-        return False
-    profile = UserProfile.objects.filter(user=user).only("attendance_only_mode").first()
-    return bool(profile and profile.attendance_only_mode)
+    # Deprecated: public PIN entry replaced the old attendance-only login flow.
+    return False
 
 
 def _redirect_attendance_only_user_to_check(request):
@@ -527,6 +525,12 @@ def _can_access_attendance(user):
 
 def _can_submit_attendance(user, role_context):
     return bool(role_context["led_group_ids"] or _has_attendance_check_override(user))
+
+
+def _can_use_manual_attendance_check(user):
+    if not user.is_authenticated:
+        return False
+    return _is_pastor_or_admin(user) or _has_attendance_manage_override(user) or _has_attendance_check_override(user)
 
 
 def _is_attendance_test_sunday(request):
@@ -903,6 +907,7 @@ def attendance_dashboard_view(request):
             "missing_groups": missing_groups,
             "missing_group_count": len(missing_groups),
             "can_manage_attendance": role_context["has_full_attendance_access"],
+            "can_manual_check_attendance": _can_use_manual_attendance_check(request.user),
             "is_attendance_group_leader": bool(role_context["led_group_ids"]),
             "is_attendance_district_leader": bool(role_context["district_ids"]),
             "can_check_attendance": bool(group_queryset.exists()) and can_submit_attendance,
@@ -1104,6 +1109,174 @@ def attendance_check_view(request):
             "can_force_attendance_open": can_force_attendance_open,
             "show_full_nav": bool(request.user.is_authenticated and _can_access_attendance(request.user)),
             "logout_url": reverse("core:logout") if request.user.is_authenticated else "",
+            **_build_church_nav_context(church),
+        },
+    )
+
+
+@login_required(login_url="core:login")
+def attendance_manual_check_view(request):
+    guard = _redirect_attendance_only_user_to_check(request)
+    if guard:
+        return guard
+    if not _can_use_manual_attendance_check(request.user):
+        return redirect("attendance:dashboard")
+
+    church = _get_scope_church(request.user)
+    today = timezone.localdate()
+    reference_date = today if today.weekday() == 6 else _last_sunday_for(today)
+    current_session, _ = AttendanceSession.get_or_create_current(church, request.user, reference_date=reference_date)
+
+    district_queryset = (
+        AttendanceDistrict.objects.filter(church=church, is_active=True)
+        .prefetch_related("groups__members")
+        .order_by("sort_order", "name", "id")
+    )
+    group_queryset = (
+        AttendanceGroup.objects.filter(church=church, is_active=True, district__is_active=True)
+        .select_related("district", "guide", "leader")
+        .annotate(active_member_count=Count("members", filter=Q(members__is_active=True), distinct=True))
+        .order_by("district__sort_order", "sort_order", "name", "id")
+    )
+    groups = list(group_queryset)
+    members = list(
+        AttendanceMember.objects.filter(group__in=groups, is_active=True)
+        .select_related("group", "group__district")
+        .order_by("group__district__sort_order", "group__sort_order", "sort_order", "name", "id")
+    )
+
+    record_map = {
+        record.member_id: record
+        for record in AttendanceRecord.objects.filter(session=current_session, member__in=members)
+    }
+
+    if request.method == "POST":
+        now = timezone.now()
+        records_to_create = []
+        updated_count = 0
+        for member in members:
+            status_value = request.POST.get(f"status_{member.pk}")
+            note = (request.POST.get(f"note_{member.pk}") or "").strip()
+            record = record_map.get(member.pk)
+
+            if not status_value:
+                if record is not None and record.note != note:
+                    record.note = note
+                    record.marked_by = request.user
+                    record.marked_at = now
+                    record.save(update_fields=["note", "marked_by", "marked_at", "updated_at"])
+                    updated_count += 1
+                continue
+
+            status = _normalize_attendance_status(status_value)
+            if record is None:
+                records_to_create.append(
+                    AttendanceRecord(
+                        session=current_session,
+                        member=member,
+                        status=status,
+                        note=note,
+                        marked_by=request.user,
+                        marked_at=now,
+                    )
+                )
+                continue
+
+            changed = False
+            if record.status != status:
+                record.status = status
+                changed = True
+            if record.note != note:
+                record.note = note
+                changed = True
+            if record.marked_by_id != request.user.id:
+                record.marked_by = request.user
+                changed = True
+            if changed or record.marked_at is None:
+                record.marked_at = now
+                record.save(update_fields=["status", "note", "marked_by", "marked_at", "updated_at"])
+                updated_count += 1
+
+        if records_to_create:
+            AttendanceRecord.objects.bulk_create(records_to_create)
+
+        saved_total = updated_count + len(records_to_create)
+        if saved_total:
+            messages.success(request, f"수동 출석 체크 내용을 저장했습니다. ({saved_total}명 반영)")
+        else:
+            messages.info(request, "변경된 내용이 없습니다.")
+        return redirect("attendance:manual_check")
+
+    member_rows_by_group = {}
+    group_summaries = {}
+    district_summaries = {}
+    for member in members:
+        record = record_map.get(member.pk)
+        current_status = _normalize_attendance_status(record.status) if record else ""
+        is_pending = record is None
+        row = {
+            "member": member,
+            "status": current_status,
+            "note": record.note if record else "",
+            "is_pending": is_pending,
+        }
+        member_rows_by_group.setdefault(member.group_id, []).append(row)
+
+        group_summary = group_summaries.setdefault(
+            member.group_id,
+            {"present": 0, "absent": 0, "pending": 0, "total": 0},
+        )
+        district_summary = district_summaries.setdefault(
+            member.group.district_id,
+            {"present": 0, "absent": 0, "pending": 0, "total": 0},
+        )
+        for bucket in (group_summary, district_summary):
+            bucket["total"] += 1
+            if current_status == AttendanceStatus.PRESENT:
+                bucket["present"] += 1
+            elif current_status == AttendanceStatus.ABSENT:
+                bucket["absent"] += 1
+            else:
+                bucket["pending"] += 1
+
+    district_sections = []
+    groups_by_district = {}
+    for group in groups:
+        groups_by_district.setdefault(group.district_id, []).append(group)
+
+    for district in district_queryset:
+        district_groups = groups_by_district.get(district.id, [])
+        if not district_groups:
+            continue
+        group_sections = []
+        for group in district_groups:
+            summary = group_summaries.get(group.id, {"present": 0, "absent": 0, "pending": 0, "total": 0})
+            group_sections.append(
+                {
+                    "group": group,
+                    "summary": summary,
+                    "rows": member_rows_by_group.get(group.id, []),
+                }
+            )
+        district_sections.append(
+            {
+                "district": district,
+                "summary": district_summaries.get(district.id, {"present": 0, "absent": 0, "pending": 0, "total": 0}),
+                "groups": group_sections,
+            }
+        )
+
+    return render(
+        request,
+        "attendance/manual_check.html",
+        {
+            "active_church": church,
+            "active_attendance_tab": "manual_check",
+            "current_session": current_session,
+            "district_sections": district_sections,
+            "status_choices": CHECK_STATUS_CHOICES,
+            "can_manage_attendance": _is_pastor_or_admin(request.user) or _has_attendance_manage_override(request.user),
+            "can_manual_check_attendance": True,
             **_build_church_nav_context(church),
         },
     )
