@@ -246,20 +246,23 @@
             font-size: 18px;
             font-weight: 700;
         }
-        .pending-tag {
+        .submission-tag {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             padding: 6px 10px;
             border-radius: 999px;
-            background: var(--pending-bg);
             border: 1px solid rgba(111, 94, 79, .18);
-            color: var(--muted);
             font-size: 12px;
             font-weight: 800;
             white-space: nowrap;
         }
-        .default-tag {
+        .submission-tag.is-submitted {
+            background: var(--success-soft);
+            border-color: rgba(93, 136, 86, .18);
+            color: var(--success-ink);
+        }
+        .submission-tag.is-pending {
             background: rgba(165, 106, 59, .10);
             border-color: rgba(165, 106, 59, .16);
             color: var(--accent-strong);
@@ -371,7 +374,7 @@
 
         <section class="hero">
             <h1>수동 출석체크</h1>
-            <p>각 속에서 PIN으로 제출한 상태를 그대로 반영하고, 아직 입력 전인 인원은 기본값을 출석으로 두어 결석자만 빠르게 수정할 수 있습니다.</p>
+            <p>각 속에서 PIN으로 제출한 상태를 그대로 반영하고, 속별 제출 여부를 함께 보여 주어 미제출 속만 골라서 빠르게 보정할 수 있습니다.</p>
             <div class="hero-meta">
                 <span>현재 출석표 · {{ current_session.worship_date|date:"Y-m-d" }}</span>
                 <span>{{ active_church.name }}</span>
@@ -383,13 +386,13 @@
             <div class="panel-head">
                 <div>
                     <h2>교구별 수동 체크</h2>
-                    <p>교구와 속을 펼쳐서 전체 교인 상태를 한 번에 확인하고, 결석자만 바꾼 뒤 바로 저장할 수 있습니다.</p>
+                    <p>미제출 속은 자동으로 펼쳐지며, 이미 제출 완료된 속은 건너뛰고 필요한 곳만 바로 수정할 수 있습니다.</p>
                 </div>
             </div>
 
             <div class="district-list">
                 {% for district_section in district_sections %}
-                    <details class="district-card" {% if forloop.first %}open{% endif %}>
+                    <details class="district-card" {% if district_section.summary.unsubmitted_group_count %}open{% elif forloop.first %}open{% endif %}>
                         <summary>
                             <div class="district-main">
                                 <div class="district-title">{{ district_section.district.name }}</div>
@@ -397,6 +400,7 @@
                                     <span class="summary-badge">출석 {{ district_section.summary.present }}</span>
                                     <span class="summary-badge is-danger">결석 {{ district_section.summary.absent }}</span>
                                     <span class="summary-badge">총원 {{ district_section.summary.total }}</span>
+                                    <span class="summary-badge is-pending">미제출 속 {{ district_section.summary.unsubmitted_group_count }}</span>
                                 </div>
                             </div>
                             <span class="expand-hint">⌄</span>
@@ -404,7 +408,7 @@
                         <div class="district-body">
                             <div class="group-list">
                                 {% for group_section in district_section.groups %}
-                                    <details class="group-card">
+                                    <details class="group-card" {% if not group_section.is_submitted %}open{% endif %}>
                                         <summary>
                                             <div class="group-main">
                                                 <div class="group-title">{{ group_section.group.name }}</div>
@@ -412,6 +416,11 @@
                                                     <span class="summary-badge">출석 {{ group_section.summary.present }}</span>
                                                     <span class="summary-badge is-danger">결석 {{ group_section.summary.absent }}</span>
                                                     <span class="summary-badge">총원 {{ group_section.summary.total }}</span>
+                                                    {% if group_section.is_submitted %}
+                                                        <span class="submission-tag is-submitted">제출 완료</span>
+                                                    {% else %}
+                                                        <span class="submission-tag is-pending">미제출</span>
+                                                    {% endif %}
                                                 </div>
                                             </div>
                                             <span class="expand-hint">⌄</span>
@@ -422,9 +431,6 @@
                                                     <div class="member-card">
                                                         <div class="member-head">
                                                             <div class="member-name">{{ row.member.name }}</div>
-                                                            {% if row.is_pending %}
-                                                                <span class="pending-tag default-tag">기본 출석</span>
-                                                            {% endif %}
                                                         </div>
                                                         <div class="status-pills">
                                                             <label class="present-option">

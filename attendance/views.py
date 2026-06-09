@@ -1210,6 +1210,7 @@ def attendance_manual_check_view(request):
     member_rows_by_group = {}
     group_summaries = {}
     district_summaries = {}
+    group_pending_counts = {}
     for member in members:
         record = record_map.get(member.pk)
         current_status = _normalize_attendance_status(record.status) if record else AttendanceStatus.PRESENT
@@ -1221,6 +1222,8 @@ def attendance_manual_check_view(request):
             "is_pending": is_pending,
         }
         member_rows_by_group.setdefault(member.group_id, []).append(row)
+        if is_pending:
+            group_pending_counts[member.group_id] = group_pending_counts.get(member.group_id, 0) + 1
 
         group_summary = group_summaries.setdefault(
             member.group_id,
@@ -1247,19 +1250,33 @@ def attendance_manual_check_view(request):
         if not district_groups:
             continue
         group_sections = []
+        submitted_group_count = 0
+        unsubmitted_group_count = 0
         for group in district_groups:
             summary = group_summaries.get(group.id, {"present": 0, "absent": 0, "total": 0})
+            pending_member_count = group_pending_counts.get(group.id, 0)
+            is_submitted = bool(summary["total"]) and pending_member_count == 0
+            if is_submitted:
+                submitted_group_count += 1
+            else:
+                unsubmitted_group_count += 1
             group_sections.append(
                 {
                     "group": group,
                     "summary": summary,
+                    "pending_member_count": pending_member_count,
+                    "is_submitted": is_submitted,
                     "rows": member_rows_by_group.get(group.id, []),
                 }
             )
+        district_summary = district_summaries.get(district.id, {"present": 0, "absent": 0, "total": 0})
+        district_summary["submitted_group_count"] = submitted_group_count
+        district_summary["unsubmitted_group_count"] = unsubmitted_group_count
+        district_summary["total_group_count"] = len(district_groups)
         district_sections.append(
             {
                 "district": district,
-                "summary": district_summaries.get(district.id, {"present": 0, "absent": 0, "total": 0}),
+                "summary": district_summary,
                 "groups": group_sections,
             }
         )
