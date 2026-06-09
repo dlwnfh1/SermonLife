@@ -143,6 +143,30 @@
             justify-content: flex-end;
             margin-top: 18px;
         }
+        .panel-tools {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+        .filter-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(165, 106, 59, .16);
+            background: rgba(255, 255, 255, 0.82);
+            color: var(--accent-strong);
+            font-weight: 700;
+        }
+        .filter-toggle input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+        }
         .district-list {
             display: grid;
             gap: 14px;
@@ -349,6 +373,14 @@
                 min-width: 0;
                 width: 100%;
             }
+            .panel-tools,
+            .save-actions {
+                justify-content: stretch;
+            }
+            .filter-toggle,
+            .save-actions button {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -381,18 +413,28 @@
             </div>
         </section>
 
-        <form method="post" class="panel">
+        <form method="post" class="panel" id="manual-attendance-form">
             {% csrf_token %}
             <div class="panel-head">
                 <div>
                     <h2>교구별 수동 체크</h2>
-                    <p>미제출 속은 자동으로 펼쳐지며, 이미 제출 완료된 속은 건너뛰고 필요한 곳만 바로 수정할 수 있습니다.</p>
+                    <p>미제출 속만 보기로 필요한 속만 추려서 보고, 이미 제출 완료된 속은 건너뛰고 바로 수정할 수 있습니다.</p>
+                </div>
+            </div>
+
+            <div class="panel-tools">
+                <label class="filter-toggle">
+                    <input type="checkbox" id="show-unsubmitted-only">
+                    <span>미제출 속만 보기</span>
+                </label>
+                <div class="save-actions" style="margin-top: 0;">
+                    <button type="submit" class="primary">전체 출석 저장하기</button>
                 </div>
             </div>
 
             <div class="district-list">
                 {% for district_section in district_sections %}
-                    <details class="district-card" {% if district_section.summary.unsubmitted_group_count %}open{% elif forloop.first %}open{% endif %}>
+                    <details class="district-card" data-district-card>
                         <summary>
                             <div class="district-main">
                                 <div class="district-title">{{ district_section.district.name }}</div>
@@ -408,7 +450,7 @@
                         <div class="district-body">
                             <div class="group-list">
                                 {% for group_section in district_section.groups %}
-                                    <details class="group-card" {% if not group_section.is_submitted %}open{% endif %}>
+                                    <details class="group-card" data-group-card data-submitted="{% if group_section.is_submitted %}true{% else %}false{% endif %}">
                                         <summary>
                                             <div class="group-main">
                                                 <div class="group-title">{{ group_section.group.name }}</div>
@@ -462,5 +504,40 @@
             </div>
         </form>
     </div>
+    <script>
+        (function () {
+            const form = document.getElementById("manual-attendance-form");
+            const toggle = document.getElementById("show-unsubmitted-only");
+            const districtCards = Array.from(document.querySelectorAll("[data-district-card]"));
+            const groupCards = Array.from(document.querySelectorAll("[data-group-card]"));
+
+            function updateSubmittedFilter() {
+                const unsubmittedOnly = toggle && toggle.checked;
+
+                groupCards.forEach((groupCard) => {
+                    const isSubmitted = groupCard.dataset.submitted === "true";
+                    groupCard.hidden = unsubmittedOnly && isSubmitted;
+                });
+
+                districtCards.forEach((districtCard) => {
+                    const visibleGroups = districtCard.querySelectorAll("[data-group-card]:not([hidden])");
+                    districtCard.hidden = visibleGroups.length === 0;
+                });
+            }
+
+            if (toggle) {
+                toggle.addEventListener("change", updateSubmittedFilter);
+                updateSubmittedFilter();
+            }
+
+            if (form) {
+                form.addEventListener("submit", function (event) {
+                    if (!window.confirm("현재 출석 상태를 저장하시겠습니까?")) {
+                        event.preventDefault();
+                    }
+                });
+            }
+        })();
+    </script>
 </body>
 </html>
