@@ -1212,7 +1212,7 @@ def attendance_manual_check_view(request):
     district_summaries = {}
     for member in members:
         record = record_map.get(member.pk)
-        current_status = _normalize_attendance_status(record.status) if record else ""
+        current_status = _normalize_attendance_status(record.status) if record else AttendanceStatus.PRESENT
         is_pending = record is None
         row = {
             "member": member,
@@ -1224,11 +1224,11 @@ def attendance_manual_check_view(request):
 
         group_summary = group_summaries.setdefault(
             member.group_id,
-            {"present": 0, "absent": 0, "pending": 0, "total": 0},
+            {"present": 0, "absent": 0, "total": 0},
         )
         district_summary = district_summaries.setdefault(
             member.group.district_id,
-            {"present": 0, "absent": 0, "pending": 0, "total": 0},
+            {"present": 0, "absent": 0, "total": 0},
         )
         for bucket in (group_summary, district_summary):
             bucket["total"] += 1
@@ -1236,8 +1236,6 @@ def attendance_manual_check_view(request):
                 bucket["present"] += 1
             elif current_status == AttendanceStatus.ABSENT:
                 bucket["absent"] += 1
-            else:
-                bucket["pending"] += 1
 
     district_sections = []
     groups_by_district = {}
@@ -1250,7 +1248,7 @@ def attendance_manual_check_view(request):
             continue
         group_sections = []
         for group in district_groups:
-            summary = group_summaries.get(group.id, {"present": 0, "absent": 0, "pending": 0, "total": 0})
+            summary = group_summaries.get(group.id, {"present": 0, "absent": 0, "total": 0})
             group_sections.append(
                 {
                     "group": group,
@@ -1261,7 +1259,7 @@ def attendance_manual_check_view(request):
         district_sections.append(
             {
                 "district": district,
-                "summary": district_summaries.get(district.id, {"present": 0, "absent": 0, "pending": 0, "total": 0}),
+                "summary": district_summaries.get(district.id, {"present": 0, "absent": 0, "total": 0}),
                 "groups": group_sections,
             }
         )

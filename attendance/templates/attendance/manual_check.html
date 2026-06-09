@@ -259,6 +259,11 @@
             font-weight: 800;
             white-space: nowrap;
         }
+        .default-tag {
+            background: rgba(165, 106, 59, .10);
+            border-color: rgba(165, 106, 59, .16);
+            color: var(--accent-strong);
+        }
         .status-pills {
             display: flex;
             flex-wrap: wrap;
@@ -293,6 +298,10 @@
             background: var(--danger);
             border-color: var(--danger);
             color: #fff6f5;
+        }
+        .status-pills label:hover {
+            border-color: rgba(165, 106, 59, 0.34);
+            transform: translateY(-1px);
         }
         .note-field {
             margin-top: 12px;
@@ -362,7 +371,7 @@
 
         <section class="hero">
             <h1>수동 출석체크</h1>
-            <p>각 속에서 PIN으로 제출한 상태를 그대로 반영한 뒤, 필요한 경우 권한자가 전체 교인을 한 화면에서 수동으로 보정할 수 있습니다.</p>
+            <p>각 속에서 PIN으로 제출한 상태를 그대로 반영하고, 아직 입력 전인 인원은 기본값을 출석으로 두어 결석자만 빠르게 수정할 수 있습니다.</p>
             <div class="hero-meta">
                 <span>현재 출석표 · {{ current_session.worship_date|date:"Y-m-d" }}</span>
                 <span>{{ active_church.name }}</span>
@@ -374,7 +383,7 @@
             <div class="panel-head">
                 <div>
                     <h2>교구별 수동 체크</h2>
-                    <p>교구를 펼치고, 다시 속을 펼치면 전체 교인 출석 상태를 바로 확인하고 수정할 수 있습니다.</p>
+                    <p>교구와 속을 펼쳐서 전체 교인 상태를 한 번에 확인하고, 결석자만 바꾼 뒤 바로 저장할 수 있습니다.</p>
                 </div>
             </div>
 
@@ -387,7 +396,6 @@
                                 <div class="summary-badges">
                                     <span class="summary-badge">출석 {{ district_section.summary.present }}</span>
                                     <span class="summary-badge is-danger">결석 {{ district_section.summary.absent }}</span>
-                                    <span class="summary-badge is-pending">미제출 {{ district_section.summary.pending }}</span>
                                     <span class="summary-badge">총원 {{ district_section.summary.total }}</span>
                                 </div>
                             </div>
@@ -403,7 +411,6 @@
                                                 <div class="summary-badges">
                                                     <span class="summary-badge">출석 {{ group_section.summary.present }}</span>
                                                     <span class="summary-badge is-danger">결석 {{ group_section.summary.absent }}</span>
-                                                    <span class="summary-badge is-pending">미제출 {{ group_section.summary.pending }}</span>
                                                     <span class="summary-badge">총원 {{ group_section.summary.total }}</span>
                                                 </div>
                                             </div>
@@ -416,7 +423,7 @@
                                                         <div class="member-head">
                                                             <div class="member-name">{{ row.member.name }}</div>
                                                             {% if row.is_pending %}
-                                                                <span class="pending-tag">미제출</span>
+                                                                <span class="pending-tag default-tag">기본 출석</span>
                                                             {% endif %}
                                                         </div>
                                                         <div class="status-pills">
@@ -445,7 +452,7 @@
             </div>
 
             <div class="save-actions">
-                <button type="submit" class="primary">수동 출석 저장하기</button>
+                <button type="submit" class="primary">전체 출석 저장하기</button>
             </div>
         </form>
     </div>

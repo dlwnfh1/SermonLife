@@ -123,8 +123,17 @@
 
         .summary-actions {
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
             margin-top: 16px;
+        }
+
+        .summary-action-copy {
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.6;
         }
 
         .summary-action-link {
@@ -430,6 +439,11 @@
             .summary-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
+
+            .summary-actions,
+            .summary-action-link {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -487,6 +501,7 @@
                     </section>
                     {% if can_manual_check_attendance %}
                         <div class="summary-actions">
+                            <div class="summary-action-copy">교구별 PIN 제출 내용까지 반영해서 전체 교인을 한 번에 수정할 수 있습니다.</div>
                             <a class="summary-action-link" href="{% url 'attendance:manual_check' %}">전체 출석 체크</a>
                         </div>
                     {% endif %}
