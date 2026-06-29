@@ -1,5 +1,7 @@
 from datetime import date
+import os
 import tempfile
+import time
 from pathlib import Path
 from unittest.mock import patch
 
@@ -780,6 +782,92 @@ class TranscriptServiceTests(TestCase):
 
         self.assertEqual(transcript, "오디오 전사")
         mock_transcribe_chunks.assert_called_once()
+
+    @patch("core.services.transcript_service._transcribe_audio_with_openai")
+    @patch("core.services.transcript_service._split_audio_file")
+    def test_transcribe_in_chunks_cleans_up_chunk_directory(self, mock_split_audio_file, mock_transcribe_audio):
+        with tempfile.TemporaryDirectory() as chunk_dir:
+            chunk_path = Path(chunk_dir) / "chunk_000.mp3"
+            chunk_path.write_bytes(b"chunk")
+            mock_split_audio_file.return_value = ([chunk_path], Path(chunk_dir))
+            mock_transcribe_audio.return_value = "첫 번째 청크"
+
+            from .services.transcript_service import _transcribe_in_chunks
+
+            transcript = _transcribe_in_chunks(Path("ignored.mp3"))
+
+        self.assertEqual(transcript, "첫 번째 청크")
+        self.assertFalse(Path(chunk_dir).exists())
+
+    @patch("core.services.transcript_service._transcribe_in_chunks")
+    @patch("core.services.transcript_service._extract_audio_track")
+    def test_transcribe_audio_file_cleans_up_extracted_audio_directory(self, mock_extract_audio, mock_transcribe_chunks):
+        with tempfile.NamedTemporaryFile(suffix=".mov") as media_file, tempfile.TemporaryDirectory() as extract_dir:
+            extracted_audio_path = Path(extract_dir) / "source.mp3"
+            extracted_audio_path.write_bytes(b"audio")
+            mock_extract_audio.return_value = extracted_audio_path
+            mock_transcribe_chunks.return_value = "추출 음성 전사"
+
+            from .services.transcript_service import transcribe_audio_file
+
+            transcript = transcribe_audio_file(media_file.name)
+
+        self.assertEqual(transcript, "추출 음성 전사")
+        self.assertFalse(Path(extract_dir).exists())
+
+    @patch("core.services.transcript_service._transcribe_audio_with_openai")
+    @patch("core.services.transcript_service._download_subtitles_with_ytdlp")
+    @patch("core.services.transcript_service._fetch_transcript_from_youtube_api")
+    @patch("core.services.transcript_service._download_audio_with_ytdlp")
+    def test_fetch_youtube_transcript_cleans_up_downloaded_audio_directory(
+        self,
+        mock_download_audio,
+        mock_fetch_api,
+        mock_download_subtitles,
+        mock_transcribe_audio,
+    ):
+        mock_fetch_api.side_effect = Exception("api failed")
+        mock_download_subtitles.side_effect = Exception("subtitle failed")
+        with tempfile.TemporaryDirectory() as audio_dir:
+            audio_path = Path(audio_dir) / "downloaded.mp3"
+            audio_path.write_bytes(b"audio")
+            mock_download_audio.return_value = audio_path
+            mock_transcribe_audio.return_value = "다운로드 음성 전사"
+
+            from .services.transcript_service import fetch_youtube_transcript
+
+            transcript = fetch_youtube_transcript("https://youtu.be/FQnUuUWGuWE")
+
+        self.assertEqual(transcript, "다운로드 음성 전사")
+        self.assertFalse(Path(audio_dir).exists())
+
+    def test_cleanup_stale_transcript_temp_files_removes_only_audio_temp_dirs(self):
+        with tempfile.TemporaryDirectory() as temp_root:
+            removable_dir = Path(temp_root) / "tmp_audio_job"
+            removable_dir.mkdir()
+            (removable_dir / "chunk_000.mp3").write_bytes(b"audio")
+            (removable_dir / "chunk_001.mp3").write_bytes(b"audio")
+
+            keep_dir = Path(temp_root) / "tmp_keep_job"
+            keep_dir.mkdir()
+            (keep_dir / "notes.txt").write_text("keep", encoding="utf-8")
+
+            old_ts = time.time() - (48 * 60 * 60)
+            os.utime(removable_dir, (old_ts, old_ts))
+            os.utime(keep_dir, (old_ts, old_ts))
+            os.utime(removable_dir / "chunk_000.mp3", (old_ts, old_ts))
+            os.utime(removable_dir / "chunk_001.mp3", (old_ts, old_ts))
+            os.utime(keep_dir / "notes.txt", (old_ts, old_ts))
+
+            from .services.transcript_service import cleanup_stale_transcript_temp_files
+
+            with patch("core.services.transcript_service.tempfile.gettempdir", return_value=temp_root):
+                summary = cleanup_stale_transcript_temp_files(older_than_hours=24)
+
+            self.assertEqual(summary["deleted_dirs"], 1)
+            self.assertEqual(summary["deleted_files"], 2)
+            self.assertFalse(removable_dir.exists())
+            self.assertTrue(keep_dir.exists())
 
     @patch("core.management.commands.transcribe_sermon_audio.generate_sermon_content")
     @patch("core.management.commands.transcribe_sermon_audio.transcribe_audio_file")

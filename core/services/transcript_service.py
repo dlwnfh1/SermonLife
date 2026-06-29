@@ -4,6 +4,8 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
+from datetime import timedelta
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -24,6 +26,7 @@ FFMPEG_PATH = os.environ.get(
 TRANSCRIPTION_CHUNK_SECONDS = int(os.environ.get("TRANSCRIPTION_CHUNK_SECONDS", "600"))
 VTT_TIMESTAMP_PATTERN = re.compile(r"^\d{2}:\d{2}:\d{2}\.\d{3}\s+-->\s+\d{2}:\d{2}:\d{2}\.\d{3}$")
 VIDEO_EXTENSIONS = {".mov", ".mp4", ".avi", ".mkv", ".wmv", ".m4v", ".webm", ".ogv"}
+TEMP_AUDIO_EXTENSIONS = {".m4a", ".mp3", ".wav", ".aac", ".ogg", ".webm", ".mp4", ".mov", ".m4v"}
 TRANSCRIPT_PHRASE_NORMALIZATIONS = (
     (re.compile(r"추건\s*합니다"), "축원 합니다"),
 )
@@ -31,6 +34,79 @@ TRANSCRIPT_PHRASE_NORMALIZATIONS = (
 
 class TranscriptFetchError(Exception):
     pass
+
+
+def _is_temp_audio_artifact(path: Path) -> bool:
+    if path.suffix.lower() in TEMP_AUDIO_EXTENSIONS:
+        return True
+    return path.name.startswith("chunk_") and path.suffix.lower() == ".mp3"
+
+
+def _directory_looks_like_transcript_temp_dir(path: Path) -> bool:
+    if not path.is_dir():
+        return False
+
+    files = [item for item in path.rglob("*") if item.is_file()]
+    if not files:
+        return False
+    return all(_is_temp_audio_artifact(item) for item in files)
+
+
+def cleanup_stale_transcript_temp_files(older_than_hours: int = 24):
+    temp_root = Path(tempfile.gettempdir())
+    cutoff = timedelta(hours=max(0, older_than_hours))
+    now_ts = time.time()
+
+    deleted_dirs = 0
+    deleted_files = 0
+    reclaimed_bytes = 0
+
+    current_uid = os.getuid() if hasattr(os, "getuid") else None
+
+    for candidate in temp_root.iterdir():
+        if not candidate.name.startswith("tmp"):
+            continue
+
+        try:
+            stat = candidate.stat()
+        except FileNotFoundError:
+            continue
+
+        if current_uid is not None and stat.st_uid != current_uid:
+            continue
+
+        age = timedelta(seconds=max(0, int(now_ts - stat.st_mtime)))
+        if age < cutoff:
+            continue
+
+        if candidate.is_dir():
+            if not _directory_looks_like_transcript_temp_dir(candidate):
+                continue
+
+            file_sizes = []
+            for item in candidate.rglob("*"):
+                if item.is_file():
+                    try:
+                        file_sizes.append(item.stat().st_size)
+                    except FileNotFoundError:
+                        continue
+            reclaimed_bytes += sum(file_sizes)
+            deleted_files += len(file_sizes)
+            shutil.rmtree(candidate, ignore_errors=True)
+            deleted_dirs += 1
+            continue
+
+        if candidate.is_file() and _is_temp_audio_artifact(candidate):
+            reclaimed_bytes += stat.st_size
+            candidate.unlink(missing_ok=True)
+            deleted_files += 1
+
+    return {
+        "temp_root": str(temp_root),
+        "deleted_dirs": deleted_dirs,
+        "deleted_files": deleted_files,
+        "reclaimed_bytes": reclaimed_bytes,
+    }
 
 
 def build_watch_url(video_id: str) -> str:
@@ -231,18 +307,22 @@ def _split_audio_file(audio_path: Path):
     chunks = sorted(Path(tmpdir).glob("chunk_*.mp3"))
     if not chunks:
         raise TranscriptFetchError("ffmpeg did not create any audio chunks.")
-    return chunks
+    return chunks, Path(tmpdir)
 
 
 def _transcribe_in_chunks(audio_path: Path) -> str:
     transcripts = []
-    for chunk in _split_audio_file(audio_path):
-        transcripts.append(_transcribe_audio_with_openai(chunk))
+    chunks, chunk_dir = _split_audio_file(audio_path)
+    try:
+        for chunk in chunks:
+            transcripts.append(_transcribe_audio_with_openai(chunk))
 
-    merged = "\n".join(part.strip() for part in transcripts if part.strip()).strip()
-    if not merged:
-        raise TranscriptFetchError("Chunked transcription produced an empty transcript.")
-    return _apply_transcript_phrase_normalizations(merged)
+        merged = "\n".join(part.strip() for part in transcripts if part.strip()).strip()
+        if not merged:
+            raise TranscriptFetchError("Chunked transcription produced an empty transcript.")
+        return _apply_transcript_phrase_normalizations(merged)
+    finally:
+        shutil.rmtree(chunk_dir, ignore_errors=True)
 
 
 def _extract_audio_track(media_path: Path) -> Path:
@@ -320,19 +400,25 @@ def transcribe_audio_file(audio_path: str) -> str:
         raise TranscriptFetchError(f"Audio file not found: {audio_path}")
 
     transcribable_path = path
+    transcribable_temp_dir = None
     if path.suffix.lower() in VIDEO_EXTENSIONS:
         transcribable_path = _extract_audio_track(path)
+        transcribable_temp_dir = transcribable_path.parent
 
     try:
-        return _transcribe_in_chunks(transcribable_path)
-    except TranscriptFetchError as exc:
-        if "input_too_large" not in str(exc):
-            try:
-                return _transcribe_audio_with_openai(transcribable_path)
-            except TranscriptFetchError:
-                raise exc
+        try:
+            return _transcribe_in_chunks(transcribable_path)
+        except TranscriptFetchError as exc:
+            if "input_too_large" not in str(exc):
+                try:
+                    return _transcribe_audio_with_openai(transcribable_path)
+                except TranscriptFetchError:
+                    raise exc
 
-    return _transcribe_in_chunks(transcribable_path)
+        return _transcribe_in_chunks(transcribable_path)
+    finally:
+        if transcribable_temp_dir is not None:
+            shutil.rmtree(transcribable_temp_dir, ignore_errors=True)
 
 
 def transcribe_uploaded_audio(uploaded_file) -> str:
@@ -367,7 +453,10 @@ def fetch_youtube_transcript(youtube_url: str, languages=None) -> str:
 
     try:
         audio_path = _download_audio_with_ytdlp(youtube_url)
-        return _transcribe_audio_with_openai(audio_path)
+        try:
+            return _transcribe_audio_with_openai(audio_path)
+        finally:
+            shutil.rmtree(audio_path.parent, ignore_errors=True)
     except Exception as exc:
         failures.append(f"audio transcription: {exc}")
 
