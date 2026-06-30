@@ -3475,11 +3475,54 @@ a {
     margin-top: 18px;
 }
 
+.reminder-panel-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.reminder-panel-summary::-webkit-details-marker {
+    display: none;
+}
+
+.reminder-panel-summary-copy {
+    min-width: 0;
+}
+
+.reminder-panel-summary-copy h2 {
+    margin: 0;
+}
+
+.reminder-panel-summary-copy p {
+    margin: 6px 0 0;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.reminder-panel-summary-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: var(--paper-soft);
+    border: 1px solid rgba(139, 92, 59, 0.12);
+    color: var(--accent);
+    font-size: 0.9rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
 .reminder-settings-form {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 18px;
     align-items: end;
+    margin-top: 18px;
 }
 
 .reminder-settings-copy {
@@ -3699,6 +3742,11 @@ a {
 
     .reminder-settings-form {
         grid-template-columns: 1fr;
+    }
+
+    .reminder-panel-summary {
+        align-items: flex-start;
+        flex-direction: column;
     }
 
     .pastor-shell {

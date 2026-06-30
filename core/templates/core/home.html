@@ -948,13 +948,23 @@
         </section>
 
         {% if request.user.is_authenticated and profile %}
-            <section class="panel reminder-panel">
-                <div class="panel-header">
-                    <h2>말씀 리마인드</h2>
-                </div>
+            <details class="panel reminder-panel" id="reminder-panel" {% if request.GET.reminder_saved != "1" %}open{% endif %}>
+                <summary class="reminder-panel-summary">
+                    <div class="reminder-panel-summary-copy">
+                        <h2>말씀 리마인드</h2>
+                        <p>
+                            {% if profile.reminder_enabled %}
+                                {{ profile.get_reminder_hour_display }} 알림 사용중
+                            {% else %}
+                                현재 알림 꺼짐
+                            {% endif %}
+                        </p>
+                    </div>
+                    <span class="reminder-panel-summary-action">{% if request.GET.reminder_saved == "1" %}다시 열기{% else %}접기{% endif %}</span>
+                </summary>
                 <form method="post" action="{% url 'core:update_reminder_preferences' %}" class="reminder-settings-form">
                     {% csrf_token %}
-                    <input type="hidden" name="return_url" value="{{ request.get_full_path }}">
+                    <input type="hidden" name="return_url" value="{{ request.path }}{% if request.GET.tab %}?tab={{ request.GET.tab }}{% endif %}">
                     <div class="reminder-settings-copy">
                         <p>기본 시간은 오후 7시이며, 원하시면 변경하실수 있습니다.</p>
                         <div class="reminder-settings-controls">
@@ -994,7 +1004,7 @@
                         <button type="submit" class="action-button">리마인드 저장</button>
                     </div>
                 </form>
-            </section>
+            </details>
         {% endif %}
 
         {% if sermon or prayer_tab_enabled %}
