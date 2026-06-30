@@ -1,6 +1,7 @@
 asgiref==3.11.1
 certifi==2026.2.25
 charset-normalizer==3.4.6
+cryptography==49.0.0
 defusedxml==0.7.1
 Django==5.2.12
 idna==3.11

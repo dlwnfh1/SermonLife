@@ -78,6 +78,7 @@ from .services.prayer_scripture_recommendations import (
 from .services.reminders import (
     delete_web_push_subscription,
     get_vapid_public_key,
+    get_vapid_public_key_for_browser,
     save_web_push_subscription,
     web_push_is_configured,
 )
@@ -651,7 +652,7 @@ def _build_home_context(request):
         "profile": profile,
         "reminder_hour_choices": UserProfile.REMINDER_HOUR_CHOICES,
         "web_push_enabled": web_push_is_configured(),
-        "web_push_public_key": get_vapid_public_key(),
+        "web_push_public_key": get_vapid_public_key_for_browser(),
         "has_web_push_subscription": (
             WebPushSubscription.objects.filter(user=request.user).exists()
             if request.user.is_authenticated
@@ -1218,8 +1219,8 @@ def update_reminder_preferences_view(request):
 def reminder_vapid_public_key_view(request):
     return JsonResponse(
         {
-            "configured": bool(get_vapid_public_key()),
-            "publicKey": get_vapid_public_key(),
+            "configured": bool(get_vapid_public_key_for_browser()),
+            "publicKey": get_vapid_public_key_for_browser(),
         }
     )
 

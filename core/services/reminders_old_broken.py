@@ -1,11 +1,7 @@
-import base64
-import binascii
 import json
 import os
 from dataclasses import dataclass
 
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ec
 from django.conf import settings
 from django.utils import timezone
 
@@ -44,51 +40,6 @@ class ReminderCandidate:
 
 def get_vapid_public_key():
     return getattr(settings, "WEB_PUSH_VAPID_PUBLIC_KEY", "") or os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "")
-
-
-def _decode_base64_key(value):
-    normalized = (value or "").strip()
-    if not normalized:
-        return b""
-
-    candidates = [normalized]
-    standard = normalized.replace("-", "+").replace("_", "/")
-    if standard != normalized:
-        candidates.append(standard)
-
-    for candidate in candidates:
-        padding = "=" * ((4 - len(candidate) % 4) % 4)
-        try:
-            return base64.b64decode(candidate + padding, validate=True)
-        except (binascii.Error, ValueError):
-            continue
-    return b""
-
-
-def get_vapid_public_key_for_browser():
-    raw_key = get_vapid_public_key().strip()
-    if not raw_key:
-        return ""
-
-    decoded = _decode_base64_key(raw_key)
-    if len(decoded) == 65 and decoded[:1] == b"\x04":
-        return base64.urlsafe_b64encode(decoded).decode("ascii").rstrip("=")
-
-    if decoded:
-        try:
-            public_key = serialization.load_der_public_key(decoded)
-        except ValueError:
-            public_key = None
-        if isinstance(public_key, ec.EllipticCurvePublicKey):
-            public_numbers = public_key.public_numbers()
-            uncompressed_point = (
-                b"\x04"
-                + public_numbers.x.to_bytes(32, "big")
-                + public_numbers.y.to_bytes(32, "big")
-            )
-            return base64.urlsafe_b64encode(uncompressed_point).decode("ascii").rstrip("=")
-
-    return raw_key
 
 
 def _get_vapid_private_key():
