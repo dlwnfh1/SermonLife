@@ -956,7 +956,7 @@
                     {% csrf_token %}
                     <input type="hidden" name="return_url" value="{{ request.get_full_path }}">
                     <div class="reminder-settings-copy">
-                        <p>기본 시간은 오후 7시이며, 원하시면 오전 8시부터 오후 10시 사이에서 1시간 단위로 변경할 수 있습니다.</p>
+                        <p>기본 시간은 오후 7시이며, 원하시면 변경하실수 있습니다.</p>
                         <div class="reminder-settings-controls">
                             <label class="reminder-toggle">
                                 <input type="checkbox" name="reminder_enabled" {% if profile.reminder_enabled %}checked{% endif %}>
