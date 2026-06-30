@@ -198,7 +198,7 @@ def send_web_push_reminder(candidate: ReminderCandidate, click_url: str):
     payload = json.dumps(
         {
             "title": REMINDER_TITLE,
-            "body": REMINDER_BODY,
+            "body": "오늘 말씀 묵상을 잠깐 시작해 보세요\n알림을 누르면 바로 열립니다",
             "url": click_url,
         }
     )

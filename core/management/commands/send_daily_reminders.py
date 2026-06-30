@@ -30,7 +30,7 @@ class Command(BaseCommand):
         sent_total = 0
         deleted_total = 0
         base_url = options["base_url"].rstrip("/")
-        click_url = f"{base_url}{reverse('core:home')}?tab=today"
+        click_url = f"{base_url}{reverse('core:home')}?tab=today#today-set"
         for candidate in candidates:
             try:
                 summary = send_web_push_reminder(candidate, click_url=click_url)
