@@ -3475,19 +3475,6 @@ a {
     margin-top: 18px;
 }
 
-.reminder-panel-summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    cursor: pointer;
-    list-style: none;
-}
-
-.reminder-panel-summary::-webkit-details-marker {
-    display: none;
-}
-
 .reminder-panel-summary-copy {
     min-width: 0;
 }
@@ -3502,7 +3489,7 @@ a {
     line-height: 1.5;
 }
 
-.reminder-panel-summary-action {
+.reminder-panel-close {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -3515,6 +3502,7 @@ a {
     font-size: 0.9rem;
     font-weight: 800;
     white-space: nowrap;
+    text-decoration: none;
 }
 
 .reminder-settings-form {
@@ -3744,7 +3732,7 @@ a {
         grid-template-columns: 1fr;
     }
 
-    .reminder-panel-summary {
+    .reminder-panel .panel-header {
         align-items: flex-start;
         flex-direction: column;
     }

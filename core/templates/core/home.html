@@ -879,6 +879,7 @@
                     <a class="text-link" href="{% url 'attendance:dashboard' %}">주일출석표</a>
                 {% endif %}
                 <a class="text-link" href="{{ history_url }}">내 기록</a>
+                <a class="text-link{% if request.GET.reminder_settings == '1' %} strong{% endif %}" href="{{ request.path }}?tab={{ active_home_tab }}&reminder_settings=1#reminder-panel">알림설정</a>
                 <a class="text-link" href="{% url 'core:password_change' %}">비밀번호 변경</a>
                 <a class="text-link" href="{{ logout_url }}">로그아웃</a>
             {% else %}
@@ -947,11 +948,11 @@
             </div>
         </section>
 
-        {% if request.user.is_authenticated and profile %}
-            <details class="panel reminder-panel" id="reminder-panel" {% if request.GET.reminder_saved != "1" %}open{% endif %}>
-                <summary class="reminder-panel-summary">
+        {% if request.user.is_authenticated and profile and request.GET.reminder_settings == "1" %}
+            <section class="panel reminder-panel" id="reminder-panel">
+                <div class="panel-header">
                     <div class="reminder-panel-summary-copy">
-                        <h2>말씀 리마인드</h2>
+                        <h2>알림설정</h2>
                         <p>
                             {% if profile.reminder_enabled %}
                                 {{ profile.get_reminder_hour_display }} 알림 사용중
@@ -960,11 +961,11 @@
                             {% endif %}
                         </p>
                     </div>
-                    <span class="reminder-panel-summary-action">{% if request.GET.reminder_saved == "1" %}다시 열기{% else %}접기{% endif %}</span>
-                </summary>
+                    <a class="reminder-panel-close" href="{{ request.path }}?tab={{ active_home_tab }}">닫기</a>
+                </div>
                 <form method="post" action="{% url 'core:update_reminder_preferences' %}" class="reminder-settings-form">
                     {% csrf_token %}
-                    <input type="hidden" name="return_url" value="{{ request.path }}{% if request.GET.tab %}?tab={{ request.GET.tab }}{% endif %}">
+                    <input type="hidden" name="return_url" value="{{ request.path }}?tab={{ active_home_tab }}">
                     <div class="reminder-settings-copy">
                         <p>기본 시간은 오후 7시이며, 원하시면 변경하실수 있습니다.</p>
                         <div class="reminder-settings-controls">
@@ -1004,7 +1005,7 @@
                         <button type="submit" class="action-button">리마인드 저장</button>
                     </div>
                 </form>
-            </details>
+            </section>
         {% endif %}
 
         {% if sermon or prayer_tab_enabled %}
