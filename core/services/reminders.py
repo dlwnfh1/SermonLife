@@ -230,3 +230,48 @@ def send_web_push_reminder(candidate: ReminderCandidate, click_url: str):
         UserProfile.objects.filter(pk=candidate.profile.pk).update(reminder_last_sent_on=timezone.localdate())
 
     return {"sent": sent, "deleted": deleted}
+
+
+def send_web_push_reminder(candidate: ReminderCandidate, click_url: str):
+    if not web_push_is_configured():
+        raise ReminderConfigurationError("Web push is not configured.")
+
+    subscriptions = list(WebPushSubscription.objects.filter(user=candidate.profile.user))
+    if not subscriptions:
+        return {"sent": 0, "deleted": 0}
+
+    payload = json.dumps(
+        {
+            "title": REMINDER_TITLE,
+            "body": "오늘 말씀 묵상을 잠깐 시작해 보세요\n[지금 열기]",
+            "url": click_url,
+        }
+    )
+    sent = 0
+    deleted = 0
+
+    for subscription in subscriptions:
+        try:
+            webpush(
+                subscription_info={
+                    "endpoint": subscription.endpoint,
+                    "keys": {"auth": subscription.auth_key, "p256dh": subscription.p256dh_key},
+                },
+                data=payload,
+                vapid_private_key=_get_vapid_private_key(),
+                vapid_claims={"sub": _get_vapid_subject()},
+                ttl=3600,
+            )
+            sent += 1
+        except WebPushException as exc:  # pragma: no cover
+            status_code = getattr(getattr(exc, "response", None), "status_code", None)
+            if status_code in {404, 410}:
+                subscription.delete()
+                deleted += 1
+                continue
+            raise
+
+    if sent:
+        UserProfile.objects.filter(pk=candidate.profile.pk).update(reminder_last_sent_on=timezone.localdate())
+
+    return {"sent": sent, "deleted": deleted}
