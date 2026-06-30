@@ -3567,6 +3567,26 @@ a {
     line-height: 1.6;
 }
 
+.reminder-save-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(139, 92, 59, 0.1);
+}
+
+.reminder-save-button {
+    min-width: 112px;
+}
+
+.reminder-save-note {
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
 .reminder-guide-dialog {
     width: min(100% - 24px, 460px);
     border: none;
@@ -3790,6 +3810,15 @@ a {
 
     .reminder-settings-form {
         grid-template-columns: 1fr;
+    }
+
+    .reminder-save-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .reminder-save-button {
+        width: 100%;
     }
 
     .reminder-panel .panel-header {
