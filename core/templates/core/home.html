@@ -2193,13 +2193,21 @@
             var reminderGuideClose = document.getElementById("reminder-guide-close");
             var reminderGuideOpenSettings = document.getElementById("reminder-guide-open-settings");
             var reminderGuideStorageKey = "sermonlife_hide_reminder_guide_v1";
+            var reminderGuideDailyKey = "sermonlife_hide_reminder_guide_daily_v1";
+            var todayKey = new Date().toISOString().slice(0, 10);
 
             function closeReminderGuide() {
                 if (!reminderGuideDialog) {
                     return;
                 }
-                if (reminderGuideHide && reminderGuideHide.checked) {
-                    window.localStorage.setItem(reminderGuideStorageKey, "1");
+                try {
+                    if (reminderGuideHide && reminderGuideHide.checked) {
+                        window.localStorage.setItem(reminderGuideStorageKey, "1");
+                    } else {
+                        window.localStorage.setItem(reminderGuideDailyKey, todayKey);
+                    }
+                } catch (error) {
+                    // Ignore storage failures and just close the dialog.
                 }
                 reminderGuideDialog.close();
             }
@@ -2211,7 +2219,9 @@
             ) {
                 var shouldHideReminderGuide = false;
                 try {
-                    shouldHideReminderGuide = window.localStorage.getItem(reminderGuideStorageKey) === "1";
+                    shouldHideReminderGuide =
+                        window.localStorage.getItem(reminderGuideStorageKey) === "1" ||
+                        window.localStorage.getItem(reminderGuideDailyKey) === todayKey;
                 } catch (error) {
                     shouldHideReminderGuide = false;
                 }
@@ -2228,8 +2238,14 @@
 
                 if (reminderGuideOpenSettings) {
                     reminderGuideOpenSettings.addEventListener("click", function () {
-                        if (reminderGuideHide && reminderGuideHide.checked) {
-                            window.localStorage.setItem(reminderGuideStorageKey, "1");
+                        try {
+                            if (reminderGuideHide && reminderGuideHide.checked) {
+                                window.localStorage.setItem(reminderGuideStorageKey, "1");
+                            } else {
+                                window.localStorage.setItem(reminderGuideDailyKey, todayKey);
+                            }
+                        } catch (error) {
+                            // Ignore storage failures and continue navigation.
                         }
                     });
                 }
