@@ -1029,6 +1029,56 @@
                 </section>
             {% endif %}
 
+            {% if request.user.is_authenticated and profile %}
+                <section class="panel reminder-panel">
+                    <div class="panel-header">
+                        <h2>말씀 리마인드</h2>
+                    </div>
+                    <form method="post" action="{% url 'core:update_reminder_preferences' %}" class="reminder-settings-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="return_url" value="{{ request.get_full_path }}">
+                        <div class="reminder-settings-copy">
+                            <p>기본 시간은 오후 7시이며, 원하시면 오전 8시부터 오후 10시 사이에서 1시간 단위로 변경할 수 있습니다.</p>
+                            <div class="reminder-settings-controls">
+                                <label class="reminder-toggle">
+                                    <input type="checkbox" name="reminder_enabled" {% if profile.reminder_enabled %}checked{% endif %}>
+                                    <span>리마인드 받기</span>
+                                </label>
+                                <select class="reminder-select" name="reminder_hour">
+                                    {% for hour_value, hour_label in reminder_hour_choices %}
+                                        <option value="{{ hour_value }}" {% if profile.reminder_hour == hour_value %}selected{% endif %}>{{ hour_label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="reminder-push-box">
+                                <button
+                                    type="button"
+                                    class="action-button"
+                                    id="enable-reminder-push"
+                                    data-has-subscription="{% if has_web_push_subscription %}true{% else %}false{% endif %}"
+                                >
+                                    {% if has_web_push_subscription %}브라우저 알림 연결됨{% else %}브라우저 알림 연결{% endif %}
+                                </button>
+                                <span class="reminder-push-status" id="reminder-push-status">
+                                    {% if web_push_enabled %}
+                                        {% if has_web_push_subscription %}
+                                            이 기기에서 푸시 알림을 받을 준비가 되어 있습니다.
+                                        {% else %}
+                                            이 기기에서 알림을 받으려면 브라우저 알림 연결을 눌러 주세요.
+                                        {% endif %}
+                                    {% else %}
+                                        서버 푸시 설정이 아직 완료되지 않았습니다.
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <button type="submit" class="action-button">리마인드 저장</button>
+                        </div>
+                    </form>
+                </section>
+            {% endif %}
+
             <div class="home-tab-panels">
 
                 <section class="home-tab-panel home-tab-panel-sermon">
@@ -2142,6 +2192,109 @@
             }, true);
 
             window.addEventListener("pageshow", hidePrayerSubmitOverlay);
+        })();
+
+        (function () {
+            var pushButton = document.getElementById("enable-reminder-push");
+            var pushStatus = document.getElementById("reminder-push-status");
+
+            function getCookie(name) {
+                var cookieValue = null;
+                if (document.cookie && document.cookie !== "") {
+                    var cookies = document.cookie.split(";");
+                    for (var i = 0; i < cookies.length; i += 1) {
+                        var cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + "=")) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            function urlBase64ToUint8Array(base64String) {
+                var padding = "=".repeat((4 - base64String.length % 4) % 4);
+                var base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+                var rawData = window.atob(base64);
+                var outputArray = new Uint8Array(rawData.length);
+                for (var i = 0; i < rawData.length; ++i) {
+                    outputArray[i] = rawData.charCodeAt(i);
+                }
+                return outputArray;
+            }
+
+            async function fetchPublicKey() {
+                var response = await fetch("{% url 'core:reminder_vapid_public_key' %}", { credentials: "same-origin" });
+                if (!response.ok) {
+                    throw new Error("public_key_fetch_failed");
+                }
+                return response.json();
+            }
+
+            async function saveSubscription(subscription) {
+                var response = await fetch("{% url 'core:save_push_subscription' %}", {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": getCookie("csrftoken")
+                    },
+                    body: JSON.stringify({ subscription: subscription.toJSON() })
+                });
+                if (!response.ok) {
+                    throw new Error("subscription_save_failed");
+                }
+            }
+
+            async function registerReminderPush() {
+                if (!pushButton || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+                    return;
+                }
+
+                pushButton.disabled = true;
+                pushStatus.textContent = "브라우저 알림을 준비하는 중입니다...";
+
+                try {
+                    var keyPayload = await fetchPublicKey();
+                    if (!keyPayload.configured || !keyPayload.publicKey) {
+                        pushStatus.textContent = "서버 푸시 설정이 아직 완료되지 않았습니다.";
+                        pushButton.disabled = false;
+                        return;
+                    }
+
+                    var registration = await navigator.serviceWorker.register("/service-worker.js");
+                    var permission = await Notification.requestPermission();
+                    if (permission !== "granted") {
+                        pushStatus.textContent = "브라우저 알림 권한이 허용되지 않았습니다.";
+                        pushButton.disabled = false;
+                        return;
+                    }
+
+                    var existing = await registration.pushManager.getSubscription();
+                    var subscription = existing || await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(keyPayload.publicKey)
+                    });
+
+                    await saveSubscription(subscription);
+                    pushButton.textContent = "브라우저 알림 연결됨";
+                    pushButton.dataset.hasSubscription = "true";
+                    pushStatus.textContent = "이 기기에서 매일 리마인드 알림을 받을 수 있습니다.";
+                } catch (error) {
+                    pushStatus.textContent = "브라우저 알림 연결에 실패했습니다.";
+                    pushButton.disabled = false;
+                    return;
+                }
+
+                pushButton.disabled = false;
+            }
+
+            if (pushButton) {
+                pushButton.addEventListener("click", function () {
+                    registerReminderPush();
+                });
+            }
         })();
     </script>
   </body>

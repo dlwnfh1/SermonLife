@@ -628,6 +628,11 @@ class SermonMission(models.Model):
 
 
 class UserProfile(models.Model):
+    REMINDER_HOUR_CHOICES = tuple(
+        (hour, f"{'오전' if hour < 12 else '오후'} {12 if hour in {0, 12} else hour if hour < 12 else hour - 12}시")
+        for hour in range(8, 23)
+    )
+
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     church = models.ForeignKey(
         Church,
@@ -647,6 +652,9 @@ class UserProfile(models.Model):
     can_manage_attendance = models.BooleanField(default=False)
     can_check_attendance = models.BooleanField(default=False)
     attendance_only_mode = models.BooleanField(default=False)
+    reminder_enabled = models.BooleanField(default=True)
+    reminder_hour = models.PositiveSmallIntegerField(choices=REMINDER_HOUR_CHOICES, default=19)
+    reminder_last_sent_on = models.DateField(null=True, blank=True)
 
     def __str__(self):
         return self.user.get_username()
@@ -657,6 +665,31 @@ class UserProfile(models.Model):
             if default_church:
                 self.church = default_church
         super().save(*args, **kwargs)
+
+
+class WebPushSubscription(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="web_push_subscriptions")
+    church = models.ForeignKey(
+        Church,
+        on_delete=models.PROTECT,
+        related_name="web_push_subscriptions",
+        null=True,
+        blank=True,
+    )
+    endpoint = models.TextField(unique=True)
+    auth_key = models.CharField(max_length=255)
+    p256dh_key = models.CharField(max_length=255)
+    expiration_time = models.BigIntegerField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_seen_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-id"]
+
+    def __str__(self):
+        return f"{self.user.get_username()} push subscription"
 
 
 class PrayerRequestStatus(models.TextChoices):

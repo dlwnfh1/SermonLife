@@ -1,4 +1,5 @@
 ﻿import re
+import json
 import logging
 from urllib.parse import urlencode
 
@@ -13,7 +14,7 @@ from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import Case, Count, IntegerField, Max, Q, Sum, Value, When
 from django.forms import modelformset_factory
-from django.http import Http404, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.template.defaultfilters import filesizeformat
@@ -52,6 +53,7 @@ from .models import (
     SermonStatus,
     SermonSummary,
     UserProfile,
+    WebPushSubscription,
     WeeklyChallenge,
     TranscriptCorrectionRule,
     get_current_public_sermon_id,
@@ -72,6 +74,12 @@ from .services.prayer_scripture_recommendations import (
     PrayerScriptureRecommendationError,
     enrich_prayer_scripture_recommendations,
     request_prayer_scripture_recommendations,
+)
+from .services.reminders import (
+    delete_web_push_subscription,
+    get_vapid_public_key,
+    save_web_push_subscription,
+    web_push_is_configured,
 )
 from reports.models import (
     ContentQualityReport,
@@ -641,6 +649,14 @@ def _build_home_context(request):
 
     context = {
         "profile": profile,
+        "reminder_hour_choices": UserProfile.REMINDER_HOUR_CHOICES,
+        "web_push_enabled": web_push_is_configured(),
+        "web_push_public_key": get_vapid_public_key(),
+        "has_web_push_subscription": (
+            WebPushSubscription.objects.filter(user=request.user).exists()
+            if request.user.is_authenticated
+            else False
+        ),
         "can_access_attendance": _can_access_attendance_app(request.user),
         "can_show_attendance_button": _can_show_attendance_button(request.user),
         "active_church": active_church,
@@ -1124,6 +1140,119 @@ def my_history_view(request, church_slug=None):
     }
     context.update(_build_church_nav_context(active_church))
     return render(request, "core/my_history.html", context)
+
+
+def service_worker_view(request):
+    script = """
+self.addEventListener('install', function(event) {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', function(event) {
+  event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('push', function(event) {
+  var payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch (error) {
+    payload = {};
+  }
+  event.waitUntil(
+    self.registration.showNotification(payload.title || 'Word & Life', {
+      body: payload.body || '',
+      icon: '/static/core/icons/icon-192.png',
+      badge: '/static/core/icons/icon-192.png',
+      data: { url: payload.url || '/' }
+    })
+  );
+});
+
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  var targetUrl = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+      for (var i = 0; i < clientList.length; i += 1) {
+        var client = clientList[i];
+        if ('focus' in client) {
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+    })
+  );
+});
+""".strip()
+    response = HttpResponse(script, content_type="application/javascript; charset=utf-8")
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
+
+
+@login_required
+@require_POST
+def update_reminder_preferences_view(request):
+    profile = _get_or_create_profile(request.user)
+    enabled = request.POST.get("reminder_enabled") == "on"
+    try:
+        reminder_hour = int(request.POST.get("reminder_hour") or profile.reminder_hour or 19)
+    except (TypeError, ValueError):
+        reminder_hour = 19
+
+    valid_hours = {choice[0] for choice in UserProfile.REMINDER_HOUR_CHOICES}
+    if reminder_hour not in valid_hours:
+        reminder_hour = 19
+
+    profile.reminder_enabled = enabled
+    profile.reminder_hour = reminder_hour
+    profile.save(update_fields=["reminder_enabled", "reminder_hour"])
+    messages.success(request, "말씀 리마인드 설정이 저장되었습니다.")
+    return redirect(request.POST.get("return_url") or reverse("core:home"))
+
+
+@login_required
+def reminder_vapid_public_key_view(request):
+    return JsonResponse(
+        {
+            "configured": bool(get_vapid_public_key()),
+            "publicKey": get_vapid_public_key(),
+        }
+    )
+
+
+@login_required
+@require_POST
+def save_push_subscription_view(request):
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({"ok": False, "error": "invalid_json"}, status=400)
+
+    try:
+        save_web_push_subscription(
+            user=request.user,
+            payload=payload,
+            user_agent=request.META.get("HTTP_USER_AGENT", ""),
+        )
+    except ValueError as exc:
+        return JsonResponse({"ok": False, "error": str(exc)}, status=400)
+
+    return JsonResponse({"ok": True})
+
+
+@login_required
+@require_POST
+def delete_push_subscription_view(request):
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        payload = {}
+    delete_web_push_subscription(user=request.user, endpoint=payload.get("endpoint", ""))
+    return JsonResponse({"ok": True})
 
 
 def home_view(request, church_slug=None):

@@ -36,6 +36,7 @@ from .models import (
     SermonSummary,
     TranscriptCorrectionRule,
     UserProfile,
+    WebPushSubscription,
 )
 from .services.ai_generation import AIContentGenerationError, generate_sermon_content
 from .services.pastor_review_notifications import (
@@ -1036,10 +1037,23 @@ class ChurchAdmin(admin.ModelAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "church", "member_role", "can_use_audio_transcriber", "can_manage_attendance", "can_check_attendance", "points", "streak_days")
+    list_display = ("user", "church", "member_role", "reminder_enabled", "reminder_hour", "can_use_audio_transcriber", "can_manage_attendance", "can_check_attendance", "points", "streak_days")
     search_fields = ("user__username", "member_role", "church__name", "church__slug")
-    list_filter = ("church", "member_role", "can_use_audio_transcriber", "can_manage_attendance", "can_check_attendance")
-    list_editable = ("can_use_audio_transcriber", "can_manage_attendance", "can_check_attendance")
+    list_filter = ("church", "member_role", "reminder_enabled", "can_use_audio_transcriber", "can_manage_attendance", "can_check_attendance")
+    list_editable = ("reminder_enabled", "reminder_hour", "can_use_audio_transcriber", "can_manage_attendance", "can_check_attendance")
+
+
+@admin.register(WebPushSubscription)
+class WebPushSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ("user", "church", "short_endpoint", "updated_at")
+    search_fields = ("user__username", "church__name", "endpoint")
+    list_filter = ("church",)
+    readonly_fields = ("created_at", "updated_at", "last_seen_at")
+
+    def short_endpoint(self, obj):
+        return (obj.endpoint[:80] + "...") if len(obj.endpoint) > 80 else obj.endpoint
+
+    short_endpoint.short_description = "endpoint"
 
 
 @admin.register(PastorNotificationRecipient)

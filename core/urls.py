@@ -4,6 +4,7 @@ from django.contrib.auth.views import PasswordChangeDoneView, PasswordChangeView
 from .views import (
     complete_mission_view,
     create_prayer_request_view,
+    delete_push_subscription_view,
     delete_pastor_audio_transcript_view,
     delete_prayer_request_view,
     email_pastor_audio_transcript_view,
@@ -20,11 +21,14 @@ from .views import (
     pastor_sermon_edit_view,
     pastor_transcript_corrections_view,
     read_sermon_view,
+    reminder_vapid_public_key_view,
+    save_push_subscription_view,
     signup_view,
     submit_highlight_vote_view,
     submit_daily_quiz_view,
     submit_reflection_view,
     transcribe_voice_note_view,
+    update_reminder_preferences_view,
     update_prayer_request_view,
     watch_sermon_view,
 )
@@ -48,6 +52,10 @@ urlpatterns = [
     path("login/", login_view, name="login"),
     path("signup/", signup_view, name="signup"),
     path("logout/", logout_view, name="logout"),
+    path("reminders/preferences/", update_reminder_preferences_view, name="update_reminder_preferences"),
+    path("reminders/vapid-public-key/", reminder_vapid_public_key_view, name="reminder_vapid_public_key"),
+    path("reminders/push-subscription/", save_push_subscription_view, name="save_push_subscription"),
+    path("reminders/push-subscription/delete/", delete_push_subscription_view, name="delete_push_subscription"),
     path(
         "password-change/",
         PasswordChangeView.as_view(

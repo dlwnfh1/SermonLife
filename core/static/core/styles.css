@@ -3471,6 +3471,71 @@ a {
     line-height: 1.5;
 }
 
+.reminder-panel {
+    margin-top: 18px;
+}
+
+.reminder-settings-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 18px;
+    align-items: end;
+}
+
+.reminder-settings-copy {
+    display: grid;
+    gap: 12px;
+}
+
+.reminder-settings-copy p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.7;
+}
+
+.reminder-settings-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.reminder-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: 999px;
+    background: var(--paper-soft);
+    border: 1px solid rgba(139, 92, 59, 0.12);
+    color: var(--ink);
+    font-weight: 700;
+}
+
+.reminder-select {
+    min-height: 48px;
+    padding: 0 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(139, 92, 59, 0.16);
+    background: #fffdf8;
+    color: var(--ink);
+    font: inherit;
+}
+
+.reminder-push-box {
+    margin-top: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.reminder-push-status {
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.6;
+}
+
 .points-guide-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3629,6 +3694,10 @@ a {
     .pastor-report-day-grid,
     .pastor-report-hero-grid,
     .pastor-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .reminder-settings-form {
         grid-template-columns: 1fr;
     }
 

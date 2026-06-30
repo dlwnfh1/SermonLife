@@ -19,7 +19,10 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import include, path
 
+from core.views import service_worker_view
+
 urlpatterns = [
+    path('service-worker.js', service_worker_view),
     path('admin/', admin.site.urls),
     path('attendance/', include('attendance.urls')),
     path('', include('core.urls')),
