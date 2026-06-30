@@ -1002,10 +1002,31 @@
                         </div>
                     </div>
                     <div>
-                        <button type="submit" class="action-button">리마인드 저장</button>
+                        <button type="submit" class="action-button">저장</button>
                     </div>
                 </form>
             </section>
+        {% endif %}
+
+        {% if request.user.is_authenticated and profile %}
+            <dialog class="reminder-guide-dialog" id="reminder-guide-dialog" aria-labelledby="reminder-guide-title">
+                <form method="dialog" class="reminder-guide-card">
+                    <div class="reminder-guide-kicker">알림설정 안내</div>
+                    <h2 id="reminder-guide-title">매일 정해진 시간에 말씀 알림을 받아보세요</h2>
+                    <p>
+                        알림을 설정하여 매일 정해진 시간에 알림을 받아볼 수 있습니다.
+                        상단의 <strong>알림설정</strong> 버튼에서 시간과 알림 사용 여부를 정할 수 있습니다.
+                    </p>
+                    <label class="reminder-guide-checkbox">
+                        <input type="checkbox" id="reminder-guide-hide">
+                        <span>다시 안보기</span>
+                    </label>
+                    <div class="reminder-guide-actions">
+                        <button type="button" class="action-button action-button-secondary" id="reminder-guide-close">닫기</button>
+                        <a class="action-button" href="{{ request.path }}?tab={{ active_home_tab }}&reminder_settings=1#reminder-panel" id="reminder-guide-open-settings">알림설정 열기</a>
+                    </div>
+                </form>
+            </dialog>
         {% endif %}
 
         {% if sermon or prayer_tab_enabled %}
@@ -2162,6 +2183,56 @@
                 if (prayerTabInput.checked) {
                     ensurePrayerSubviewLoaded("mine");
                 }
+            }
+        })();
+
+        (function () {
+            var reminderGuideDialog = document.getElementById("reminder-guide-dialog");
+            var reminderGuideHide = document.getElementById("reminder-guide-hide");
+            var reminderGuideClose = document.getElementById("reminder-guide-close");
+            var reminderGuideOpenSettings = document.getElementById("reminder-guide-open-settings");
+            var reminderGuideStorageKey = "sermonlife_hide_reminder_guide_v1";
+
+            function closeReminderGuide() {
+                if (!reminderGuideDialog) {
+                    return;
+                }
+                if (reminderGuideHide && reminderGuideHide.checked) {
+                    window.localStorage.setItem(reminderGuideStorageKey, "1");
+                }
+                reminderGuideDialog.close();
+            }
+
+            if (reminderGuideDialog && !window.location.search.includes("reminder_settings=1")) {
+                var shouldHideReminderGuide = false;
+                try {
+                    shouldHideReminderGuide = window.localStorage.getItem(reminderGuideStorageKey) === "1";
+                } catch (error) {
+                    shouldHideReminderGuide = false;
+                }
+
+                if (!shouldHideReminderGuide) {
+                    reminderGuideDialog.showModal();
+                }
+
+                if (reminderGuideClose) {
+                    reminderGuideClose.addEventListener("click", function () {
+                        closeReminderGuide();
+                    });
+                }
+
+                if (reminderGuideOpenSettings) {
+                    reminderGuideOpenSettings.addEventListener("click", function () {
+                        if (reminderGuideHide && reminderGuideHide.checked) {
+                            window.localStorage.setItem(reminderGuideStorageKey, "1");
+                        }
+                    });
+                }
+
+                reminderGuideDialog.addEventListener("cancel", function (event) {
+                    event.preventDefault();
+                    closeReminderGuide();
+                });
             }
         })();
 
