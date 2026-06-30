@@ -195,7 +195,6 @@ def send_web_push_reminder(candidate: ReminderCandidate, click_url: str):
     if not subscriptions:
         return {"sent": 0, "deleted": 0}
 
-    vapid_claims = {"sub": _get_vapid_subject()}
     payload = json.dumps(
         {
             "title": REMINDER_TITLE,
@@ -215,7 +214,7 @@ def send_web_push_reminder(candidate: ReminderCandidate, click_url: str):
                 },
                 data=payload,
                 vapid_private_key=_get_vapid_private_key(),
-                vapid_claims=vapid_claims,
+                vapid_claims={"sub": _get_vapid_subject()},
                 ttl=3600,
             )
             sent += 1
