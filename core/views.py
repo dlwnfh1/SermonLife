@@ -1212,7 +1212,9 @@ def update_reminder_preferences_view(request):
     profile.reminder_hour = reminder_hour
     profile.save(update_fields=["reminder_enabled", "reminder_hour"])
     messages.success(request, "말씀 리마인드 설정이 저장되었습니다.")
-    return redirect(request.POST.get("return_url") or reverse("core:home"))
+    redirect_url = request.POST.get("return_url") or reverse("core:home")
+    separator = "&" if "?" in redirect_url else "?"
+    return redirect(f"{redirect_url}{separator}reminder_returned=1")
 
 
 @login_required
