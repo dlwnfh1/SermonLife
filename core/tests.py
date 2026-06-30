@@ -237,6 +237,54 @@ class HomeViewTests(TestCase):
         user = User.objects.get(username="newmember")
         self.assertTrue(UserProfile.objects.filter(user=user, member_role="elder").exists())
 
+    def test_my_history_deduplicates_same_challenge_from_multiple_point_entries(self):
+        user = User.objects.create_user(username="historyuser", password="1234")
+        self.client.force_login(user)
+        sermon = Sermon.objects.create(
+            title="택한 나의 그릇",
+            sermon_date=date(2026, 6, 22),
+            status=SermonStatus.PUBLISHED,
+            is_published=True,
+        )
+        challenge = WeeklyChallenge.objects.create(
+            sermon=sermon,
+            title="06/22 Weekly Sermon Challenge",
+            week_start=date(2026, 6, 22),
+            week_end=date(2026, 6, 28),
+            is_active=True,
+        )
+
+        PointLedger.objects.create(
+            user=user,
+            challenge=challenge,
+            sermon=sermon,
+            source=PointSource.SUMMARY,
+            points=5,
+            note="summary",
+        )
+        PointLedger.objects.create(
+            user=user,
+            challenge=challenge,
+            sermon=sermon,
+            source=PointSource.QUIZ,
+            points=5,
+            note="day:1",
+        )
+        PointLedger.objects.create(
+            user=user,
+            challenge=challenge,
+            sermon=sermon,
+            source=PointSource.REFLECTION,
+            points=5,
+            note="day:1",
+        )
+
+        response = self.client.get(reverse("core:my_history"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["weekly_history"]), 1)
+        self.assertEqual(response.context["weekly_history"][0]["challenge"].pk, challenge.pk)
+
     def test_signup_shows_message_when_username_is_duplicated(self):
         User.objects.create_user(username="duplicate", password="1234")
 

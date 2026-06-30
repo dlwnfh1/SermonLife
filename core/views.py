@@ -1057,10 +1057,15 @@ def my_history_view(request, church_slug=None):
         )
 
     challenge_ids = list(
-        PointLedger.objects.filter(user=request.user, challenge__sermon__church=active_church)
-        .order_by("-created_at")
-        .values_list("challenge_id", flat=True)
-        .distinct()[:8]
+        PointLedger.objects.filter(
+            user=request.user,
+            challenge__sermon__church=active_church,
+            challenge_id__isnull=False,
+        )
+        .values("challenge_id")
+        .annotate(last_earned_at=Max("created_at"))
+        .order_by("-last_earned_at")
+        .values_list("challenge_id", flat=True)[:8]
     )
     challenges = (
         WeeklyChallenge.objects.filter(id__in=challenge_ids)
