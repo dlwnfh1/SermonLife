@@ -72,11 +72,15 @@
         .weekly-card,
         .result-card,
         .streak-card,
-        .roster-section,
+        .report-entry,
         .flash {
             background: var(--panel);
             border: 1px solid rgba(165, 106, 59, .14);
             box-shadow: 0 20px 48px rgba(133, 96, 52, .09);
+        }
+        .panel {
+            border-radius: 28px;
+            padding: 24px;
         }
         .flash-wrap {
             display: grid;
@@ -90,16 +94,10 @@
         .flash.success {
             color: var(--success-ink);
             border-color: rgba(93, 136, 86, .24);
-            background: rgba(255, 250, 241, 0.96);
         }
         .flash.error {
             color: var(--danger);
             border-color: rgba(182, 75, 69, .22);
-            background: rgba(255, 250, 241, 0.96);
-        }
-        .panel {
-            border-radius: 28px;
-            padding: 24px;
         }
         h1 { margin: 0; font-size: clamp(34px, 5vw, 46px); }
         h2 { margin: 0; font-size: clamp(24px, 3vw, 30px); }
@@ -107,58 +105,12 @@
         p { margin: 0; color: var(--muted); line-height: 1.7; }
         .section { margin-top: 22px; }
         .section-head,
-        .detail-header,
-        .roster-section-head {
+        .detail-header {
             display: flex;
             justify-content: space-between;
             align-items: end;
             gap: 16px;
         }
-        .headline-metric {
-            min-width: 250px;
-            max-width: 320px;
-            padding: 14px 16px;
-            border-radius: 18px;
-            background: rgba(255, 250, 241, 0.96);
-            border: 1px solid rgba(165, 106, 59, .14);
-            box-shadow: 0 12px 28px rgba(133, 96, 52, .08);
-        }
-        .headline-metric-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            gap: 12px;
-        }
-        .headline-metric-label {
-            color: var(--muted);
-            font-size: 13px;
-            font-weight: 700;
-        }
-        .headline-metric-value {
-            color: var(--accent-strong);
-            font-size: 26px;
-            font-weight: 800;
-            line-height: 1;
-        }
-        .headline-metric-meta {
-            margin-top: 8px;
-            color: var(--muted);
-            font-size: 13px;
-        }
-        .headline-meter {
-            margin-top: 12px;
-            width: 100%;
-            height: 10px;
-            border-radius: 999px;
-            background: #eadfce;
-            overflow: hidden;
-        }
-        .headline-meter-bar {
-            height: 100%;
-            border-radius: 999px;
-            background: linear-gradient(90deg, #a56a3b 0%, #c1844d 100%);
-        }
-        .detail-header { margin-bottom: 18px; }
         .header-actions {
             display: flex;
             gap: 10px;
@@ -215,10 +167,10 @@
             font: inherit;
         }
         .summary-grid,
+        .weekly-grid,
         .absent-list,
         .streak-list,
-        .search-match-list,
-        .weekly-grid {
+        .search-match-list {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 14px 16px;
@@ -234,6 +186,50 @@
             color: var(--accent-strong);
         }
         .summary-card.is-danger strong { color: var(--danger); }
+        .headline-metric {
+            min-width: 250px;
+            max-width: 320px;
+            padding: 14px 16px;
+            border-radius: 18px;
+            background: rgba(255, 250, 241, 0.96);
+            border: 1px solid rgba(165, 106, 59, .14);
+            box-shadow: 0 12px 28px rgba(133, 96, 52, .08);
+        }
+        .headline-metric-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 12px;
+        }
+        .headline-metric-label {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .headline-metric-value {
+            color: var(--accent-strong);
+            font-size: 26px;
+            font-weight: 800;
+            line-height: 1;
+        }
+        .headline-metric-meta {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+        .headline-meter {
+            margin-top: 12px;
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            background: #eadfce;
+            overflow: hidden;
+        }
+        .headline-meter-bar {
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #a56a3b 0%, #c1844d 100%);
+        }
         .weekly-card {
             display: block;
             border-radius: 20px;
@@ -242,13 +238,13 @@
             text-decoration: none;
         }
         .weekly-card p { margin-top: 6px; }
-        .weekly-badges {
+        .pill-row {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
             margin-top: 12px;
         }
-        .weekly-badge,
+        .pill,
         .status-pill,
         .absent-badge,
         .streak-badge {
@@ -261,13 +257,13 @@
             font-weight: 800;
             white-space: nowrap;
         }
-        .weekly-badge,
+        .pill,
         .status-pill {
             background: var(--success-soft);
             border: 1px solid rgba(93, 136, 86, .18);
             color: var(--success-ink);
         }
-        .weekly-badge.is-danger,
+        .pill.is-danger,
         .status-pill.is-absent,
         .absent-badge,
         .streak-badge {
@@ -298,41 +294,50 @@
             background: #fffdfa;
         }
         .result-name,
-        .streak-name,
-        .roster-name {
+        .streak-name {
             font-size: 17px;
             font-weight: 700;
             line-height: 1.3;
         }
         .result-meta,
-        .streak-meta,
-        .roster-meta {
+        .streak-meta {
             margin-top: 2px;
             color: var(--muted);
             font-size: 13px;
         }
-        .roster-sections {
+        .member-sections {
             display: grid;
             gap: 18px;
         }
-        .roster-section {
+        .member-section {
             border-radius: 24px;
             padding: 18px;
+            background: var(--panel);
+            border: 1px solid rgba(165, 106, 59, .14);
+            box-shadow: 0 20px 48px rgba(133, 96, 52, .09);
         }
-        .roster-section-subtitle {
+        .member-section-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            gap: 16px;
+        }
+        .member-section-subtitle {
             color: var(--accent-strong);
             font-size: 14px;
             font-weight: 700;
             white-space: nowrap;
         }
-        .roster-grid {
+        .member-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 12px 14px;
+            margin-top: 16px;
         }
-        .roster-item {
+        .member-item {
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 10px;
             min-height: 48px;
             padding: 10px 12px;
@@ -341,7 +346,6 @@
             border: 1px solid rgba(165, 106, 59, .12);
             box-shadow: 0 4px 10px rgba(133, 96, 52, .05);
         }
-        .roster-main { min-width: 0; }
         .search-match-link {
             display: block;
             padding: 12px 14px;
@@ -357,6 +361,129 @@
             font-size: 17px;
             margin-bottom: 4px;
         }
+        .report-list {
+            display: grid;
+            gap: 16px;
+        }
+        .district-sections {
+            display: grid;
+            gap: 18px;
+        }
+        .district-section {
+            border-radius: 24px;
+            background: rgba(255, 250, 241, 0.86);
+            border: 1px solid rgba(165, 106, 59, .14);
+            box-shadow: 0 18px 40px rgba(133, 96, 52, .08);
+            overflow: hidden;
+        }
+        .district-toggle {
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 18px 20px;
+            font-weight: 800;
+            color: var(--ink);
+        }
+        .district-toggle::-webkit-details-marker { display: none; }
+        .district-toggle::after {
+            content: "열기";
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 34px;
+            padding: 0 12px;
+            border-radius: 999px;
+            background: rgba(165, 106, 59, .10);
+            color: var(--accent-strong);
+            font-size: 12px;
+            font-weight: 800;
+        }
+        .district-section[open] .district-toggle::after { content: "닫기"; }
+        .district-toggle-main {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .district-toggle-title {
+            font-size: 24px;
+            font-weight: 900;
+            color: var(--ink);
+        }
+        .district-toggle-meta {
+            font-size: 13px;
+            color: var(--muted);
+            font-weight: 700;
+        }
+        .district-body {
+            padding: 0 20px 20px;
+        }
+        .report-entry {
+            border-radius: 24px;
+            padding: 20px;
+        }
+        .report-entry-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            gap: 16px;
+        }
+        .report-entry-meta {
+            display: grid;
+            gap: 4px;
+        }
+        .report-entry-date {
+            color: var(--accent-strong);
+            font-size: 14px;
+            font-weight: 800;
+        }
+        .report-notes {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(165, 106, 59, .14);
+        }
+        .pending-group-list {
+            display: grid;
+            gap: 10px;
+        }
+        .pending-group-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            min-height: 52px;
+            padding: 12px 14px;
+            border-radius: 16px;
+            background: #fffdfa;
+            border: 1px solid rgba(165, 106, 59, .12);
+        }
+        .pending-group-name {
+            font-size: 18px;
+            font-weight: 900;
+            color: var(--ink);
+        }
+        .pending-group-subtitle {
+            font-size: 13px;
+            color: var(--muted);
+            font-weight: 700;
+        }
+        .group-inline-title {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .group-inline-title strong {
+            font-size: 22px;
+        }
+        .group-inline-sub {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 700;
+        }
         .empty-state {
             padding: 20px;
             border-radius: 18px;
@@ -369,11 +496,11 @@
             .report-cards { grid-template-columns: 1fr; }
             .filter-form { grid-template-columns: 1fr 1fr; }
             .summary-grid,
+            .weekly-grid,
             .absent-list,
             .streak-list,
             .search-match-list,
-            .weekly-grid,
-            .roster-grid {
+            .member-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
@@ -383,53 +510,70 @@
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
             .filter-form { grid-template-columns: 1fr; }
-            .summary-grid,
+            .summary-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 10px;
+            }
+            .weekly-grid,
             .streak-list,
             .search-match-list,
-            .weekly-grid { grid-template-columns: 1fr; }
+            .member-grid { grid-template-columns: 1fr; }
             .absent-list {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
+                grid-template-columns: repeat(2, minmax(0, 1fr));
                 gap: 8px;
             }
-            .result-card {
+            .section-head,
+            .member-section-head,
+            .report-entry-head,
+            .district-toggle,
+            .pending-group-item {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 6px;
-                min-height: 0;
-                padding: 10px;
-            }
-            .result-name { font-size: 14px; }
-            .result-meta { font-size: 11px; }
-            .absent-badge { padding: 6px 10px; font-size: 12px; }
-            .roster-grid {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
                 gap: 8px;
             }
-            .roster-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 6px;
-                min-height: 0;
-                padding: 10px;
+            .detail-header {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                align-items: start;
+                gap: 10px;
             }
-            .roster-name { font-size: 14px; }
-            .status-pill { min-width: 0; padding: 6px 10px; font-size: 12px; }
-            .roster-section-head,
-            .detail-header,
-            .section-head {
+            .detail-header h1 {
+                font-size: 36px;
+                line-height: 1.02;
+                min-width: 0;
+                white-space: nowrap;
+            }
+            .header-actions {
+                justify-content: flex-end;
                 align-items: flex-start;
-                flex-direction: column;
-                gap: 8px;
+                flex-wrap: nowrap;
+            }
+            .header-actions .back-link {
+                padding: 12px 16px;
+                white-space: nowrap;
+            }
+            .summary-card {
+                padding: 14px 12px;
+                border-radius: 18px;
+            }
+            .summary-card span {
+                font-size: 13px;
+                line-height: 1.2;
+            }
+            .summary-card strong {
+                margin-top: 8px;
+                font-size: 26px;
+                line-height: 1;
             }
             .headline-metric {
                 min-width: 100%;
                 max-width: none;
             }
-        }
-        @media (max-width: 420px) {
-            .absent-list,
-            .roster-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+            .member-item,
+            .result-card,
+            .streak-card {
+                flex-direction: column;
+                align-items: flex-start;
             }
         }
     </style>
@@ -471,6 +615,10 @@
                         <strong>개인별 리포트</strong>
                         <p>교구, 속, 이름 검색으로 한 사람의 최근 출석 이력과 연속 결석 상태를 확인합니다.</p>
                     </a>
+                    <a class="report-card" href="{% url 'attendance:report_hub' %}?report=small_group">
+                        <strong>속회 보고서</strong>
+                        <p>각 속에서 제출한 속회 보고서를 월별로 모아 보고, 미제출 속도 함께 확인합니다.</p>
+                    </a>
                     <a class="report-card is-danger" href="{% url 'attendance:report_hub' %}?report=streak">
                         <strong>연속 결석자</strong>
                         <p>가장 최근 주일을 기준으로 2주 이상 연속 결석 중인 교인을 주수별로 확인합니다.</p>
@@ -485,6 +633,8 @@
                             결석자 리포트
                         {% elif selected_report == "personal" %}
                             개인별 리포트
+                        {% elif selected_report == "small_group" %}
+                            속회보고서
                         {% elif selected_report == "streak" %}
                             {% if selected_min_weeks == 5 %}5주 이상 연속 결석자{% else %}{{ selected_min_weeks }}주 연속 결석자{% endif %} ({{ streak_rows|length }}명)
                         {% else %}
@@ -502,9 +652,6 @@
 
                 <form method="get" class="filter-form" id="report-filter-form">
                     <input type="hidden" name="report" value="{{ selected_report }}">
-                    {% if selected_report == "weekly" and selected_group %}
-                        <input type="hidden" name="group" value="{{ selected_group.id }}">
-                    {% endif %}
 
                     {% if selected_report == "weekly" or selected_report == "absent" %}
                         <div class="field">
@@ -512,6 +659,17 @@
                             <select id="session" name="session">
                                 {% for session in available_sessions %}
                                     <option value="{{ session.id }}" {% if selected_session and selected_session.id == session.id %}selected{% endif %}>{{ session.worship_date|date:"Y-m-d" }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    {% endif %}
+
+                    {% if selected_report == "small_group" %}
+                        <div class="field">
+                            <label for="report_month">보고 월</label>
+                            <select id="report_month" name="report_month">
+                                {% for report_month in available_report_months %}
+                                    <option value="{{ report_month|date:'Y-m' }}" {% if selected_report_month and selected_report_month == report_month %}selected{% endif %}>{{ report_month|date:"Y-m" }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -538,29 +696,31 @@
                                 {% endfor %}
                             </select>
                         </div>
-                    {% elif selected_report == "personal" %}
+                    {% elif selected_report == "personal" or selected_report == "small_group" %}
                         <div class="field">
                             <label for="group">속 선택</label>
-                            <select id="group" name="group" data-autosubmit="group">
+                            <select id="group" name="group" {% if selected_report == "personal" %}data-autosubmit="group"{% endif %}>
                                 <option value="">전체 속</option>
                                 {% for group in available_groups %}
                                     <option value="{{ group.id }}" {% if selected_group and selected_group.id == group.id %}selected{% endif %}>{{ group.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="field">
-                            <label for="member">교인 선택</label>
-                            <select id="member" name="member">
-                                <option value="">교인을 선택하세요</option>
-                                {% for member in personal_member_options %}
-                                    <option value="{{ member.id }}" {% if personal_member and personal_member.id == member.id %}selected{% endif %}>{{ member.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="field">
-                            <label for="member_search">이름으로 찾기</label>
-                            <input id="member_search" type="text" name="member_search" value="{{ member_search }}" placeholder="이름 일부를 입력해 주세요">
-                        </div>
+                        {% if selected_report == "personal" %}
+                            <div class="field">
+                                <label for="member">교인 선택</label>
+                                <select id="member" name="member">
+                                    <option value="">교인을 선택하세요</option>
+                                    {% for member in personal_member_options %}
+                                        <option value="{{ member.id }}" {% if personal_member and personal_member.id == member.id %}selected{% endif %}>{{ member.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="member_search">이름으로 찾기</label>
+                                <input id="member_search" type="text" name="member_search" value="{{ member_search }}" placeholder="이름 일부를 입력해 주세요">
+                            </div>
+                        {% endif %}
                     {% endif %}
 
                     <button type="submit" class="submit-button">리포트 보기</button>
@@ -599,12 +759,10 @@
                         </div>
 
                         {% if selected_group %}
-                            <div class="roster-grid section">
+                            <div class="member-grid section">
                                 {% for row in weekly_member_rows %}
-                                    <div class="roster-item">
-                                        <div class="roster-main">
-                                            <div class="roster-name">{{ row.member_name }}</div>
-                                        </div>
+                                    <div class="member-item">
+                                        <strong>{{ row.member_name }}</strong>
                                         <span class="status-pill {% if row.status != 'present' %}is-absent{% endif %}">
                                             {% if row.status == 'present' %}출석{% else %}결석{% endif %}
                                         </span>
@@ -620,39 +778,37 @@
                                         <a class="weekly-card" href="{% url 'attendance:report_hub' %}?report=weekly&session={{ selected_session.id }}&district={{ selected_district.id }}&group={{ row.id }}">
                                             <strong>{{ row.name }}</strong>
                                             <p>{{ selected_district.name }} 교구</p>
-                                            <div class="weekly-badges">
-                                                <span class="weekly-badge">출석 {{ row.present }}</span>
-                                                <span class="weekly-badge is-danger">결석 {{ row.absent }}</span>
-                                                <span class="weekly-badge">미입력 {{ row.pending }}</span>
-                                                <span class="weekly-badge">총원 {{ row.total }}</span>
+                                            <div class="pill-row">
+                                                <span class="pill">출석 {{ row.present }}</span>
+                                                <span class="pill is-danger">결석 {{ row.absent }}</span>
+                                                <span class="pill">미입력 {{ row.pending }}</span>
+                                                <span class="pill">총원 {{ row.total }}</span>
                                             </div>
-                                            <span class="card-link-hint">눌러서 속원별 상세 보기 ›</span>
+                                            <span class="card-link-hint">눌러서 속원별 상세 보기</span>
                                         </a>
                                     {% empty %}
-                                        <div class="empty-state">선택한 교구의 속 출석 현황이 없습니다.</div>
+                                        <div class="empty-state">선택한 교구의 출석 현황이 없습니다.</div>
                                     {% endfor %}
                                 </div>
                             {% endif %}
 
                             {% if weekly_member_sections %}
-                                <div class="section roster-sections">
+                                <div class="section member-sections">
                                     {% if selected_district %}
                                         <div class="section-head">
                                             <h2>{{ selected_district.name }} 교구 전체 출석 상세</h2>
                                         </div>
                                     {% endif %}
                                     {% for section in weekly_member_sections %}
-                                        <section class="roster-section">
-                                            <div class="roster-section-head">
+                                        <section class="member-section">
+                                            <div class="member-section-head">
                                                 <h3>{{ section.title }}</h3>
-                                                <span class="roster-section-subtitle">{{ section.subtitle }}</span>
+                                                <span class="member-section-subtitle">{{ section.subtitle }}</span>
                                             </div>
-                                            <div class="roster-grid section">
+                                            <div class="member-grid">
                                                 {% for row in section.rows %}
-                                                    <div class="roster-item">
-                                                        <div class="roster-main">
-                                                            <div class="roster-name">{{ row.member_name }}</div>
-                                                        </div>
+                                                    <div class="member-item">
+                                                        <strong>{{ row.member_name }}</strong>
                                                         <span class="status-pill {% if row.status != 'present' %}is-absent{% endif %}">
                                                             {% if row.status == 'present' %}출석{% else %}결석{% endif %}
                                                         </span>
@@ -709,6 +865,116 @@
                             <div class="empty-state">조건에 맞는 연속 결석자가 없습니다.</div>
                         {% endif %}
                     </div>
+                {% elif selected_report == "small_group" %}
+                    <div class="section">
+                        {% if small_group_summary %}
+                            <div class="summary-grid">
+                                <div class="summary-card">
+                                    <span>제출된 보고서</span>
+                                    <strong>{{ small_group_summary.submitted_count }}</strong>
+                                </div>
+                                <div class="summary-card is-danger">
+                                    <span>미제출 속</span>
+                                    <strong>{{ small_group_summary.pending_count }}</strong>
+                                </div>
+                                <div class="summary-card">
+                                    <span>대상 속 수</span>
+                                    <strong>{{ small_group_summary.target_group_count }}</strong>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="section">
+                        {% if small_group_sections %}
+                            <div class="district-sections">
+                                {% for section in small_group_sections %}
+                                    <details class="district-section" {% if forloop.first %}open{% endif %}>
+                                        <summary class="district-toggle">
+                                            <div class="district-toggle-main">
+                                                <span class="district-toggle-title">{{ section.district_name }}</span>
+                                                <span class="district-toggle-meta">{{ section.rows|length }}개 보고서</span>
+                                            </div>
+                                        </summary>
+                                        <div class="district-body">
+                                            <div class="report-list">
+                                                {% for row in section.rows %}
+                                                    <article class="report-entry">
+                                                        <div class="report-entry-head">
+                                                            <div class="report-entry-meta">
+                                                                <div class="group-inline-title">
+                                                                    <strong>{{ row.district_name }}</strong>
+                                                                    <span class="group-inline-sub">{{ row.group_name }}</span>
+                                                                </div>
+                                                                <span class="report-entry-date">{{ row.meeting_date|date:"Y-m-d" }}</span>
+                                                            </div>
+                                                            <div class="pill-row">
+                                                                <span class="pill">참석 {{ row.attendee_count }}명</span>
+                                                                <span class="pill">헌금 ${{ row.offering_amount }}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="pill-row">
+                                                            {% if row.place %}<span class="pill">장소 {{ row.place }}</span>{% endif %}
+                                                            {% if row.next_meeting_place %}<span class="pill">다음 {{ row.next_meeting_place }}</span>{% endif %}
+                                                            {% if row.submitted_by %}<span class="pill">제출자 {{ row.submitted_by.get_username }}</span>{% endif %}
+                                                            {% if row.submitted_at %}<span class="pill">{{ row.submitted_at|date:"Y-m-d H:i" }}</span>{% endif %}
+                                                        </div>
+                                                        {% if row.absent_members or row.special_notes %}
+                                                            <div class="report-notes">
+                                                                {% if row.absent_members %}
+                                                                    <p>결석자: {% for member in row.absent_members %}{{ member.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+                                                                {% endif %}
+                                                                {% if row.special_notes %}
+                                                                    <p{% if row.absent_members %} style="margin-top:8px;"{% endif %}>특이사항: {{ row.special_notes }}</p>
+                                                                {% endif %}
+                                                            </div>
+                                                        {% endif %}
+                                                    </article>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </details>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="empty-state">선택한 조건에 해당하는 속회 보고서가 아직 없습니다.</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="section">
+                        <div class="section-head">
+                            <h2>미제출 속</h2>
+                        </div>
+                        {% if small_group_pending_sections %}
+                            <div class="district-sections">
+                                {% for section in small_group_pending_sections %}
+                                    <details class="district-section" {% if forloop.first %}open{% endif %}>
+                                        <summary class="district-toggle">
+                                            <div class="district-toggle-main">
+                                                <span class="district-toggle-title">{{ section.district_name }}</span>
+                                                <span class="district-toggle-meta">{{ section.rows|length }}개 미제출</span>
+                                            </div>
+                                        </summary>
+                                        <div class="district-body">
+                                            <div class="pending-group-list">
+                                                {% for row in section.rows %}
+                                                    <div class="pending-group-item">
+                                                        <div>
+                                                            <div class="pending-group-name">{{ section.district_name }}</div>
+                                                            <div class="pending-group-subtitle">{{ row.group_name }}</div>
+                                                        </div>
+                                                        <span class="absent-badge">미제출</span>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </details>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="empty-state">선택한 범위에서는 모든 속이 속회 보고서를 제출했습니다.</div>
+                        {% endif %}
+                    </div>
                 {% elif selected_report == "personal" %}
                     {% if personal_search_matches %}
                         <div class="section">
@@ -740,14 +1006,13 @@
                                 <strong>{{ personal_current_streak }}주</strong>
                             </div>
                         </div>
-
                         <div class="section">
                             {% if personal_rows %}
-                                <div class="roster-grid">
+                                <div class="weekly-grid">
                                     {% for row in personal_rows %}
-                                        <div class="roster-item">
-                                            <div class="roster-main">
-                                                <div class="roster-name">{{ row.worship_date|date:"Y-m-d" }}</div>
+                                        <div class="result-card">
+                                            <div>
+                                                <div class="result-name">{{ row.worship_date|date:"Y-m-d" }}</div>
                                             </div>
                                             <span class="status-pill {% if row.status != 'present' %}is-absent{% endif %}">
                                                 {% if row.status == 'present' %}출석{% else %}결석{% endif %}
@@ -759,8 +1024,8 @@
                                 <div class="empty-state">표시할 개인 출석 기록이 없습니다.</div>
                             {% endif %}
                         </div>
-                    {% elif not personal_search_matches %}
-                        <div class="empty-state">교구/속을 선택하거나 이름으로 교인을 찾아 주세요.</div>
+                    {% else %}
+                        <div class="empty-state">교인 한 명을 선택하면 최근 출석 기록을 볼 수 있습니다.</div>
                     {% endif %}
                 {% endif %}
             {% endif %}
@@ -768,28 +1033,9 @@
     </div>
 
     <script>
-        document.querySelectorAll("[data-autosubmit]").forEach((element) => {
-            element.addEventListener("change", () => {
-                const form = document.getElementById("report-filter-form");
-                if (!form) return;
-
-                if (element.dataset.autosubmit === "district") {
-                    const groupField = document.getElementById("group");
-                    const memberField = document.getElementById("member");
-                    const memberSearchField = document.getElementById("member_search");
-                    if (groupField) groupField.value = "";
-                    if (memberField) memberField.value = "";
-                    if (memberSearchField) memberSearchField.value = "";
-                }
-
-                if (element.dataset.autosubmit === "group") {
-                    const memberField = document.getElementById("member");
-                    const memberSearchField = document.getElementById("member_search");
-                    if (memberField) memberField.value = "";
-                    if (memberSearchField) memberSearchField.value = "";
-                }
-
-                form.submit();
+        document.querySelectorAll('[data-autosubmit]').forEach(function (element) {
+            element.addEventListener('change', function () {
+                document.getElementById('report-filter-form').submit();
             });
         });
     </script>

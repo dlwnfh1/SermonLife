@@ -1,0 +1,550 @@
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>출석/속회</title>
+    <link rel="manifest" href="{% url 'attendance:pwa_manifest' %}">
+    <link rel="apple-touch-icon" href="{% static 'core/icons/attendance-check-192.png' %}">
+    <meta name="theme-color" content="#a56a3b">
+    <style>
+        :root {
+            --bg: #f6efe4;
+            --paper: #fffaf3;
+            --paper-soft: #f2e8d9;
+            --line: rgba(120, 88, 58, 0.15);
+            --ink: #24180e;
+            --muted: #6f5c4b;
+            --accent: #a56a3b;
+            --accent-strong: #8f5730;
+            --danger: #cb554b;
+            --danger-soft: #fff0ed;
+            --ok-soft: #eef6ec;
+            --shadow: 0 22px 40px rgba(56, 36, 19, 0.08);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: radial-gradient(circle at top, rgba(165,106,59,0.08), transparent 28%), var(--bg);
+            color: var(--ink);
+            font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+        }
+        .page {
+            width: min(100% - 24px, 920px);
+            margin: 0 auto;
+            padding: 20px 0 60px;
+        }
+        .topbar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .chip, .link-chip {
+            display: inline-flex;
+            align-items: center;
+            min-height: 42px;
+            padding: 0 14px;
+            border-radius: 999px;
+            background: rgba(255,250,243,0.86);
+            border: 1px solid var(--line);
+            color: var(--ink);
+            text-decoration: none;
+            font-weight: 700;
+        }
+        .shell, .panel {
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            box-shadow: var(--shadow);
+        }
+        .shell {
+            padding: 24px;
+        }
+        .hero h1 {
+            margin: 8px 0 10px;
+            font-size: clamp(2rem, 6vw, 3.6rem);
+            line-height: 1.02;
+        }
+        .eyebrow {
+            display: inline-flex;
+            min-height: 28px;
+            align-items: center;
+            padding: 0 12px;
+            border-radius: 999px;
+            background: rgba(165,106,59,0.12);
+            color: var(--accent-strong);
+            font-size: 0.82rem;
+            font-weight: 800;
+        }
+        .subcopy {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.7;
+            font-size: 1rem;
+        }
+        .hero-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .hero-meta span {
+            display: inline-flex;
+            min-height: 36px;
+            align-items: center;
+            padding: 0 12px;
+            border-radius: 999px;
+            background: var(--paper-soft);
+            color: var(--accent-strong);
+            font-weight: 700;
+        }
+        .pin-stage, .chooser-grid, .report-grid, .member-list {
+            display: grid;
+            gap: 16px;
+            margin-top: 22px;
+        }
+        .pin-shell-card, .chooser-card, .report-card, .member-card {
+            background: linear-gradient(180deg, rgba(255,250,243,0.98), rgba(244,235,222,0.98));
+            border: 1px solid var(--line);
+            border-radius: 24px;
+            padding: 18px;
+        }
+        .pin-shell-card.is-primary { background: linear-gradient(180deg, rgba(245,233,217,0.98), rgba(236,222,205,0.98)); }
+        .pin-grid, .report-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .field, .pin-field { display: grid; gap: 8px; }
+        .field label, .pin-field label { font-weight: 800; color: var(--accent-strong); }
+        .field input, .field select, .field textarea, .pin-field select, .pin-field input {
+            width: 100%; min-height: 50px; border-radius: 16px; border: 1px solid var(--line); background: #fffdf9;
+            padding: 0 14px; font: inherit; color: var(--ink);
+        }
+        .pin-field select {
+            min-height: 50px;
+            height: 50px;
+            padding-top: 0;
+            padding-bottom: 0;
+            line-height: 50px;
+        }
+        .money-input {
+            display: flex;
+            align-items: center;
+            min-height: 50px;
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            background: #fffdf9;
+            overflow: hidden;
+        }
+        .money-input span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 52px;
+            min-height: 50px;
+            background: var(--paper-soft);
+            color: var(--accent-strong);
+            font-weight: 800;
+            border-right: 1px solid var(--line);
+        }
+        .money-input input {
+            border: 0;
+            border-radius: 0;
+            min-height: 48px;
+            background: transparent;
+        }
+        .field textarea { min-height: 110px; padding: 14px; resize: vertical; }
+        .pin-actions, .form-actions, .chooser-actions, .panel-head {
+            display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-top: 18px;
+        }
+        button, .button-link {
+            display: inline-flex; align-items: center; justify-content: center; min-height: 50px; padding: 0 18px;
+            border-radius: 16px; border: 1px solid transparent; background: var(--accent); color: #fffaf3; font: inherit; font-weight: 800;
+            text-decoration: none; cursor: pointer;
+        }
+        .button-link.secondary, button.secondary { background: #fffaf3; color: var(--accent-strong); border-color: var(--line); }
+        .button-link.with-icon {
+            gap: 8px;
+        }
+        .button-link.with-icon svg {
+            width: 22px;
+            height: 22px;
+            flex: 0 0 auto;
+            stroke: currentColor;
+            stroke-width: 2.4;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .chooser-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .chooser-card h2, .report-card h2 { margin: 0 0 10px; }
+        .chooser-card p, .report-card p, .helper { margin: 0; color: var(--muted); line-height: 1.65; }
+        .flash-wrap { display: grid; gap: 10px; margin: 14px 0 18px; }
+        .flash {
+            padding: 14px 16px; border-radius: 18px; border: 1px solid var(--line); background: #fffdf9; color: var(--ink); font-weight: 700;
+        }
+        .flash.success { background: var(--ok-soft); }
+        .flash.error { background: var(--danger-soft); }
+        .member-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .member-card h3 { margin: 0; font-size: 1.1rem; }
+        .member-meta { margin-top: 6px; color: var(--muted); font-size: 0.92rem; }
+        .status-pills { display: flex; gap: 10px; margin: 14px 0 12px; flex-wrap: wrap; }
+        .status-pills label {
+            display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); font-weight: 700;
+            background: #fffdf9;
+        }
+        .status-pills .absent-option { color: var(--danger); border-color: rgba(203,85,75,0.22); background: var(--danger-soft); }
+        .member-card textarea {
+            width: 100%; min-height: 82px; border-radius: 16px; border: 1px solid var(--line); background: #fffdf9; padding: 12px 14px; font: inherit;
+        }
+        .report-counter {
+            display: inline-flex; align-items: center; gap: 10px; width: fit-content; padding: 8px; border-radius: 18px; background: var(--paper-soft); border: 1px solid var(--line);
+        }
+        .report-counter button {
+            min-height: 42px;
+            min-width: 42px;
+            padding: 0;
+            border-radius: 12px;
+            background: rgba(165,106,59,0.12);
+            color: var(--accent-strong);
+            border: 1px solid var(--line);
+        }
+        .report-counter input {
+            width: 72px; min-height: 42px; text-align: center; border-radius: 12px; border: 1px solid var(--line); background: #fffdf9; font-weight: 800;
+        }
+        .absent-picker { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+        .absent-picker {
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: rgba(255, 253, 249, 0.95);
+            padding: 14px 16px;
+        }
+        .absent-picker summary {
+            cursor: pointer;
+            font-weight: 900;
+            color: var(--accent-strong);
+            list-style: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .absent-picker summary::-webkit-details-marker { display: none; }
+        .absent-picker summary::after {
+            content: "열기";
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 34px;
+            padding: 0 12px;
+            border-radius: 999px;
+            background: var(--paper-soft);
+            border: 1px solid var(--line);
+            font-size: 0.9rem;
+        }
+        .absent-picker[open] summary::after { content: "닫기"; }
+        .absent-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 14px;
+        }
+        .absent-grid label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: #fffdf9;
+            border: 1px solid var(--line);
+            font-weight: 700;
+            min-height: 44px;
+            white-space: nowrap;
+        }
+        .absent-grid input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            flex: 0 0 auto;
+        }
+        .absent-grid label span {
+            display: inline-block;
+            white-space: nowrap;
+            line-height: 1.2;
+        }
+        .report-summary {
+            display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px;
+        }
+        .report-summary span, .report-tag {
+            display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; border-radius: 999px; background: var(--paper-soft); color: var(--accent-strong); font-weight: 700;
+        }
+        .report-history { display: grid; gap: 12px; margin-top: 18px; }
+        .report-history-item {
+            padding: 14px 16px; border-radius: 18px; background: rgba(255,253,249,0.95); border: 1px solid var(--line);
+        }
+        .empty { padding: 18px; border-radius: 18px; background: #fffdf9; border: 1px dashed var(--line); color: var(--muted); }
+        @media (max-width: 760px) {
+            .page { width: min(100% - 16px, 920px); padding-top: 14px; }
+            .shell { padding: 18px; border-radius: 22px; }
+            .pin-grid, .report-grid, .chooser-grid, .member-list { grid-template-columns: 1fr; }
+            button, .button-link { width: 100%; }
+            .pin-actions, .form-actions, .chooser-actions, .panel-head { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="topbar">
+            <span class="chip">{{ active_church.name }} 출석/속회</span>
+            {% if pin_authenticated and selected_group %}
+                <span class="chip">{{ selected_group.district.name }} {{ selected_group.name }}</span>
+            {% endif %}
+            <a class="link-chip" href="{% url 'attendance:check' %}?reset=1">처음 화면으로</a>
+            {% if show_full_nav %}
+                <a class="link-chip" href="{% url 'attendance:dashboard' %}">출석 대시보드</a>
+            {% endif %}
+            {% if logout_url %}
+                <a class="link-chip" href="{{ logout_url }}">로그아웃</a>
+            {% endif %}
+        </div>
+
+        {% if messages %}
+            <div class="flash-wrap">
+                {% for message in messages %}
+                    <div class="flash {% if message.tags %}{{ message.tags }}{% endif %}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <section class="shell hero">
+            {% if not pin_authenticated %}
+                <span class="eyebrow">{{ active_church.name }} 출석/속회</span>
+                <h1>PIN으로 속을 열어 주세요</h1>
+
+                <div class="pin-stage">
+                    <form method="get" class="pin-shell-card">
+                        <div class="pin-field">
+                            <label for="pin-district">교구 선택</label>
+                            <select id="pin-district" name="district" onchange="this.form.submit()">
+                                <option value="">교구를 선택해 주세요</option>
+                                {% for district in district_cards %}
+                                    <option value="{{ district.id }}" {% if selected_district and selected_district.id == district.id %}selected{% endif %}>{{ district.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </form>
+
+                    <form method="post" class="pin-shell-card is-primary">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="verify_pin">
+                        <input type="hidden" name="district" value="{% if selected_district %}{{ selected_district.id }}{% endif %}">
+                        <div class="pin-grid">
+                            <div class="pin-field">
+                                <label for="pin-group">속 선택</label>
+                                <select id="pin-group" name="group" {% if not selected_district %}disabled{% endif %}>
+                                    <option value="">속을 선택해 주세요</option>
+                                    {% for group in pin_groups %}
+                                        <option value="{{ group.id }}" {% if selected_pin_group_id == group.id %}selected{% endif %}>{{ group.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="pin-field">
+                                <label for="attendance-pin">PIN 입력</label>
+                                <input id="attendance-pin" type="password" name="pin" inputmode="numeric" pattern="\d{5}" maxlength="5" placeholder="5자리 숫자">
+                            </div>
+                        </div>
+                        <div class="pin-actions">
+                            <button type="submit">입력 화면 열기</button>
+                        </div>
+                    </form>
+                </div>
+            {% else %}
+                <span class="eyebrow">{{ selected_group.district.name }} {{ selected_group.name }}</span>
+                <h1>{% if check_mode == 'attendance' %}주일 출석 보고{% elif check_mode == 'report' %}속회 보고{% else %}무엇을 제출할까요?{% endif %}</h1>
+                <div class="hero-meta">
+                    <span>속원 {{ group_member_total }}명</span>
+                    {% if current_session %}<span>최근 주일 {{ current_session.worship_date|date:"Y-m-d" }}</span>{% endif %}
+                    {% if current_month_report %}<span>이번 달 속회 보고 작성됨</span>{% endif %}
+                    {% if check_mode == 'attendance' %}
+                        <a class="button-link secondary with-icon" href="{% url 'attendance:check' %}?mode=report">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M9 7H5V3"></path>
+                                <path d="M5 7c2.5-3 6-4.5 9.7-4A9 9 0 1 1 8 19"></path>
+                            </svg>
+                            <span>속회 보고 작성하기</span>
+                        </a>
+                    {% elif check_mode == 'report' %}
+                        <a class="button-link secondary with-icon" href="{% url 'attendance:check' %}?mode=attendance">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M9 7H5V3"></path>
+                                <path d="M5 7c2.5-3 6-4.5 9.7-4A9 9 0 1 1 8 19"></path>
+                            </svg>
+                            <span>주일 출석 체크하기</span>
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </section>
+
+        {% if pin_authenticated and not check_mode %}
+            <section class="panel" style="margin-top:16px; padding:20px;">
+                <div class="chooser-grid">
+                    <article class="chooser-card">
+                        <h2>주일 출석 보고</h2>
+                        <p>속원들의 주일 출석과 결석을 체크해 제출합니다.</p>
+                        <div class="chooser-actions">
+                            <a class="button-link {% if check_mode == 'attendance' %}secondary{% endif %}" href="{% url 'attendance:check' %}?mode=attendance">주일 출석 보고 열기</a>
+                        </div>
+                    </article>
+                    <article class="chooser-card">
+                        <h2>속회 보고</h2>
+                        <p>모임 날짜, 장소, 참석자 수, 헌금, 결석자, 다음 장소, 특이사항을 함께 제출합니다.</p>
+                        <div class="chooser-actions">
+                            <a class="button-link {% if check_mode == 'report' %}secondary{% endif %}" href="{% url 'attendance:check' %}?mode=report">속회 보고 열기</a>
+                        </div>
+                    </article>
+                </div>
+            </section>
+        {% endif %}
+
+        {% if pin_authenticated and check_mode == 'attendance' %}
+            <section class="panel" style="margin-top:16px; padding:20px;">
+                {% if attendance_test_mode %}
+                    <div class="flash">로컬 테스트 또는 강제 공개 모드로 주일 출석 입력 화면이 열려 있습니다.</div>
+                {% endif %}
+                <form method="post" onsubmit="return confirm('현재 선택한 출석 상태를 제출할까요?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="submit_attendance">
+                    <input type="hidden" name="check_mode" value="attendance">
+                    <div class="member-list">
+                        {% for row in member_rows %}
+                            <article class="member-card">
+                                <h3>{{ row.member.name }}</h3>
+                                <div class="member-meta">{% if row.member == selected_group.leader %}현재 속장{% else %}{{ selected_group.name }}{% endif %}</div>
+                                <div class="status-pills">
+                                    {% for status_value, status_label in status_choices %}
+                                        <label class="{% if status_value == 'absent' %}absent-option{% else %}present-option{% endif %}">
+                                            <input type="radio" name="status_{{ row.member.id }}" value="{{ status_value }}" {% if row.status == status_value %}checked{% endif %} {% if not attendance_check_day %}disabled{% endif %}>
+                                            <span>{{ status_label }}</span>
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                                <textarea name="note_{{ row.member.id }}" placeholder="필요하면 메모를 남겨 주세요." {% if not attendance_check_day %}disabled{% endif %}>{{ row.note }}</textarea>
+                            </article>
+                        {% empty %}
+                            <div class="empty">이 속에 등록된 속원이 아직 없습니다.</div>
+                        {% endfor %}
+                    </div>
+                    {% if attendance_check_day %}
+                        <div class="form-actions">
+                            <button type="submit">출석 제출하기</button>
+                        </div>
+                    {% endif %}
+                </form>
+            </section>
+        {% endif %}
+
+        {% if pin_authenticated and check_mode == 'report' %}
+            <section class="panel" style="margin-top:16px; padding:20px;">
+                <div class="panel-head">
+                    <div><h2 style="margin:0;">속회 보고 작성</h2></div>
+                </div>
+                {% if current_month_report %}
+                    <div class="report-summary" style="margin-top:0; margin-bottom:16px;">
+                        <span>이번 달 보고 수정 중</span>
+                    </div>
+                {% endif %}
+                {% if report_form %}
+                    <form method="post" class="report-card" onsubmit="return confirm('속회 보고를 저장할까요?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="submit_small_group_report">
+                        <input type="hidden" name="check_mode" value="report">
+                        <div class="report-grid">
+                            <div class="field">{{ report_form.meeting_date.label_tag }}{{ report_form.meeting_date }}</div>
+                            <div class="field">{{ report_form.place.label_tag }}{{ report_form.place }}</div>
+                            <div class="field">
+                                <label for="id_attendee_count">참석자 수</label>
+                                <div class="report-counter" data-counter>
+                                    <button type="button" data-counter-minus>-</button>
+                                    {{ report_form.attendee_count }}
+                                    <button type="button" data-counter-plus>+</button>
+                                </div>
+                            </div>
+                            <div class="field">
+                                {{ report_form.offering_amount.label_tag }}
+                                <div class="money-input">
+                                    <span>$</span>
+                                    {{ report_form.offering_amount }}
+                                </div>
+                            </div>
+                            <div class="field" style="grid-column: 1 / -1;">
+                                <details class="absent-picker">
+                                    <summary>결석자 명단 선택하기</summary>
+                                    <div class="absent-grid">
+                                        {% for checkbox in report_form.absent_members %}
+                                            <label>{{ checkbox.tag }} <span>{{ checkbox.choice_label }}</span></label>
+                                        {% empty %}
+                                            <div class="empty">선택할 속원 명단이 없습니다.</div>
+                                        {% endfor %}
+                                    </div>
+                                </details>
+                            </div>
+                            <div class="field">{{ report_form.next_meeting_place.label_tag }}{{ report_form.next_meeting_place }}</div>
+                            <div class="field">{{ report_form.special_notes.label_tag }}{{ report_form.special_notes }}</div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit">속회 보고서 제출</button>
+                        </div>
+                    </form>
+                {% endif %}
+
+                {% if recent_reports %}
+                    <div class="report-history">
+                        {% for report in recent_reports %}
+                            <article class="report-history-item">
+                                <strong>{{ report.meeting_date|date:"Y-m-d" }} 속회 보고</strong>
+                                <div class="report-summary">
+                                    <span>참석 {{ report.attendee_count }}명</span>
+                                    <span>헌금 {{ report.offering_amount }}</span>
+                                    {% if report.place %}<span>장소 {{ report.place }}</span>{% endif %}
+                                    {% if report.next_meeting_place %}<span>다음 장소 {{ report.next_meeting_place }}</span>{% endif %}
+                                </div>
+                                {% if report.absent_members.exists %}
+                                    <p class="helper" style="margin-top:10px;">결석자: {% for member in report.absent_members.all %}{{ member.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+                                {% endif %}
+                                {% if report.special_notes %}
+                                    <p class="helper" style="margin-top:10px;">특이사항: {{ report.special_notes }}</p>
+                                {% endif %}
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </section>
+        {% endif %}
+    </div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('{% url "attendance:service_worker" %}', { scope: '/attendance/' }).catch(function () {});
+            });
+        }
+
+        document.querySelectorAll('[data-counter]').forEach(function (counter) {
+            var input = counter.querySelector('input');
+            var minus = counter.querySelector('[data-counter-minus]');
+            var plus = counter.querySelector('[data-counter-plus]');
+            function currentValue() {
+                var parsed = parseInt(input.value || '0', 10);
+                return Number.isNaN(parsed) ? 0 : parsed;
+            }
+            minus.addEventListener('click', function () {
+                input.value = Math.max(0, currentValue() - 1);
+            });
+            plus.addEventListener('click', function () {
+                input.value = currentValue() + 1;
+            });
+        });
+    </script>
+</body>
+</html>

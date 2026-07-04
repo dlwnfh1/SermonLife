@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from math import ceil
 from urllib.parse import urlencode
 
@@ -31,6 +31,7 @@ from .forms import (
     AttendanceGroupCreateForm,
     AttendanceGroupForm,
     AttendanceMemberForm,
+    AttendanceSmallGroupReportForm,
 )
 from .models import (
     AttendanceControl,
@@ -40,6 +41,7 @@ from .models import (
     AttendanceMember,
     AttendanceRecord,
     AttendanceSession,
+    AttendanceSmallGroupReport,
     AttendanceStatus,
 )
 
@@ -61,9 +63,9 @@ def attendance_pwa_manifest_view(request):
     return JsonResponse(
         {
             "id": "/attendance/check-pwa",
-            "name": "FGMC 주일출석표",
-            "short_name": "주일출석표",
-            "description": "주일 출석을 제출하는 전용 화면입니다.",
+            "name": "FGMC 출석/속회",
+            "short_name": "출석/속회",
+            "description": "주일 출석과 속회 보고를 입력하는 화면입니다.",
             "start_url": "/attendance/check/",
             "scope": "/attendance/",
             "display": "standalone",
@@ -977,17 +979,19 @@ def attendance_check_view(request):
         if action == "verify_pin":
             group_id = request.POST.get("group")
             pin = (request.POST.get("pin") or "").strip()
-            pin_group = (
-                AttendanceGroup.objects.filter(
-                    church=church,
-                    is_active=True,
-                    district__is_active=True,
-                    pk=group_id,
+            pin_group = None
+            if group_id:
+                pin_group = (
+                    AttendanceGroup.objects.filter(
+                        church=church,
+                        is_active=True,
+                        district__is_active=True,
+                        pk=group_id,
+                    )
+                    .select_related("district", "guide", "leader")
+                    .annotate(active_member_count=Count("members", filter=Q(members__is_active=True), distinct=True))
+                    .first()
                 )
-                .select_related("district", "guide", "leader")
-                .annotate(active_member_count=Count("members", filter=Q(members__is_active=True), distinct=True))
-                .first()
-            )
             if pin_group is None:
                 messages.error(request, "먼저 교구와 속을 선택해 주세요.")
             elif not pin_group.attendance_pin:
@@ -1002,6 +1006,9 @@ def attendance_check_view(request):
             return redirect("attendance:check")
 
     selected_group = _get_attendance_pin_group(request, church)
+    check_mode = (request.POST.get("check_mode") or request.GET.get("mode") or "").strip().lower()
+    if check_mode not in {"attendance", "report"}:
+        check_mode = ""
 
     today = timezone.localdate()
     reference_date = today if today.weekday() == 6 else _last_sunday_for(today)
@@ -1013,6 +1020,11 @@ def attendance_check_view(request):
 
     members = []
     record_map = {}
+    member_rows = []
+    report_form = None
+    current_month_report = None
+    recent_reports = []
+
     if selected_group is not None:
         members = list(
             AttendanceMember.objects.filter(group=selected_group, is_active=True)
@@ -1021,14 +1033,36 @@ def attendance_check_view(request):
         )
         existing_records = AttendanceRecord.objects.filter(session=current_session, member__in=members)
         record_map = {record.member_id: record for record in existing_records}
+        for member in members:
+            record = record_map.get(member.pk)
+            member_rows.append(
+                {
+                    "member": member,
+                    "status": _normalize_attendance_status(record.status) if record else AttendanceStatus.PRESENT,
+                    "note": record.note if record else "",
+                }
+            )
+
+        report_month = today.replace(day=1)
+        current_month_report = (
+            AttendanceSmallGroupReport.objects.filter(group=selected_group, report_month=report_month)
+            .prefetch_related("absent_members")
+            .order_by("-meeting_date", "-id")
+            .first()
+        )
+        recent_reports = list(
+            AttendanceSmallGroupReport.objects.filter(group=selected_group)
+            .prefetch_related("absent_members")
+            .order_by("-meeting_date", "-id")[:4]
+        )
 
     if request.method == "POST" and request.POST.get("action") == "submit_attendance":
         if selected_group is None:
             messages.error(request, "출석을 제출할 속이 선택되지 않았습니다.")
             return redirect("attendance:check")
         if not attendance_check_day:
-            messages.error(request, "출석 체크는 주일에만 열립니다. 평일에는 admin 계정으로 강제 공개를 켜야 입력할 수 있습니다.")
-            return redirect("attendance:check")
+            messages.error(request, "출석 체크는 주일에만 열립니다. 테스트 중에는 강제 공개를 켜야 입력할 수 있습니다.")
+            return redirect(f"{reverse('attendance:check')}?mode=attendance")
 
         now = timezone.now()
         records_to_create = []
@@ -1071,26 +1105,60 @@ def attendance_check_view(request):
         if saved_total:
             messages.success(
                 request,
-                f"{selected_group.district.name} {selected_group.name} 출석을 제출했습니다. ({saved_total}명 반영)",
+                f"{selected_group.district.name} {selected_group.name} 주일 출석이 제출되었습니다. ({saved_total}명 반영)",
             )
         else:
             messages.info(request, "변경된 내용이 없어 기존 출석 상태를 그대로 유지했습니다.")
-        return redirect("attendance:check")
+        return redirect(f"{reverse('attendance:check')}?mode=attendance")
 
-    member_rows = []
-    for member in members:
-        record = record_map.get(member.pk)
-        member_rows.append(
-            {
-                "member": member,
-                "status": _normalize_attendance_status(record.status) if record else AttendanceStatus.PRESENT,
-                "note": record.note if record else "",
-            }
+    if request.method == "POST" and request.POST.get("action") == "submit_small_group_report":
+        if selected_group is None:
+            messages.error(request, "?? ??? ??? ?? ???? ?????.")
+            return redirect("attendance:check")
+
+        requested_report = None
+        meeting_date_raw = (request.POST.get("meeting_date") or "").strip()
+        if meeting_date_raw:
+            try:
+                meeting_date_value = date.fromisoformat(meeting_date_raw)
+            except ValueError:
+                meeting_date_value = None
+            if meeting_date_value is not None:
+                requested_report = AttendanceSmallGroupReport.objects.filter(
+                    group=selected_group,
+                    report_month=meeting_date_value.replace(day=1),
+                ).first()
+
+        report_form = AttendanceSmallGroupReportForm(
+            request.POST,
+            group=selected_group,
+            instance=requested_report,
+        )
+        if report_form.is_valid():
+            report = report_form.save(commit=False)
+            report.church = church
+            report.group = selected_group
+            if request.user.is_authenticated:
+                report.submitted_by = request.user
+            report.submitted_at = timezone.now()
+            report.save()
+            report_form.save_m2m()
+            messages.success(request, f"{selected_group.district.name} {selected_group.name} 속회 보고가 저장되었습니다.")
+            return redirect(f"{reverse('attendance:check')}?mode=report")
+        messages.error(request, "속회 보고 내용을 다시 확인해 주세요.")
+    elif selected_group is not None and check_mode == "report":
+        report_form = AttendanceSmallGroupReportForm(
+            group=selected_group,
+            instance=current_month_report,
+            initial={
+                "meeting_date": current_month_report.meeting_date if current_month_report else today,
+                "attendee_count": current_month_report.attendee_count if current_month_report else len(members),
+            },
         )
 
     return render(
         request,
-        "attendance/check.html",
+        "attendance/check_v2.html",
         {
             "active_church": church,
             "active_attendance_tab": "check",
@@ -1109,6 +1177,11 @@ def attendance_check_view(request):
             "can_force_attendance_open": can_force_attendance_open,
             "show_full_nav": bool(request.user.is_authenticated and _can_access_attendance(request.user)),
             "logout_url": reverse("core:logout") if request.user.is_authenticated else "",
+            "check_mode": check_mode,
+            "report_form": report_form,
+            "current_month_report": current_month_report,
+            "recent_reports": recent_reports,
+            "group_member_total": len(members),
             **_build_church_nav_context(church),
         },
     )
@@ -1520,7 +1593,7 @@ def attendance_report_hub_view(request):
             selected_group = None
 
     selected_report = request.GET.get("report")
-    if selected_report not in {"weekly", "absent", "streak", "personal"}:
+    if selected_report not in {"weekly", "absent", "streak", "personal", "small_group"}:
         selected_report = None
 
     absent_rows = []
@@ -1533,6 +1606,13 @@ def attendance_report_hub_view(request):
     personal_rows = []
     personal_last_present = None
     personal_current_streak = 0
+    small_group_rows = []
+    small_group_pending_groups = []
+    small_group_sections = []
+    small_group_pending_sections = []
+    small_group_summary = None
+    available_report_months = []
+    selected_report_month = None
     member_search = request.GET.get("member_search", "").strip()
     personal_member_options = []
     personal_search_matches = []
@@ -1552,6 +1632,24 @@ def attendance_report_hub_view(request):
         .select_related("group", "group__district")
         .order_by("group__district__sort_order", "group__sort_order", "name")
     )
+    report_month_values = list(
+        AttendanceSmallGroupReport.objects.filter(group__in=group_queryset)
+        .order_by("-report_month")
+        .values_list("report_month", flat=True)
+        .distinct()
+    )
+    available_report_months = report_month_values
+    if selected_report == "small_group":
+        selected_report_month = available_report_months[0] if available_report_months else timezone.localdate().replace(day=1)
+        report_month_param = (request.GET.get("report_month") or "").strip()
+        if report_month_param:
+            try:
+                requested_month = date.fromisoformat(f"{report_month_param}-01")
+            except ValueError:
+                requested_month = None
+            if requested_month is not None:
+                selected_report_month = requested_month
+
     personal_member_options = available_members
     if selected_report == "personal" and selected_group:
         personal_member_options = [member for member in personal_member_options if member.group_id == selected_group.id]
@@ -1809,6 +1907,100 @@ def attendance_report_hub_view(request):
                     continue
                 break
 
+    if selected_report == "small_group":
+        scoped_groups_queryset = available_groups.select_related("district")
+        if selected_group:
+            scoped_groups_queryset = scoped_groups_queryset.filter(pk=selected_group.pk)
+        elif selected_district:
+            scoped_groups_queryset = scoped_groups_queryset.filter(district=selected_district)
+
+        scoped_groups = list(scoped_groups_queryset)
+        report_queryset = AttendanceSmallGroupReport.objects.filter(group__in=scoped_groups).select_related(
+            "group",
+            "group__district",
+            "submitted_by",
+        ).prefetch_related("absent_members")
+        if selected_report_month:
+            report_queryset = report_queryset.filter(report_month=selected_report_month)
+
+        report_map = {
+            report.group_id: report
+            for report in report_queryset.order_by("group__district__sort_order", "group__sort_order", "meeting_date", "id")
+        }
+
+        for group in scoped_groups:
+            report = report_map.get(group.id)
+            if report:
+                small_group_rows.append(
+                    {
+                        "group_id": group.id,
+                        "district_name": group.district.name,
+                        "group_name": group.name,
+                        "meeting_date": report.meeting_date,
+                        "place": report.place,
+                        "attendee_count": report.attendee_count,
+                        "offering_amount": report.offering_amount,
+                        "next_meeting_place": report.next_meeting_place,
+                        "special_notes": report.special_notes,
+                        "submitted_by": report.submitted_by,
+                        "submitted_at": report.submitted_at,
+                        "absent_members": list(report.absent_members.all()),
+                    }
+                )
+            else:
+                small_group_pending_groups.append(
+                    {
+                        "district_id": group.district_id,
+                        "district_name": group.district.name,
+                        "group_name": group.name,
+                    }
+                )
+
+        grouped_submitted = {}
+        for row in small_group_rows:
+            bucket = grouped_submitted.setdefault(
+                row["district_name"],
+                {
+                    "district_name": row["district_name"],
+                    "rows": [],
+                },
+            )
+            bucket["rows"].append(row)
+        small_group_sections = [
+            {
+                "district_name": district_name,
+                "rows": sorted(rows["rows"], key=lambda item: (item["meeting_date"], item["group_name"]), reverse=True),
+            }
+            for district_name, rows in sorted(grouped_submitted.items(), key=lambda item: item[0])
+        ]
+
+        grouped_pending = {}
+        for row in small_group_pending_groups:
+            bucket = grouped_pending.setdefault(
+                row["district_name"],
+                {
+                    "district_name": row["district_name"],
+                    "rows": [],
+                },
+            )
+            bucket["rows"].append(row)
+        small_group_pending_sections = [
+            {
+                "district_name": district_name,
+                "rows": sorted(rows["rows"], key=lambda item: item["group_name"]),
+            }
+            for district_name, rows in sorted(grouped_pending.items(), key=lambda item: item[0])
+        ]
+
+        target_group_count = len(scoped_groups)
+        submitted_count = len(small_group_rows)
+        pending_count = len(small_group_pending_groups)
+        small_group_summary = {
+            "target_group_count": target_group_count,
+            "submitted_count": submitted_count,
+            "pending_count": pending_count,
+        }
+
     return render(
         request,
         "attendance/report_hub.html",
@@ -1836,6 +2028,13 @@ def attendance_report_hub_view(request):
             "personal_rows": personal_rows,
             "personal_last_present": personal_last_present,
             "personal_current_streak": personal_current_streak,
+            "small_group_rows": small_group_rows,
+            "small_group_pending_groups": small_group_pending_groups,
+            "small_group_sections": small_group_sections,
+            "small_group_pending_sections": small_group_pending_sections,
+            "small_group_summary": small_group_summary,
+            "available_report_months": available_report_months,
+            "selected_report_month": selected_report_month,
             "member_search": member_search,
             "min_week_options": min_week_options,
             "selected_min_weeks": selected_min_weeks,

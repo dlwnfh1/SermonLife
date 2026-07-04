@@ -68,7 +68,7 @@ class AttendanceGroup(models.Model):
         related_name="attendance_login_groups",
         null=True,
         blank=True,
-        verbose_name="출석 전용 로그인",
+        verbose_name="출석 전용 사용자",
     )
     attendance_pin = models.CharField(
         max_length=5,
@@ -179,7 +179,7 @@ class AttendanceSession(models.Model):
         verbose_name_plural = "주일 출석표"
 
     def __str__(self):
-        return self.title or f"{self.worship_date} 주일 출석"
+        return self.title or f"{self.worship_date} 주일예배 출석"
 
     def save(self, *args, **kwargs):
         if not self.title:
@@ -262,4 +262,55 @@ class AttendanceRecord(models.Model):
         verbose_name_plural = "출석 기록"
 
     def __str__(self):
-        return f"{self.session.worship_date} · {self.member.name} · {self.get_status_display()}"
+        return f"{self.session} - {self.member.name} ({self.get_status_display()})"
+
+
+class AttendanceSmallGroupReport(models.Model):
+    church = models.ForeignKey(
+        Church,
+        on_delete=models.PROTECT,
+        related_name="attendance_small_group_reports",
+    )
+    group = models.ForeignKey(
+        AttendanceGroup,
+        on_delete=models.CASCADE,
+        related_name="small_group_reports",
+    )
+    report_month = models.DateField()
+    meeting_date = models.DateField()
+    place = models.CharField(max_length=255, blank=True)
+    attendee_count = models.PositiveIntegerField(default=0)
+    offering_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    absent_members = models.ManyToManyField(
+        AttendanceMember,
+        blank=True,
+        related_name="small_group_absence_reports",
+    )
+    next_meeting_place = models.CharField(max_length=255, blank=True)
+    special_notes = models.TextField(blank=True)
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="submitted_small_group_reports",
+        null=True,
+        blank=True,
+    )
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-meeting_date", "-id"]
+        unique_together = [("group", "report_month")]
+        verbose_name = "속회 보고서"
+        verbose_name_plural = "속회 보고서"
+
+    def __str__(self):
+        return f"{self.group} - {self.meeting_date.strftime('%Y-%m-%d')}"
+
+    def save(self, *args, **kwargs):
+        if self.meeting_date:
+            self.report_month = self.meeting_date.replace(day=1)
+        if not self.church_id and self.group_id:
+            self.church = self.group.church
+        super().save(*args, **kwargs)

@@ -9,6 +9,7 @@ from .models import (
     AttendanceMember,
     AttendanceRecord,
     AttendanceSession,
+    AttendanceSmallGroupReport,
 )
 
 
@@ -51,7 +52,7 @@ class AttendanceGroupAdmin(admin.ModelAdmin):
     list_filter = ("church", "district", "is_active")
     search_fields = ("name", "district__name", "leader__name", "attendance_login_user__username", "church__name")
     list_editable = ("is_active", "sort_order")
-    autocomplete_fields = ("leader", "attendance_login_user")
+    autocomplete_fields = ("leader", "attendance_login_user", "guide")
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("church", "district", "leader", "attendance_login_user").annotate(
@@ -62,7 +63,7 @@ class AttendanceGroupAdmin(admin.ModelAdmin):
     def group_leader(self, obj):
         return obj.leader.name if obj.leader else "-"
 
-    @admin.display(description="출석 전용 로그인", ordering="attendance_login_user__username")
+    @admin.display(description="출석 전용 사용자", ordering="attendance_login_user__username")
     def attendance_login(self, obj):
         return obj.attendance_login_user.username if obj.attendance_login_user else "-"
 
@@ -111,3 +112,12 @@ class AttendanceRecordAdmin(admin.ModelAdmin):
     list_filter = ("status", "session__church", "session__worship_date", "member__group__district", "member__group")
     search_fields = ("member__name", "member__group__name", "session__title", "note")
     autocomplete_fields = ("member", "marked_by", "session")
+
+
+@admin.register(AttendanceSmallGroupReport)
+class AttendanceSmallGroupReportAdmin(admin.ModelAdmin):
+    list_display = ("group", "report_month", "meeting_date", "attendee_count", "offering_amount", "submitted_by", "submitted_at")
+    list_filter = ("church", "report_month", "group__district", "group")
+    search_fields = ("group__name", "group__district__name", "place", "next_meeting_place", "special_notes")
+    autocomplete_fields = ("group", "submitted_by", "absent_members")
+    filter_horizontal = ("absent_members",)

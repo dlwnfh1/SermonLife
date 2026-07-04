@@ -1,7 +1,13 @@
 from django import forms
 from django.contrib.auth import get_user_model
 
-from .models import AttendanceDistrict, AttendanceDistrictLeader, AttendanceGroup, AttendanceMember
+from .models import (
+    AttendanceDistrict,
+    AttendanceDistrictLeader,
+    AttendanceGroup,
+    AttendanceMember,
+    AttendanceSmallGroupReport,
+)
 
 
 User = get_user_model()
@@ -116,3 +122,71 @@ class AttendanceMemberForm(forms.ModelForm):
             queryset = queryset.filter(userprofile__church=church).order_by("username")
         self.fields["linked_user"].queryset = queryset
         self.fields["linked_user"].required = False
+
+
+class AttendanceSmallGroupReportForm(forms.ModelForm):
+    absent_members = forms.ModelMultipleChoiceField(
+        queryset=AttendanceMember.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="결석자 명단",
+    )
+
+    class Meta:
+        model = AttendanceSmallGroupReport
+        fields = [
+            "meeting_date",
+            "place",
+            "attendee_count",
+            "offering_amount",
+            "absent_members",
+            "next_meeting_place",
+            "special_notes",
+        ]
+        labels = {
+            "meeting_date": "속회 모임 날짜",
+            "place": "장소",
+            "attendee_count": "참석자 수",
+            "offering_amount": "속회 헌금 총액",
+            "next_meeting_place": "다음 속회 모임 장소",
+            "special_notes": "특이사항",
+        }
+        widgets = {
+            "meeting_date": forms.DateInput(attrs={"type": "date"}),
+            "place": forms.TextInput(attrs={"placeholder": "예: 김집사님 댁"}),
+            "attendee_count": forms.NumberInput(attrs={"min": "0"}),
+            "offering_amount": forms.NumberInput(attrs={"min": "0", "step": "0.01"}),
+            "next_meeting_place": forms.TextInput(attrs={"placeholder": "예: 박권사님 댁"}),
+            "special_notes": forms.Textarea(attrs={"rows": 4, "placeholder": "필요한 내용이 있으면 적어 주세요."}),
+        }
+
+    def __init__(self, *args, group=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.group = group
+        member_queryset = AttendanceMember.objects.none()
+        if group is not None:
+            member_queryset = AttendanceMember.objects.filter(group=group, is_active=True).order_by(
+                "sort_order",
+                "name",
+                "id",
+            )
+        self.fields["absent_members"].queryset = member_queryset
+        if not self.instance.pk and group is not None:
+            self.fields["attendee_count"].initial = member_queryset.count()
+            self.fields["offering_amount"].initial = ""
+
+    def clean_attendee_count(self):
+        attendee_count = self.cleaned_data.get("attendee_count") or 0
+        if attendee_count < 0:
+            raise forms.ValidationError("참석자 수는 0명 이상으로 입력해 주세요.")
+        return attendee_count
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.group is not None:
+            instance.group = self.group
+            instance.church = self.group.church
+        if commit:
+            instance.save()
+            self.save_m2m()
+        return instance
