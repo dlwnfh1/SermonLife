@@ -34,7 +34,6 @@
             margin-bottom: 18px;
         }
         .topbar a,
-        .topbar .user-pill,
         .actions a,
         .actions button {
             display: inline-flex;
@@ -52,11 +51,6 @@
             font-weight: 700;
             cursor: pointer;
         }
-        .topbar .user-pill {
-            background: rgba(165, 106, 59, 0.10);
-            border-color: rgba(165, 106, 59, 0.18);
-            color: var(--accent-strong);
-        }
         .card {
             background: var(--panel);
             border: 1px solid rgba(165, 106, 59, 0.14);
@@ -72,6 +66,12 @@
             margin: 0;
             color: var(--muted);
             line-height: 1.8;
+        }
+        .hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 22px;
         }
         .qr-grid {
             display: grid;
@@ -354,8 +354,7 @@
                 display: grid;
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
-            .topbar a,
-            .topbar .user-pill {
+            .topbar a {
                 width: 100%;
                 padding: 12px 10px;
                 text-align: center;
@@ -385,18 +384,17 @@
     <div class="shell">
         <div class="topbar">
             <a href="{{ home_url }}">Word &amp; Life</a>
-            {% if can_access_attendance %}
-                <a href="{% url 'attendance:dashboard' %}">출석 대시보드</a>
-                <a href="{% url 'attendance:report_hub' %}">리포트</a>
-                <a href="{% url 'attendance:manage' %}">교구/속 관리</a>
-            {% endif %}
-            <span class="user-pill">{{ request.user.get_username }}</span>
-            <a href="{{ logout_url }}">로그아웃</a>
+            <a href="{{ check_url }}">출석/속회</a>
         </div>
 
         <section class="card">
             <h1>QR</h1>
             <p class="copy">{{ active_church.name }} 공동체 앱과 출석/속회 입력 화면으로 바로 들어갈 수 있는 QR을 함께 모아 두었습니다.</p>
+            <div class="hero-actions">
+                <button type="button" onclick="window.print()">인쇄하기</button>
+                <a href="{{ home_url }}">Word &amp; Life 가기</a>
+                <a href="{{ check_url }}">출석/속회 가기</a>
+            </div>
 
             <div class="qr-grid">
                 <article class="qr-card">
@@ -485,12 +483,6 @@
                     </article>
                 </div>
             </section>
-
-            <div class="actions">
-                <button type="button" onclick="window.print()">인쇄하기</button>
-                <a href="{{ check_url }}">출석/속회 열기</a>
-                <a href="{{ home_url }}">Word &amp; Life 열기</a>
-            </div>
         </section>
     </div>
 </body>
