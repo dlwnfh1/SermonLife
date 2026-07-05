@@ -362,9 +362,25 @@
                 box-shadow: none;
                 padding: 0;
             }
+            .title-row,
+            .copy,
+            .qr-grid {
+                break-inside: avoid;
+            }
+            .guide {
+                break-before: page;
+                page-break-before: always;
+                margin-top: 0;
+                padding-top: 0;
+            }
+            .guide-head {
+                break-inside: avoid;
+            }
+            .guide-grid {
+                break-inside: avoid;
+            }
             .qr-card,
             .guide-card,
-            .link-box,
             .mini-screen { break-inside: avoid; }
         }
     </style>
