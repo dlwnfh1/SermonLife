@@ -109,25 +109,10 @@
             height: auto;
             display: block;
         }
-        .link-box {
-            padding: 16px 18px;
-            border-radius: 20px;
-            background: var(--soft);
-            border: 1px solid #ead8c1;
-        }
-        .link-box strong {
+        .qr-box svg {
+            width: min(100%, 260px);
+            height: auto;
             display: block;
-            margin-bottom: 8px;
-        }
-        .link-box code {
-            display: block;
-            padding: 12px 14px;
-            border-radius: 14px;
-            background: #fff;
-            border: 1px solid var(--line);
-            color: var(--accent-strong);
-            font-size: 0.95rem;
-            word-break: break-all;
         }
         .guide {
             margin-top: 28px;
@@ -407,11 +392,7 @@
                         <p>교인들이 말씀, 퀴즈, 묵상, 실천, 기도, 알림 설정을 사용하는 메인 공동체 앱 화면입니다.</p>
                     </div>
                     <div class="qr-box">
-                        <img src="{{ home_qr_svg_url }}" alt="Word & Life QR 코드">
-                    </div>
-                    <div class="link-box">
-                        <strong>직접 접속 주소</strong>
-                        <code>{{ home_url }}</code>
+                        {{ home_qr_svg_markup }}
                     </div>
                 </article>
 
@@ -421,11 +402,7 @@
                         <p>속장과 담당자가 바로 들어가서 교구, 속, PIN을 선택한 뒤 출석과 속회 보고를 입력하는 화면입니다.</p>
                     </div>
                     <div class="qr-box">
-                        <img src="{{ check_qr_svg_url }}" alt="출석/속회 QR 코드">
-                    </div>
-                    <div class="link-box">
-                        <strong>직접 접속 주소</strong>
-                        <code>{{ check_url }}</code>
+                        {{ check_qr_svg_markup }}
                     </div>
                 </article>
 

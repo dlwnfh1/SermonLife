@@ -12,6 +12,7 @@ from django.db.models import Count, Max, Q
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils.safestring import mark_safe
 from django.utils import timezone
 from reportlab.graphics import renderSVG
 from reportlab.graphics.barcode import qr
@@ -140,15 +141,19 @@ def attendance_home_qr_svg_view(request):
 @login_required(login_url="core:login")
 def attendance_check_qr_print_view(request):
     church = _get_scope_church(request.user)
+    check_url = _build_attendance_check_entry_url(request)
+    home_url = request.build_absolute_uri(_church_home_url(church))
     return render(
         request,
         "attendance/check_qr_print.html",
         {
             "active_church": church,
             "active_attendance_tab": "manage",
-            "check_url": _build_attendance_check_entry_url(request),
+            "check_url": check_url,
             "check_qr_svg_url": reverse("attendance:check_qr_svg"),
             "home_qr_svg_url": reverse("attendance:home_qr_svg"),
+            "check_qr_svg_markup": mark_safe(_build_attendance_qr_svg(check_url)),
+            "home_qr_svg_markup": mark_safe(_build_attendance_qr_svg(home_url)),
             "can_access_attendance": _can_access_attendance(request.user),
             **_build_church_nav_context(church),
         },
