@@ -406,10 +406,12 @@
                 margin-top: 14px;
             }
             .qr-card {
-                padding: 12px;
-                gap: 10px;
+                padding: 24px 18px;
+                gap: 18px;
                 min-height: 100vh;
-                align-content: start;
+                align-content: center;
+                justify-items: center;
+                text-align: center;
                 border: 0;
                 box-shadow: none;
                 border-radius: 0;
@@ -420,18 +422,22 @@
                 page-break-before: always;
             }
             .qr-card h2 {
-                font-size: 22px;
+                font-size: 28px;
             }
             .qr-card p {
-                font-size: 12px;
-                line-height: 1.45;
+                max-width: 520px;
+                font-size: 14px;
+                line-height: 1.6;
             }
             .qr-box {
-                padding: 8px;
+                width: 100%;
+                max-width: 560px;
+                padding: 18px;
+                border-radius: 28px;
             }
             .qr-box svg,
             .qr-box img {
-                width: min(100%, 180px);
+                width: min(100%, 380px);
             }
             .guide-head {
                 break-inside: avoid;
@@ -439,23 +445,18 @@
             }
             .guide-grid {
                 break-inside: avoid;
-                grid-template-columns: 1fr;
-                gap: 0;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 24px;
             }
             .guide-card {
                 break-inside: avoid;
                 page-break-inside: avoid;
-                min-height: 100vh;
                 align-content: start;
                 border: 0;
                 box-shadow: none;
                 border-radius: 0;
                 background: #fff;
                 padding: 0;
-            }
-            .guide-card + .guide-card {
-                break-before: page;
-                page-break-before: always;
             }
             .mini-screen { break-inside: avoid; }
         }
