@@ -384,12 +384,44 @@
             .print-page-qrs {
                 break-after: page;
                 page-break-after: always;
-                min-height: 100vh;
             }
             .print-page-guide {
                 break-before: page;
                 page-break-before: always;
-                min-height: 100vh;
+            }
+            .title-row {
+                gap: 10px;
+            }
+            .title-row h1 {
+                font-size: 30px;
+            }
+            .copy {
+                margin-top: 6px;
+                font-size: 13px;
+                line-height: 1.5;
+            }
+            .qr-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 12px;
+                margin-top: 14px;
+            }
+            .qr-card {
+                padding: 12px;
+                gap: 10px;
+            }
+            .qr-card h2 {
+                font-size: 22px;
+            }
+            .qr-card p {
+                font-size: 12px;
+                line-height: 1.45;
+            }
+            .qr-box {
+                padding: 8px;
+            }
+            .qr-box svg,
+            .qr-box img {
+                width: min(100%, 180px);
             }
             .guide-head {
                 break-inside: avoid;
