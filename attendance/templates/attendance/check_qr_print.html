@@ -382,8 +382,8 @@
                 page-break-inside: avoid;
             }
             .print-page-qrs {
-                break-after: page;
-                page-break-after: always;
+                break-after: auto;
+                page-break-after: auto;
             }
             .print-page-guide {
                 break-before: page;
@@ -401,13 +401,23 @@
                 line-height: 1.5;
             }
             .qr-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 12px;
+                grid-template-columns: 1fr;
+                gap: 0;
                 margin-top: 14px;
             }
             .qr-card {
                 padding: 12px;
                 gap: 10px;
+                min-height: 100vh;
+                align-content: start;
+                border: 0;
+                box-shadow: none;
+                border-radius: 0;
+                background: #fff;
+            }
+            .qr-card + .qr-card {
+                break-before: page;
+                page-break-before: always;
             }
             .qr-card h2 {
                 font-size: 22px;
@@ -425,12 +435,28 @@
             }
             .guide-head {
                 break-inside: avoid;
+                page-break-after: avoid;
             }
             .guide-grid {
                 break-inside: avoid;
+                grid-template-columns: 1fr;
+                gap: 0;
             }
-            .qr-card,
-            .guide-card,
+            .guide-card {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                min-height: 100vh;
+                align-content: start;
+                border: 0;
+                box-shadow: none;
+                border-radius: 0;
+                background: #fff;
+                padding: 0;
+            }
+            .guide-card + .guide-card {
+                break-before: page;
+                page-break-before: always;
+            }
             .mini-screen { break-inside: avoid; }
         }
     </style>
