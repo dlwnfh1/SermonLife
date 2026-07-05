@@ -73,6 +73,10 @@
             color: var(--muted);
             line-height: 1.8;
         }
+        .print-page {
+            display: grid;
+            gap: 18px;
+        }
         .qr-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -373,16 +377,19 @@
                 box-shadow: none;
                 padding: 0;
             }
-            .title-row,
-            .copy,
-            .qr-grid {
+            .print-page {
                 break-inside: avoid;
+                page-break-inside: avoid;
             }
-            .guide {
+            .print-page-qrs {
+                break-after: page;
+                page-break-after: always;
+                min-height: 100vh;
+            }
+            .print-page-guide {
                 break-before: page;
                 page-break-before: always;
-                margin-top: 0;
-                padding-top: 0;
+                min-height: 100vh;
             }
             .guide-head {
                 break-inside: avoid;
@@ -404,38 +411,40 @@
         </div>
 
         <section class="card">
-            <div class="title-row">
-                <h1>QR</h1>
-                <div class="actions" style="margin-top: 0;">
-                    <button type="button" onclick="window.print()">인쇄하기</button>
+            <div class="print-page print-page-qrs">
+                <div class="title-row">
+                    <h1>QR</h1>
+                    <div class="actions" style="margin-top: 0;">
+                        <button type="button" onclick="window.print()">인쇄하기</button>
+                    </div>
+                </div>
+                <p class="copy">{{ active_church.name }} 공동체 앱과 출석/속회 입력 화면으로 바로 들어갈 수 있는 QR을 함께 모아 두었습니다.</p>
+
+                <div class="qr-grid">
+                    <article class="qr-card">
+                        <div>
+                            <h2>Word &amp; Life</h2>
+                            <p>교인들이 말씀, 퀴즈, 묵상, 실천, 기도, 알림 설정을 사용하는 메인 공동체 앱 화면입니다.</p>
+                        </div>
+                        <div class="qr-box">
+                            {{ home_qr_svg_markup }}
+                        </div>
+                    </article>
+
+                    <article class="qr-card">
+                        <div>
+                            <h2>출석/속회</h2>
+                            <p>속장과 담당자가 바로 들어가서 교구, 속, PIN을 선택한 뒤 출석과 속회 보고를 입력하는 화면입니다.</p>
+                        </div>
+                        <div class="qr-box">
+                            {{ check_qr_svg_markup }}
+                        </div>
+                    </article>
+
                 </div>
             </div>
-            <p class="copy">{{ active_church.name }} 공동체 앱과 출석/속회 입력 화면으로 바로 들어갈 수 있는 QR을 함께 모아 두었습니다.</p>
 
-            <div class="qr-grid">
-                <article class="qr-card">
-                    <div>
-                        <h2>Word &amp; Life</h2>
-                        <p>교인들이 말씀, 퀴즈, 묵상, 실천, 기도, 알림 설정을 사용하는 메인 공동체 앱 화면입니다.</p>
-                    </div>
-                    <div class="qr-box">
-                        {{ home_qr_svg_markup }}
-                    </div>
-                </article>
-
-                <article class="qr-card">
-                    <div>
-                        <h2>출석/속회</h2>
-                        <p>속장과 담당자가 바로 들어가서 교구, 속, PIN을 선택한 뒤 출석과 속회 보고를 입력하는 화면입니다.</p>
-                    </div>
-                    <div class="qr-box">
-                        {{ check_qr_svg_markup }}
-                    </div>
-                </article>
-
-            </div>
-
-            <section class="guide">
+            <section class="guide print-page print-page-guide">
                 <div class="guide-head">
                     <h2>홈 화면에 추가하는 방법</h2>
                     <p>QR을 스캔해 앱을 연 뒤, 아래처럼 홈 화면에 추가하면 다음부터는 아이콘처럼 바로 실행할 수 있습니다.</p>
