@@ -59,7 +59,7 @@
             box-shadow: 0 24px 60px rgba(133, 96, 52, 0.10);
         }
         h1 {
-            margin: 0 0 10px;
+            margin: 0;
             font-size: clamp(34px, 5vw, 52px);
         }
         .title-row {
@@ -69,7 +69,7 @@
             gap: 16px;
         }
         .copy {
-            margin: 0;
+            margin: 10px 0 0;
             color: var(--muted);
             line-height: 1.8;
         }
@@ -345,8 +345,19 @@
                 text-align: center;
             }
             .title-row {
-                flex-direction: column;
-                align-items: flex-start;
+                align-items: center;
+                gap: 12px;
+            }
+            .title-row h1 {
+                font-size: 34px;
+            }
+            .title-row .actions {
+                margin-top: 0 !important;
+                flex: 0 0 auto;
+            }
+            .title-row .actions button {
+                min-height: 42px;
+                padding: 10px 16px;
             }
         }
         @media print {
