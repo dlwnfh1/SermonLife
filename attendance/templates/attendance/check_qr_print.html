@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>출석 QR 인쇄</title>
+    <title>QR 안내</title>
     <style>
         :root {
             --ink: #23170f;
@@ -12,6 +12,8 @@
             --accent: #a56a3b;
             --accent-strong: #8c5630;
             --bg: linear-gradient(180deg, #fbf4e9 0%, #f5eee1 100%);
+            --panel: #fffaf2;
+            --soft: #f8efe2;
         }
         * { box-sizing: border-box; }
         body {
@@ -21,7 +23,7 @@
             background: var(--bg);
         }
         .shell {
-            max-width: 920px;
+            max-width: 1120px;
             margin: 0 auto;
             padding: 24px 16px 56px;
         }
@@ -56,7 +58,7 @@
             color: var(--accent-strong);
         }
         .card {
-            background: #fffaf2;
+            background: var(--panel);
             border: 1px solid rgba(165, 106, 59, 0.14);
             border-radius: 28px;
             padding: 28px;
@@ -71,57 +73,54 @@
             color: var(--muted);
             line-height: 1.8;
         }
-        .qr-layout {
+        .qr-grid {
             display: grid;
-            grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
-            gap: 28px;
-            align-items: center;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
             margin-top: 26px;
+        }
+        .qr-card {
+            border-radius: 24px;
+            padding: 22px;
+            background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,236,221,.92));
+            border: 1px solid rgba(165, 106, 59, 0.14);
+            display: grid;
+            gap: 16px;
+        }
+        .qr-card h2 {
+            margin: 0;
+            font-size: 30px;
+        }
+        .qr-card p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.7;
         }
         .qr-box {
             display: grid;
             place-items: center;
-            padding: 20px;
-            border-radius: 28px;
-            background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,236,221,.92));
+            padding: 18px;
+            border-radius: 24px;
+            background: #fff;
             border: 1px solid rgba(165, 106, 59, 0.14);
         }
         .qr-box img {
-            width: min(100%, 280px);
+            width: min(100%, 260px);
             height: auto;
             display: block;
         }
-        .steps {
-            display: grid;
-            gap: 14px;
-        }
-        .step {
-            padding: 16px 18px;
-            border-radius: 20px;
-            background: #f8efe2;
-            border: 1px solid #ead8c1;
-        }
-        .step strong {
-            display: block;
-            margin-bottom: 6px;
-            color: var(--accent-strong);
-            font-size: 1rem;
-        }
-        .step p {
-            margin: 0;
-            color: var(--ink);
-            line-height: 1.7;
-        }
         .link-box {
-            margin-top: 20px;
             padding: 16px 18px;
             border-radius: 20px;
-            background: #f8efe2;
+            background: var(--soft);
             border: 1px solid #ead8c1;
+        }
+        .link-box strong {
+            display: block;
+            margin-bottom: 8px;
         }
         .link-box code {
             display: block;
-            margin-top: 8px;
             padding: 12px 14px;
             border-radius: 14px;
             background: #fff;
@@ -129,6 +128,209 @@
             color: var(--accent-strong);
             font-size: 0.95rem;
             word-break: break-all;
+        }
+        .guide {
+            margin-top: 28px;
+            display: grid;
+            gap: 18px;
+        }
+        .guide-head h2 {
+            margin: 0 0 8px;
+            font-size: 32px;
+        }
+        .guide-head p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+        .guide-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+        .guide-card {
+            border-radius: 24px;
+            padding: 22px;
+            background: var(--soft);
+            border: 1px solid #ead8c1;
+            display: grid;
+            gap: 16px;
+        }
+        .guide-card h3 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .mini-screen {
+            border-radius: 28px;
+            padding: 16px;
+            background: #1f1a16;
+            border: 6px solid #1f1a16;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+        }
+        .mini-screen-inner {
+            min-height: 270px;
+            border-radius: 22px;
+            background: linear-gradient(180deg, #fffdf8 0%, #f5ebda 100%);
+            padding: 16px;
+            display: grid;
+            grid-template-rows: auto auto 1fr;
+            gap: 14px;
+        }
+        .browser-bar {
+            min-height: 34px;
+            border-radius: 14px;
+            background: #f0e4d3;
+            border: 1px solid #e2d0ba;
+        }
+        .share-row {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+        }
+        .callout-arrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #d44234;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: .01em;
+            white-space: nowrap;
+        }
+        .callout-arrow::after {
+            content: "";
+            width: 34px;
+            height: 3px;
+            border-radius: 999px;
+            background: #d44234;
+            transform: rotate(12deg);
+            transform-origin: right center;
+            box-shadow: 16px -8px 0 -1px #d44234;
+            clip-path: polygon(0 35%, 78% 35%, 78% 0, 100% 50%, 78% 100%, 78% 65%, 0 65%);
+        }
+        .step-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #d44234;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 800;
+            line-height: 1;
+            box-shadow: 0 8px 20px rgba(212, 66, 52, .18);
+            flex: 0 0 26px;
+        }
+        .share-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            border: 2px solid var(--accent);
+            position: relative;
+            background: rgba(255,255,255,.82);
+        }
+        .share-icon::before {
+            content: "";
+            position: absolute;
+            left: 19px;
+            top: 8px;
+            width: 2px;
+            height: 18px;
+            background: var(--accent);
+        }
+        .share-icon::after {
+            content: "";
+            position: absolute;
+            left: 15px;
+            top: 6px;
+            width: 10px;
+            height: 10px;
+            border-top: 2px solid var(--accent);
+            border-left: 2px solid var(--accent);
+            transform: rotate(45deg);
+        }
+        .share-icon.is-emphasis,
+        .menu-button.is-emphasis,
+        .menu-item.is-target {
+            border-color: #d44234;
+            box-shadow: 0 0 0 4px rgba(212, 66, 52, .18);
+        }
+        .menu-stack {
+            display: grid;
+            gap: 10px;
+        }
+        .menu-item {
+            min-height: 44px;
+            border-radius: 14px;
+            background: rgba(255,255,255,.9);
+            border: 1px solid #e2d0ba;
+            display: flex;
+            align-items: center;
+            padding: 0 14px;
+            font-weight: 700;
+        }
+        .menu-item.is-active {
+            border-color: rgba(165, 106, 59, 0.4);
+            box-shadow: 0 0 0 3px rgba(165, 106, 59, 0.12);
+            color: var(--accent-strong);
+        }
+        .menu-item.is-target {
+            position: relative;
+            color: #b3382a;
+            font-weight: 800;
+        }
+        .menu-item.is-target::after {
+            content: "여기를 누르세요";
+            position: absolute;
+            right: 12px;
+            top: -12px;
+            padding: 4px 10px 4px 42px;
+            border-radius: 999px;
+            background: #d44234;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            box-shadow: 0 10px 24px rgba(212, 66, 52, .18);
+        }
+        .menu-item.is-target::before {
+            content: "2";
+            position: absolute;
+            right: 108px;
+            top: -15px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2px solid #d44234;
+            color: #d44234;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 800;
+            box-shadow: 0 10px 24px rgba(212, 66, 52, .18);
+            z-index: 1;
+        }
+        .menu-button {
+            min-height: 44px;
+            border-radius: 14px;
+            background: rgba(255,255,255,.9);
+            border: 1px solid #e2d0ba;
+            display: inline-flex;
+            align-items: center;
+            padding: 0 14px;
+            font-weight: 700;
+        }
+        .guide-copy {
+            display: grid;
+            gap: 8px;
+        }
+        .guide-copy p {
+            margin: 0;
+            line-height: 1.7;
         }
         .actions {
             display: flex;
@@ -141,10 +343,13 @@
             border-color: var(--accent);
             color: #fff8ef;
         }
-        @media (max-width: 760px) {
-            .qr-layout {
+        @media (max-width: 900px) {
+            .qr-grid,
+            .guide-grid {
                 grid-template-columns: 1fr;
             }
+        }
+        @media (max-width: 760px) {
             .topbar {
                 display: grid;
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -157,27 +362,22 @@
             }
         }
         @media print {
-            body {
-                background: #fff;
-            }
+            body { background: #fff; }
             .shell {
                 max-width: none;
                 padding: 0;
             }
             .topbar,
-            .actions {
-                display: none !important;
-            }
+            .actions { display: none !important; }
             .card {
                 border: 0;
                 box-shadow: none;
                 padding: 0;
             }
-            .qr-box,
-            .step,
-            .link-box {
-                break-inside: avoid;
-            }
+            .qr-card,
+            .guide-card,
+            .link-box,
+            .mini-screen { break-inside: avoid; }
         }
     </style>
 </head>
@@ -185,48 +385,111 @@
     <div class="shell">
         <div class="topbar">
             <a href="{{ home_url }}">Word &amp; Life</a>
-            <a href="{% url 'attendance:dashboard' %}">출석 대시보드</a>
-            <a href="{% url 'attendance:report_hub' %}">리포트</a>
-            <a href="{% url 'attendance:manage' %}">교구/속 관리</a>
+            {% if can_access_attendance %}
+                <a href="{% url 'attendance:dashboard' %}">출석 대시보드</a>
+                <a href="{% url 'attendance:report_hub' %}">리포트</a>
+                <a href="{% url 'attendance:manage' %}">교구/속 관리</a>
+            {% endif %}
             <span class="user-pill">{{ request.user.get_username }}</span>
             <a href="{{ logout_url }}">로그아웃</a>
         </div>
 
         <section class="card">
-            <h1>출석 QR 코드</h1>
-            <p class="copy">{{ active_church.name }} 속장들이 이 QR 코드를 스캔하면 주일출석표 첫 화면으로 바로 들어갑니다. 속장들은 들어간 뒤 자기 교구와 속을 선택하고 PIN을 입력하면 됩니다.</p>
+            <h1>QR</h1>
+            <p class="copy">{{ active_church.name }} 공동체 앱과 출석/속회 입력 화면으로 바로 들어갈 수 있는 QR을 함께 모아 두었습니다.</p>
 
-            <div class="qr-layout">
-                <div class="qr-box">
-                    <img src="{{ check_qr_svg_url }}" alt="주일출석표 QR 코드">
-                </div>
-
-                <div>
-                    <div class="steps">
-                        <div class="step">
-                            <strong>1. QR 스캔</strong>
-                            <p>휴대폰 카메라로 QR 코드를 찍으면 주일출석표 화면이 열립니다.</p>
-                        </div>
-                        <div class="step">
-                            <strong>2. 교구와 속 선택</strong>
-                            <p>열린 화면에서 본인 교구와 속을 선택합니다.</p>
-                        </div>
-                        <div class="step">
-                            <strong>3. PIN 입력 후 제출</strong>
-                            <p>속 PIN을 입력하고 출석표를 열어 출석을 제출합니다.</p>
-                        </div>
+            <div class="qr-grid">
+                <article class="qr-card">
+                    <div>
+                        <h2>Word &amp; Life</h2>
+                        <p>교인들이 말씀, 퀴즈, 묵상, 실천, 기도, 알림 설정을 사용하는 메인 공동체 앱 화면입니다.</p>
                     </div>
-
+                    <div class="qr-box">
+                        <img src="{{ home_qr_svg_url }}" alt="Word & Life QR 코드">
+                    </div>
                     <div class="link-box">
-                        직접 접속 주소
+                        <strong>직접 접속 주소</strong>
+                        <code>{{ home_url }}</code>
+                    </div>
+                </article>
+
+                <article class="qr-card">
+                    <div>
+                        <h2>출석/속회</h2>
+                        <p>속장과 담당자가 바로 들어가서 교구, 속, PIN을 선택한 뒤 출석과 속회 보고를 입력하는 화면입니다.</p>
+                    </div>
+                    <div class="qr-box">
+                        <img src="{{ check_qr_svg_url }}" alt="출석/속회 QR 코드">
+                    </div>
+                    <div class="link-box">
+                        <strong>직접 접속 주소</strong>
                         <code>{{ check_url }}</code>
                     </div>
-                </div>
+                </article>
+
             </div>
+
+            <section class="guide">
+                <div class="guide-head">
+                    <h2>홈 화면에 추가하는 방법</h2>
+                    <p>QR을 스캔해 앱을 연 뒤, 아래처럼 홈 화면에 추가하면 다음부터는 아이콘처럼 바로 실행할 수 있습니다.</p>
+                </div>
+
+                <div class="guide-grid">
+                    <article class="guide-card">
+                        <h3>아이폰 (Safari)</h3>
+                        <div class="mini-screen">
+                            <div class="mini-screen-inner">
+                                <div class="browser-bar"></div>
+                                <div class="share-row">
+                                    <span class="step-badge">1</span>
+                                    <span class="callout-arrow">공유 버튼</span>
+                                    <div class="share-icon is-emphasis" aria-hidden="true"></div>
+                                </div>
+                                <div class="menu-stack">
+                                    <div class="menu-item">공유 메뉴 열기</div>
+                                    <div class="menu-item is-active is-target">홈 화면에 추가</div>
+                                    <div class="menu-item">추가</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="guide-copy">
+                            <p>1. Safari에서 QR로 열린 화면을 엽니다.</p>
+                            <p>2. 아래 또는 위의 공유 버튼을 누릅니다.</p>
+                            <p>3. <strong>홈 화면에 추가</strong>를 누른 뒤 <strong>추가</strong>를 누릅니다.</p>
+                        </div>
+                    </article>
+
+                    <article class="guide-card">
+                        <h3>안드로이드 (Chrome)</h3>
+                        <div class="mini-screen">
+                            <div class="mini-screen-inner">
+                                <div class="browser-bar"></div>
+                                <div class="share-row">
+                                    <span class="step-badge">1</span>
+                                    <span class="callout-arrow">메뉴 버튼</span>
+                                    <div class="menu-button is-emphasis">⋮ 메뉴</div>
+                                </div>
+                                <div class="menu-stack">
+                                    <div class="menu-item">메뉴 열기</div>
+                                    <div class="menu-item is-active is-target">홈 화면에 추가</div>
+                                    <div class="menu-item">설치 / 추가</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="guide-copy">
+                            <p>1. Chrome에서 QR로 열린 화면을 엽니다.</p>
+                            <p>2. 오른쪽 위 메뉴를 누릅니다.</p>
+                            <p>3. <strong>홈 화면에 추가</strong> 또는 <strong>설치</strong>를 누릅니다.</p>
+                        </div>
+                    </article>
+                </div>
+            </section>
 
             <div class="actions">
                 <button type="button" onclick="window.print()">인쇄하기</button>
-                <a href="{{ check_url }}">출석 화면 열기</a>
+                <a href="{{ check_url }}">출석/속회 열기</a>
+                <a href="{{ home_url }}">Word &amp; Life 열기</a>
             </div>
         </section>
     </div>

@@ -287,7 +287,6 @@
             <a href="{% url 'attendance:dashboard' %}">출석 대시보드</a>
             <a href="{% url 'attendance:report_hub' %}">리포트</a>
             <a href="{% url 'attendance:manage' %}" class="is-active">교구/속 관리</a>
-            <a href="{% url 'attendance:check_qr_print' %}">출석 QR</a>
             <span class="user-pill">{{ request.user.get_username }}</span>
             <a href="{{ logout_url }}">로그아웃</a>
         </div>

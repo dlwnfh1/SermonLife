@@ -23,7 +23,7 @@ from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from reportlab.pdfgen import canvas
 
 from core.models import Church, UserProfile
-from core.views import _build_church_nav_context, _get_access_scope_church, _get_user_church
+from core.views import _build_church_nav_context, _church_home_url, _get_access_scope_church, _get_user_church
 
 from .forms import (
     AttendanceDistrictForm,
@@ -129,11 +129,16 @@ def attendance_check_qr_svg_view(request):
     return response
 
 
+def attendance_home_qr_svg_view(request):
+    church = _get_scope_church(request.user) if request.user.is_authenticated else None
+    svg = _build_attendance_qr_svg(request.build_absolute_uri(_church_home_url(church)))
+    response = HttpResponse(svg, content_type="image/svg+xml; charset=utf-8")
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
+
+
 @login_required(login_url="core:login")
 def attendance_check_qr_print_view(request):
-    if not _can_access_attendance(request.user):
-        return redirect("attendance:dashboard")
-
     church = _get_scope_church(request.user)
     return render(
         request,
@@ -143,6 +148,8 @@ def attendance_check_qr_print_view(request):
             "active_attendance_tab": "manage",
             "check_url": _build_attendance_check_entry_url(request),
             "check_qr_svg_url": reverse("attendance:check_qr_svg"),
+            "home_qr_svg_url": reverse("attendance:home_qr_svg"),
+            "can_access_attendance": _can_access_attendance(request.user),
             **_build_church_nav_context(church),
         },
     )
