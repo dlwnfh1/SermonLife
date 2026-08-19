@@ -45,13 +45,14 @@ def _participant_count_for_challenge(challenge):
     return len(set(PointLedger.objects.filter(challenge=challenge).values_list("user_id", flat=True)))
 
 
-def _published_challenges():
-    return (
-        WeeklyChallenge.objects.filter(sermon__status=SermonStatus.PUBLISHED, sermon__is_published=True)
-        .select_related("sermon")
-        .prefetch_related("daily_engagements")
-        .order_by("-week_start", "-id")
+def _published_challenges(church=None):
+    queryset = WeeklyChallenge.objects.filter(
+        sermon__status=SermonStatus.PUBLISHED,
+        sermon__is_published=True,
     )
+    if church is not None:
+        queryset = queryset.filter(sermon__church=church)
+    return queryset.select_related("sermon").prefetch_related("daily_engagements").order_by("-week_start", "-id")
 
 
 def _build_completion_rows(challenge):
@@ -175,21 +176,37 @@ def sync_daily_action_report(challenge):
     return report
 
 
-def sync_user_participation_report(user):
+def sync_user_participation_report(user, church=None):
     profile = UserProfile.objects.filter(user=user).first()
-    total_points = PointLedger.objects.filter(user=user).aggregate(total=Sum("points")).get("total") or 0
-    weekly_completer_count = PointLedger.objects.filter(user=user, source=PointSource.WEEKLY_BONUS).values("challenge_id").distinct().count()
-    last_activity_at = PointLedger.objects.filter(user=user).aggregate(last=Max("created_at")).get("last")
-    active_challenge = _published_challenges().filter(is_active=True).first()
-    active_this_week = bool(active_challenge and PointLedger.objects.filter(user=user, challenge=active_challenge).exists())
-    recent_challenges = list(_published_challenges()[:4])
+    ledger_queryset = PointLedger.objects.filter(user=user)
+    if church is not None:
+        ledger_queryset = ledger_queryset.filter(challenge__sermon__church=church)
+    total_points = ledger_queryset.aggregate(total=Sum("points")).get("total") or 0
+    weekly_completer_count = (
+        ledger_queryset.filter(source=PointSource.WEEKLY_BONUS)
+        .values("challenge_id")
+        .distinct()
+        .count()
+    )
+    last_activity_at = ledger_queryset.aggregate(last=Max("created_at")).get("last")
+    active_challenge = _published_challenges(church=church).filter(is_active=True).first()
+    active_this_week = bool(active_challenge and ledger_queryset.filter(challenge=active_challenge).exists())
+    recent_challenges = list(_published_challenges(church=church)[:4])
     recent_week_rows = []
     for challenge in recent_challenges:
-        points = PointLedger.objects.filter(user=user, challenge=challenge).aggregate(total=Sum("points")).get("total") or 0
-        completed = PointLedger.objects.filter(user=user, challenge=challenge, source=PointSource.WEEKLY_BONUS).exists()
-        recent_week_rows.append({"title": challenge.title, "week_start": challenge.week_start.isoformat(), "points": points, "completed": completed})
+        points = ledger_queryset.filter(challenge=challenge).aggregate(total=Sum("points")).get("total") or 0
+        completed = ledger_queryset.filter(challenge=challenge, source=PointSource.WEEKLY_BONUS).exists()
+        recent_week_rows.append(
+            {
+                "challenge_id": challenge.pk,
+                "title": challenge.title,
+                "week_start": challenge.week_start.isoformat(),
+                "points": points,
+                "completed": completed,
+            }
+        )
     latest_two = recent_challenges[:2]
-    recent_two_week_streak = bool(len(latest_two) == 2 and all(PointLedger.objects.filter(user=user, challenge=challenge).exists() for challenge in latest_two))
+    recent_two_week_streak = bool(len(latest_two) == 2 and all(ledger_queryset.filter(challenge=challenge).exists() for challenge in latest_two))
     inactive_for_two_weeks = bool(not last_activity_at or last_activity_at < timezone.now() - timezone.timedelta(days=14))
     defaults = {
         "username": user.get_username(),

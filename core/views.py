@@ -851,6 +851,9 @@ def _user_report_matches_challenge(report, challenge):
     recent_rows = report.recent_week_rows or []
     if not recent_rows:
         return False
+    latest_challenge_id = recent_rows[0].get("challenge_id")
+    if latest_challenge_id is not None:
+        return latest_challenge_id == challenge.pk
     latest_week_start = recent_rows[0].get("week_start")
     return latest_week_start == challenge.week_start.isoformat()
 
@@ -2102,7 +2105,7 @@ def pastor_reports_view(request):
             cached_report = None
         if cached_report and not _user_report_is_fresh_for_challenge(cached_report, profile.user, selected_challenge):
             cached_report = None
-        member_reports.append(cached_report or sync_user_participation_report(profile.user))
+        member_reports.append(cached_report or sync_user_participation_report(profile.user, church=scope_church))
 
     return render(
         request,
@@ -2144,7 +2147,7 @@ def pastor_members_view(request):
             cached_report = None
         if cached_report and not _user_report_is_fresh_for_challenge(cached_report, profile.user, reference_challenge):
             cached_report = None
-        all_reports.append(cached_report or sync_user_participation_report(profile.user))
+        all_reports.append(cached_report or sync_user_participation_report(profile.user, church=scope_church))
 
     search_query = (request.GET.get("q") or "").strip().lower()
     role_filter = (request.GET.get("role") or "").strip()
