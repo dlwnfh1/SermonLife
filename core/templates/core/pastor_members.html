@@ -57,9 +57,6 @@
             {% endif %}
             <h1>교인 참여 현황</h1>
             <p class="lede">교인별 최근 참여 흐름, 완주 여부, 장기 미참여 상태를 필터로 나누어 볼 수 있습니다.</p>
-            <div class="auth-church-note" style="margin-top: 14px;">
-                debug · user={{ request.user.username }} · church={% if active_church %}{{ active_church.slug }}{% else %}all{% endif %} · active={{ member_summary.active_count }} · {{ debug_active_usernames|join:", " }}
-            </div>
         </section>
 
         {% include "core/includes/pastor_nav.html" %}
