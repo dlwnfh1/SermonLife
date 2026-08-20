@@ -2245,6 +2245,7 @@ def pastor_members_view(request):
         "streak_count": sum(1 for report in all_reports if report.recent_two_week_streak),
         "away_count": sum(1 for report in all_reports if report.inactive_for_two_weeks),
     }
+    debug_active_usernames = [report.username for report in all_reports if report.active_this_week]
 
     return render(
         request,
@@ -2257,6 +2258,7 @@ def pastor_members_view(request):
             "selected_role": role_filter,
             "selected_status": status_filter,
             "member_summary": summary,
+            "debug_active_usernames": debug_active_usernames,
             "pastor_menu": "members",
             "can_use_audio_transcriber": _can_use_audio_transcriber(request.user),
             **_build_church_nav_context(scope_church),
