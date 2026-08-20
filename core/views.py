@@ -2081,6 +2081,7 @@ def pastor_sermon_edit_view(request, pk):
     )
 
 
+@never_cache
 @pastor_required
 def pastor_reports_view(request):
     scope_church = _get_access_scope_church(request.user)
@@ -2173,6 +2174,7 @@ def pastor_reports_view(request):
     )
 
 
+@never_cache
 @pastor_required
 def pastor_members_view(request):
     scope_church = _get_access_scope_church(request.user)
