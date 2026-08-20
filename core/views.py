@@ -140,6 +140,14 @@ def _resolve_active_church(request, church_slug=None):
         _set_active_church_session(request, church)
         return church
 
+    session_church_slug = None
+    if hasattr(request, "session"):
+        session_church_slug = request.session.get(ACTIVE_CHURCH_SESSION_KEY)
+    if session_church_slug:
+        church = Church.get_by_slug(session_church_slug)
+        if church:
+            return church
+
     if request.user.is_authenticated:
         church = _get_user_church(request.user)
         if church:
@@ -999,9 +1007,10 @@ def _can_access_prayer_tab(user):
     return _is_pastor_user(user)
 
 
-def _get_access_scope_church(user):
+def _get_access_scope_church(request):
+    user = request.user
     if user.is_superuser:
-        return None
+        return _resolve_active_church(request)
     return _get_user_church(user)
 
 
@@ -1672,7 +1681,7 @@ def submit_highlight_vote_view(request):
 
 @pastor_required
 def pastor_transcript_corrections_view(request):
-    scope_church = _get_access_scope_church(request.user)
+    scope_church = _get_access_scope_church(request)
     rules = list(TranscriptCorrectionRule.objects.all())
     create_form = PastorTranscriptCorrectionRuleForm(prefix="create")
     editing_rule_id = None
@@ -1743,7 +1752,7 @@ def pastor_transcript_corrections_view(request):
 @ensure_csrf_cookie
 @pastor_required
 def pastor_audio_transcriber_view(request):
-    scope_church = _get_access_scope_church(request.user)
+    scope_church = _get_access_scope_church(request)
     if not _can_use_audio_transcriber(request.user):
         messages.warning(request, "이 기능은 허용된 목회자 계정에서만 사용할 수 있습니다.")
         return redirect("core:pastor_dashboard")
@@ -1797,7 +1806,7 @@ def pastor_audio_transcriber_view(request):
 @pastor_required
 @require_POST
 def pastor_audio_transcriber_record_view(request):
-    scope_church = _get_access_scope_church(request.user)
+    scope_church = _get_access_scope_church(request)
     if not _can_use_audio_transcriber(request.user):
         return JsonResponse({"ok": False, "error": "이 기능은 허용된 목회자 계정에서만 사용할 수 있습니다."}, status=403)
 
@@ -1903,7 +1912,7 @@ def email_pastor_audio_transcript_view(request, pk):
 
 @pastor_required
 def pastor_dashboard_view(request):
-    scope_church = _get_access_scope_church(request.user)
+    scope_church = _get_access_scope_church(request)
     active_challenge = _get_active_challenge(scope_church)
     sermon_queryset = Sermon.objects.filter(Q(pastor_review_requested=True) | Q(is_published=True))
     if scope_church is not None:
@@ -1947,7 +1956,7 @@ def pastor_dashboard_view(request):
 
 @pastor_required
 def pastor_sermon_edit_view(request, pk):
-    scope_church = _get_access_scope_church(request.user)
+    scope_church = _get_access_scope_church(request)
     sermon_queryset = Sermon.objects.prefetch_related("daily_engagements", "highlight_choices", "weekly_challenges")
     if scope_church is not None:
         sermon_queryset = sermon_queryset.filter(church=scope_church)
@@ -2084,7 +2093,7 @@ def pastor_sermon_edit_view(request, pk):
 @never_cache
 @pastor_required
 def pastor_reports_view(request):
-    scope_church = _get_access_scope_church(request.user)
+    scope_church = _get_access_scope_church(request)
     force_refresh = _should_refresh_reports(request)
     challenge_queryset = WeeklyChallenge.objects.select_related("sermon")
     if scope_church is not None:
@@ -2177,7 +2186,7 @@ def pastor_reports_view(request):
 @never_cache
 @pastor_required
 def pastor_members_view(request):
-    scope_church = _get_access_scope_church(request.user)
+    scope_church = _get_access_scope_church(request)
     force_refresh = _should_refresh_reports(request)
     challenge_queryset = WeeklyChallenge.objects.select_related("sermon")
     if scope_church is not None:
