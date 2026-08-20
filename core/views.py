@@ -879,6 +879,32 @@ def _apply_live_participation_flags(report, active_user_ids, streak_user_ids):
     return report
 
 
+def _get_challenge_participant_user_ids(challenge):
+    if not challenge:
+        return set()
+    point_users = set(
+        PointLedger.objects.filter(challenge=challenge)
+        .values_list("user_id", flat=True)
+        .distinct()
+    )
+    quiz_users = set(
+        DailyQuizAttempt.objects.filter(challenge=challenge)
+        .values_list("user_id", flat=True)
+        .distinct()
+    )
+    reflection_users = set(
+        DailyReflectionResponse.objects.filter(challenge=challenge)
+        .values_list("user_id", flat=True)
+        .distinct()
+    )
+    mission_users = set(
+        DailyMissionCompletion.objects.filter(challenge=challenge, completed=True)
+        .values_list("user_id", flat=True)
+        .distinct()
+    )
+    return point_users | quiz_users | reflection_users | mission_users
+
+
 def _is_pastor_user(user):
     if not user.is_authenticated:
         return False
@@ -2079,21 +2105,10 @@ def pastor_reports_view(request):
     active_user_ids = set()
     streak_user_ids = set()
     if scope_church is not None and selected_challenge is not None:
-        active_user_ids = set(
-            PointLedger.objects.filter(challenge=selected_challenge)
-            .values_list("user_id", flat=True)
-            .distinct()
-        )
+        active_user_ids = _get_challenge_participant_user_ids(selected_challenge)
         recent_two_challenges = available_challenges[:2]
         if len(recent_two_challenges) == 2:
-            challenge_user_sets = [
-                set(
-                    PointLedger.objects.filter(challenge=challenge)
-                    .values_list("user_id", flat=True)
-                    .distinct()
-                )
-                for challenge in recent_two_challenges
-            ]
+            challenge_user_sets = [_get_challenge_participant_user_ids(challenge) for challenge in recent_two_challenges]
             streak_user_ids = challenge_user_sets[0] & challenge_user_sets[1]
 
     weekly_report = _get_cached_or_sync_challenge_report(
@@ -2170,21 +2185,10 @@ def pastor_members_view(request):
     active_user_ids = set()
     streak_user_ids = set()
     if scope_church is not None and reference_challenge is not None:
-        active_user_ids = set(
-            PointLedger.objects.filter(challenge=reference_challenge)
-            .values_list("user_id", flat=True)
-            .distinct()
-        )
+        active_user_ids = _get_challenge_participant_user_ids(reference_challenge)
         recent_two_challenges = available_challenges[:2]
         if len(recent_two_challenges) == 2:
-            challenge_user_sets = [
-                set(
-                    PointLedger.objects.filter(challenge=challenge)
-                    .values_list("user_id", flat=True)
-                    .distinct()
-                )
-                for challenge in recent_two_challenges
-            ]
+            challenge_user_sets = [_get_challenge_participant_user_ids(challenge) for challenge in recent_two_challenges]
             streak_user_ids = challenge_user_sets[0] & challenge_user_sets[1]
     profile_queryset = UserProfile.objects.select_related("user").filter(attendance_only_mode=False)
     if scope_church is not None:
