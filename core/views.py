@@ -871,6 +871,14 @@ def _user_report_is_fresh_for_challenge(report, user, challenge):
     return latest_entry_at <= report.generated_at
 
 
+def _apply_live_participation_flags(report, active_user_ids, streak_user_ids):
+    if not report:
+        return report
+    report.active_this_week = report.user_id in active_user_ids
+    report.recent_two_week_streak = report.user_id in streak_user_ids
+    return report
+
+
 def _is_pastor_user(user):
     if not user.is_authenticated:
         return False
@@ -2068,6 +2076,25 @@ def pastor_reports_view(request):
 
     if selected_challenge is None and available_challenges:
         selected_challenge = _get_default_report_challenge(available_challenges, scope_church)
+    active_user_ids = set()
+    streak_user_ids = set()
+    if scope_church is not None and selected_challenge is not None:
+        active_user_ids = set(
+            PointLedger.objects.filter(challenge=selected_challenge)
+            .values_list("user_id", flat=True)
+            .distinct()
+        )
+        recent_two_challenges = available_challenges[:2]
+        if len(recent_two_challenges) == 2:
+            challenge_user_sets = [
+                set(
+                    PointLedger.objects.filter(challenge=challenge)
+                    .values_list("user_id", flat=True)
+                    .distinct()
+                )
+                for challenge in recent_two_challenges
+            ]
+            streak_user_ids = challenge_user_sets[0] & challenge_user_sets[1]
 
     weekly_report = _get_cached_or_sync_challenge_report(
         selected_challenge,
@@ -2100,6 +2127,10 @@ def pastor_reports_view(request):
     top_profiles = list(member_queryset.order_by("-points", "user__username")[:20])
     member_reports = []
     for profile in top_profiles:
+        if scope_church is not None:
+            scoped_report = sync_user_participation_report(profile.user, church=scope_church)
+            member_reports.append(_apply_live_participation_flags(scoped_report, active_user_ids, streak_user_ids))
+            continue
         cached_report = None if force_refresh else _get_cached_user_participation_report(profile.user)
         if cached_report and not _user_report_matches_challenge(cached_report, selected_challenge):
             cached_report = None
@@ -2136,12 +2167,35 @@ def pastor_members_view(request):
         challenge_queryset = challenge_queryset.filter(sermon__church=scope_church)
     available_challenges = list(challenge_queryset.order_by("-week_start", "-id"))
     reference_challenge = _get_default_report_challenge(available_challenges, scope_church)
+    active_user_ids = set()
+    streak_user_ids = set()
+    if scope_church is not None and reference_challenge is not None:
+        active_user_ids = set(
+            PointLedger.objects.filter(challenge=reference_challenge)
+            .values_list("user_id", flat=True)
+            .distinct()
+        )
+        recent_two_challenges = available_challenges[:2]
+        if len(recent_two_challenges) == 2:
+            challenge_user_sets = [
+                set(
+                    PointLedger.objects.filter(challenge=challenge)
+                    .values_list("user_id", flat=True)
+                    .distinct()
+                )
+                for challenge in recent_two_challenges
+            ]
+            streak_user_ids = challenge_user_sets[0] & challenge_user_sets[1]
     profile_queryset = UserProfile.objects.select_related("user").filter(attendance_only_mode=False)
     if scope_church is not None:
         profile_queryset = profile_queryset.filter(church=scope_church)
     profiles = list(profile_queryset.order_by("-points", "user__username"))
     all_reports = []
     for profile in profiles:
+        if scope_church is not None:
+            scoped_report = sync_user_participation_report(profile.user, church=scope_church)
+            all_reports.append(_apply_live_participation_flags(scoped_report, active_user_ids, streak_user_ids))
+            continue
         cached_report = None if force_refresh else _get_cached_user_participation_report(profile.user)
         if cached_report and not _user_report_matches_challenge(cached_report, reference_challenge):
             cached_report = None

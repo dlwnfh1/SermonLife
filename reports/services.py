@@ -221,6 +221,8 @@ def sync_user_participation_report(user, church=None):
         "last_activity_at": last_activity_at,
         "recent_week_rows": recent_week_rows,
     }
+    if church is not None:
+        return UserParticipationReport(user=user, **defaults)
     report, _ = UserParticipationReport.objects.update_or_create(user=user, defaults=defaults)
     return report
 
