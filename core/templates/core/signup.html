@@ -105,7 +105,7 @@
                 </div>
             {% endif %}
 
-            <form method="post" class="auth-form">
+            <form method="post" class="auth-form" data-signup-form>
                 {% csrf_token %}
                 {% if form.non_field_errors %}
                     <div class="auth-messages">
@@ -144,7 +144,7 @@
                         {% endif %}
                     </div>
                 {% endfor %}
-                <button type="submit" class="action-button wide-button">계정 만들기</button>
+                <button type="submit" class="action-button wide-button" data-signup-submit>계정 만들기</button>
             </form>
 
             <p class="auth-helper">이미 계정이 있으시면 <a href="{{ login_url }}">로그인</a></p>
@@ -152,6 +152,23 @@
     </main>
     <script>
         (function () {
+            var signupForm = document.querySelector("[data-signup-form]");
+            if (signupForm) {
+                signupForm.addEventListener("submit", function (event) {
+                    if (signupForm.dataset.submitting === "true") {
+                        event.preventDefault();
+                        return;
+                    }
+
+                    signupForm.dataset.submitting = "true";
+                    var submitButton = signupForm.querySelector("[data-signup-submit]");
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                        submitButton.textContent = "계정 만드는 중...";
+                    }
+                });
+            }
+
             Array.prototype.slice.call(document.querySelectorAll("[data-password-toggle]")).forEach(function (button) {
                 button.addEventListener("click", function () {
                     var wrap = button.closest(".password-visibility-wrap");
