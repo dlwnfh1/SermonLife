@@ -847,6 +847,21 @@ class TranscriptServiceTests(TestCase):
         self.assertEqual(transcript, "첫 번째 청크")
         self.assertFalse(Path(chunk_dir).exists())
 
+    def test_merge_chunk_transcripts_removes_overlapping_words(self):
+        from .services.transcript_service import _merge_chunk_transcripts
+
+        transcript = _merge_chunk_transcripts(
+            [
+                "오늘 우리는 말씀을 통해 믿음의 길을 함께 배웁니다.",
+                "말씀을 통해 믿음의 길을 함께 배웁니다. 그리고 서로를 섬깁니다.",
+            ]
+        )
+
+        self.assertEqual(
+            transcript,
+            "오늘 우리는 말씀을 통해 믿음의 길을 함께 배웁니다.\n그리고 서로를 섬깁니다.",
+        )
+
     @patch("core.services.transcript_service._transcribe_in_chunks")
     @patch("core.services.transcript_service._extract_audio_track")
     def test_transcribe_audio_file_cleans_up_extracted_audio_directory(self, mock_extract_audio, mock_transcribe_chunks):

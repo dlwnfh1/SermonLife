@@ -24,6 +24,10 @@ FFMPEG_PATH = os.environ.get(
     r"C:\Users\Jimmy-Gram\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.1-full_build\bin\ffmpeg.exe",
 )
 TRANSCRIPTION_CHUNK_SECONDS = int(os.environ.get("TRANSCRIPTION_CHUNK_SECONDS", "600"))
+# Keep a short overlap so a sentence is not lost where two requests meet.
+TRANSCRIPTION_CHUNK_OVERLAP_SECONDS = int(os.environ.get("TRANSCRIPTION_CHUNK_OVERLAP_SECONDS", "45"))
+TRANSCRIPTION_AUDIO_SAMPLE_RATE = "16000"
+TRANSCRIPTION_AUDIO_BITRATE = "48k"
 VTT_TIMESTAMP_PATTERN = re.compile(r"^\d{2}:\d{2}:\d{2}\.\d{3}\s+-->\s+\d{2}:\d{2}:\d{2}\.\d{3}$")
 VIDEO_EXTENSIONS = {".mov", ".mp4", ".avi", ".mkv", ".wmv", ".m4v", ".webm", ".ogv"}
 TEMP_AUDIO_EXTENSIONS = {".m4a", ".mp3", ".wav", ".aac", ".ogg", ".webm", ".mp4", ".mov", ".m4v"}
@@ -273,41 +277,150 @@ def _resolve_ffmpeg_path() -> str:
     raise TranscriptFetchError("ffmpeg executable was not found.")
 
 
-def _split_audio_file(audio_path: Path):
-    ffmpeg_path = _resolve_ffmpeg_path()
-    tmpdir = tempfile.mkdtemp()
-    segment_pattern = str(Path(tmpdir) / "chunk_%03d.mp3")
-    command = [
-        ffmpeg_path,
-        "-i",
-        str(audio_path),
-        "-f",
-        "segment",
-        "-segment_time",
-        str(TRANSCRIPTION_CHUNK_SECONDS),
-        "-acodec",
-        "libmp3lame",
-        "-ar",
-        "44100",
-        "-ac",
-        "2",
-        segment_pattern,
-        "-y",
-    ]
+def _resolve_ffprobe_path() -> str | None:
+    ffmpeg_path = Path(_resolve_ffmpeg_path())
+    sibling_name = "ffprobe.exe" if ffmpeg_path.suffix.lower() == ".exe" else "ffprobe"
+    sibling = ffmpeg_path.with_name(sibling_name)
+    if sibling.exists():
+        return str(sibling)
+    return shutil.which("ffprobe")
+
+
+def _get_audio_duration_seconds(audio_path: Path) -> float | None:
+    ffprobe_path = _resolve_ffprobe_path()
+    if not ffprobe_path:
+        return None
+
     completed = subprocess.run(
-        command,
+        [
+            ffprobe_path,
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(audio_path),
+        ],
         capture_output=True,
         text=True,
         encoding="utf-8",
         errors="ignore",
     )
     if completed.returncode != 0:
-        raise TranscriptFetchError(f"ffmpeg split failed: {completed.stderr.strip()}")
+        return None
+    try:
+        duration = float(completed.stdout.strip())
+    except ValueError:
+        return None
+    return duration if duration > 0 else None
 
-    chunks = sorted(Path(tmpdir).glob("chunk_*.mp3"))
+
+def _split_audio_file(audio_path: Path):
+    ffmpeg_path = _resolve_ffmpeg_path()
+    tmpdir = tempfile.mkdtemp()
+    chunk_dir = Path(tmpdir)
+    duration = _get_audio_duration_seconds(audio_path)
+
+    if duration is None:
+        # ffprobe is normally bundled with ffmpeg. Keep the previous split behavior
+        # as a safe fallback if a host only provides ffmpeg.
+        segment_pattern = str(chunk_dir / "chunk_%03d.mp3")
+        commands = [[
+            ffmpeg_path,
+            "-i",
+            str(audio_path),
+            "-f",
+            "segment",
+            "-segment_time",
+            str(TRANSCRIPTION_CHUNK_SECONDS),
+            "-acodec",
+            "libmp3lame",
+            "-b:a",
+            TRANSCRIPTION_AUDIO_BITRATE,
+            "-ar",
+            TRANSCRIPTION_AUDIO_SAMPLE_RATE,
+            "-ac",
+            "1",
+            segment_pattern,
+            "-y",
+        ]]
+    else:
+        commands = []
+        start_seconds = 0.0
+        index = 0
+        chunk_duration = TRANSCRIPTION_CHUNK_SECONDS + TRANSCRIPTION_CHUNK_OVERLAP_SECONDS
+        while start_seconds < duration:
+            output_path = chunk_dir / f"chunk_{index:03d}.mp3"
+            commands.append([
+                ffmpeg_path,
+                "-i",
+                str(audio_path),
+                "-ss",
+                f"{start_seconds:.3f}",
+                "-t",
+                str(chunk_duration),
+                "-acodec",
+                "libmp3lame",
+                "-b:a",
+                TRANSCRIPTION_AUDIO_BITRATE,
+                "-ar",
+                TRANSCRIPTION_AUDIO_SAMPLE_RATE,
+                "-ac",
+                "1",
+                str(output_path),
+                "-y",
+            ])
+            start_seconds += TRANSCRIPTION_CHUNK_SECONDS
+            index += 1
+
+    for command in commands:
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="ignore",
+        )
+        if completed.returncode != 0:
+            raise TranscriptFetchError(f"ffmpeg split failed: {completed.stderr.strip()}")
+
+    chunks = sorted(chunk_dir.glob("chunk_*.mp3"))
     if not chunks:
         raise TranscriptFetchError("ffmpeg did not create any audio chunks.")
-    return chunks, Path(tmpdir)
+    return chunks, chunk_dir
+
+
+def _remove_overlap_from_next_chunk(previous_text: str, next_text: str) -> str:
+    """Remove a repeated word sequence introduced by overlapping audio chunks."""
+    previous_words = list(re.finditer(r"\S+", previous_text))
+    next_words = list(re.finditer(r"\S+", next_text))
+    if not previous_words or not next_words:
+        return next_text.strip()
+
+    def normalized_words(matches, text):
+        return [re.sub(r"[^\w가-힣]", "", match.group()).lower() for match in matches]
+
+    previous_normalized = normalized_words(previous_words[-100:], previous_text)
+    next_normalized = normalized_words(next_words[:160], next_text)
+    maximum = min(len(previous_normalized), len(next_normalized), 40)
+    for size in range(maximum, 5, -1):
+        if previous_normalized[-size:] == next_normalized[:size]:
+            return next_text[next_words[size - 1].end():].lstrip()
+    return next_text.strip()
+
+
+def _merge_chunk_transcripts(transcripts: list[str]) -> str:
+    merged = ""
+    for transcript in transcripts:
+        cleaned = transcript.strip()
+        if not cleaned:
+            continue
+        if merged:
+            cleaned = _remove_overlap_from_next_chunk(merged, cleaned)
+        if cleaned:
+            merged = f"{merged}\n{cleaned}".strip()
+    return merged
 
 
 def _transcribe_in_chunks(audio_path: Path) -> str:
@@ -317,7 +430,7 @@ def _transcribe_in_chunks(audio_path: Path) -> str:
         for chunk in chunks:
             transcripts.append(_transcribe_audio_with_openai(chunk))
 
-        merged = "\n".join(part.strip() for part in transcripts if part.strip()).strip()
+        merged = _merge_chunk_transcripts(transcripts)
         if not merged:
             raise TranscriptFetchError("Chunked transcription produced an empty transcript.")
         return _apply_transcript_phrase_normalizations(merged)
