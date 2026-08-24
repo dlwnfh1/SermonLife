@@ -131,7 +131,7 @@ def attendance_check_qr_svg_view(request):
 
 
 def attendance_home_qr_svg_view(request):
-    church = _get_scope_church(request.user) if request.user.is_authenticated else None
+    church = _get_scope_church(request) if request.user.is_authenticated else None
     svg = _build_attendance_qr_svg(request.build_absolute_uri(_church_home_url(church)))
     response = HttpResponse(svg, content_type="image/svg+xml; charset=utf-8")
     response["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -140,7 +140,7 @@ def attendance_home_qr_svg_view(request):
 
 @login_required(login_url="core:login")
 def attendance_check_qr_print_view(request):
-    church = _get_scope_church(request.user)
+    church = _get_scope_church(request)
     check_url = _build_attendance_check_entry_url(request)
     home_url = request.build_absolute_uri(_church_home_url(church))
     return render(
@@ -494,8 +494,10 @@ def _redirect_attendance_only_user_to_check(request):
     return None
 
 
-def _get_scope_church(user):
-    scope_church = _get_access_scope_church(user)
+def _get_scope_church(request_or_user):
+    request = request_or_user if hasattr(request_or_user, "user") else None
+    user = request.user if request is not None else request_or_user
+    scope_church = _get_access_scope_church(request) if request is not None else None
     if scope_church is None:
         scope_church = _get_user_church(user)
     return scope_church or Church.get_default()
@@ -777,7 +779,7 @@ def attendance_dashboard_view(request):
             },
         )
 
-    church = _get_scope_church(request.user)
+    church = _get_scope_church(request)
     role_context = _build_attendance_role_context(request.user, church)
     control = _get_attendance_control(church)
     attendance_check_day = _is_attendance_check_day(request, church)
@@ -1207,7 +1209,7 @@ def attendance_manual_check_view(request):
     if not _can_use_manual_attendance_check(request.user):
         return redirect("attendance:dashboard")
 
-    church = _get_scope_church(request.user)
+    church = _get_scope_church(request)
     today = timezone.localdate()
     reference_date = today if today.weekday() == 6 else _last_sunday_for(today)
     current_session, _ = AttendanceSession.get_or_create_current(church, request.user, reference_date=reference_date)
@@ -1387,7 +1389,7 @@ def attendance_force_open_toggle_view(request):
     if request.method != "POST" or not _can_force_open_attendance(request.user):
         return redirect("attendance:dashboard")
 
-    church = _get_scope_church(request.user)
+    church = _get_scope_church(request)
     control = _get_attendance_control(church)
     control.force_open = not control.force_open
     control.updated_by = request.user
@@ -1420,7 +1422,7 @@ def attendance_reports_view(request):
     if not _can_access_attendance(request.user):
         return redirect("attendance:dashboard")
 
-    church = _get_scope_church(request.user)
+    church = _get_scope_church(request)
     role_context = _build_attendance_role_context(request.user, church)
     all_sessions = [session for session in AttendanceSession.objects.filter(church=church).order_by("-worship_date", "-id") if session.worship_date.weekday() == 6]
     selected_session = all_sessions[0] if all_sessions else None
@@ -1565,7 +1567,7 @@ def attendance_report_hub_view(request):
     if not _can_access_attendance(request.user):
         return redirect("attendance:dashboard")
 
-    church = _get_scope_church(request.user)
+    church = _get_scope_church(request)
     role_context = _build_attendance_role_context(request.user, church)
     group_queryset = _scoped_group_queryset(church, role_context)
     available_districts = (
@@ -2064,7 +2066,7 @@ def attendance_weekly_pdf_view(request):
     if not _can_access_attendance(request.user):
         return redirect("attendance:dashboard")
 
-    church = _get_scope_church(request.user)
+    church = _get_scope_church(request)
     role_context = _build_attendance_role_context(request.user, church)
     group_queryset = _scoped_group_queryset(church, role_context)
     available_districts = (
@@ -2194,7 +2196,7 @@ def attendance_weekly_pdf_email_view(request):
     if not _can_access_attendance(request.user):
         return redirect("attendance:dashboard")
 
-    church = _get_scope_church(request.user)
+    church = _get_scope_church(request)
     role_context = _build_attendance_role_context(request.user, church)
     group_queryset = _scoped_group_queryset(church, role_context)
     available_districts = (
@@ -2295,7 +2297,7 @@ def attendance_manage_view(request):
     if guard:
         return guard
 
-    church = _get_scope_church(request.user)
+    church = _get_scope_church(request)
     district_form = AttendanceDistrictForm(request.POST or None)
     if request.method == "POST" and request.POST.get("action") == "add_district":
         if district_form.is_valid():
@@ -2372,7 +2374,7 @@ def attendance_district_manage_view(request, district_id):
     if guard:
         return guard
 
-    church = _get_scope_church(request.user)
+    church = _get_scope_church(request)
     district = (
         AttendanceDistrict.objects.filter(church=church, pk=district_id)
         .prefetch_related("leaders")
@@ -2460,7 +2462,7 @@ def attendance_district_manage_view(request, district_id):
     if guard:
         return guard
 
-    church = _get_scope_church(request.user)
+    church = _get_scope_church(request)
     district = (
         AttendanceDistrict.objects.filter(church=church, pk=district_id)
         .prefetch_related("leaders")
@@ -2553,7 +2555,7 @@ def attendance_group_manage_view(request, group_id):
     if guard:
         return guard
 
-    church = _get_scope_church(request.user)
+    church = _get_scope_church(request)
     group = (
         AttendanceGroup.objects.filter(church=church, pk=group_id)
         .select_related("district", "guide", "leader")
@@ -2627,7 +2629,7 @@ def attendance_district_manage_view(request, district_id):
     if guard:
         return guard
 
-    church = _get_scope_church(request.user)
+    church = _get_scope_church(request)
     district = (
         AttendanceDistrict.objects.filter(church=church, pk=district_id)
         .prefetch_related("leaders")
@@ -2721,7 +2723,7 @@ def attendance_group_manage_view(request, group_id):
     if guard:
         return guard
 
-    church = _get_scope_church(request.user)
+    church = _get_scope_church(request)
     group = (
         AttendanceGroup.objects.filter(church=church, pk=group_id)
         .select_related("district", "guide", "leader")
@@ -2800,7 +2802,7 @@ def attendance_group_manage_view(request, group_id):
     if guard:
         return guard
 
-    church = _get_scope_church(request.user)
+    church = _get_scope_church(request)
     group = (
         AttendanceGroup.objects.filter(church=church, pk=group_id)
         .select_related("district", "guide", "leader")
