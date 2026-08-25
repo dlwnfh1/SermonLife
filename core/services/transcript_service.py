@@ -23,9 +23,9 @@ FFMPEG_PATH = os.environ.get(
     "FFMPEG_PATH",
     r"C:\Users\Jimmy-Gram\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.1-full_build\bin\ffmpeg.exe",
 )
-TRANSCRIPTION_CHUNK_SECONDS = int(os.environ.get("TRANSCRIPTION_CHUNK_SECONDS", "600"))
+TRANSCRIPTION_CHUNK_SECONDS = int(os.environ.get("TRANSCRIPTION_CHUNK_SECONDS", "300"))
 # Keep a short overlap so a sentence is not lost where two requests meet.
-TRANSCRIPTION_CHUNK_OVERLAP_SECONDS = int(os.environ.get("TRANSCRIPTION_CHUNK_OVERLAP_SECONDS", "45"))
+TRANSCRIPTION_CHUNK_OVERLAP_SECONDS = int(os.environ.get("TRANSCRIPTION_CHUNK_OVERLAP_SECONDS", "60"))
 TRANSCRIPTION_AUDIO_SAMPLE_RATE = "16000"
 TRANSCRIPTION_AUDIO_BITRATE = "48k"
 VTT_TIMESTAMP_PATTERN = re.compile(r"^\d{2}:\d{2}:\d{2}\.\d{3}\s+-->\s+\d{2}:\d{2}:\d{2}\.\d{3}$")
