@@ -296,11 +296,10 @@
     <div class="page">
         <div class="topbar">
             <a class="link-chip" href="{{ home_url }}">Word &amp; Life</a>
-            <span class="chip">{{ active_church.name }} 출석/속회</span>
             {% if pin_authenticated and selected_group %}
                 <span class="chip">{{ selected_group.district.name }} {{ selected_group.name }}</span>
             {% endif %}
-            <a class="link-chip" href="{% url 'attendance:check' %}?reset=1">처음 화면으로</a>
+            <a class="link-chip" href="{% url 'attendance:check' %}?reset=1">다시 속 선택하기</a>
 
             {% if logout_url %}
                 <a class="link-chip" href="{{ logout_url }}">로그아웃</a>
