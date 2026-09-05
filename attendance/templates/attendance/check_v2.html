@@ -299,7 +299,6 @@
             {% if pin_authenticated and selected_group %}
                 <span class="chip">{{ selected_group.district.name }} {{ selected_group.name }}</span>
             {% endif %}
-            <a class="link-chip" href="{% url 'attendance:check' %}?reset=1">다시 속 선택하기</a>
 
             {% if logout_url %}
                 <a class="link-chip" href="{{ logout_url }}">로그아웃</a>
