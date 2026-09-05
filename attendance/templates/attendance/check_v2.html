@@ -301,9 +301,7 @@
                 <span class="chip">{{ selected_group.district.name }} {{ selected_group.name }}</span>
             {% endif %}
             <a class="link-chip" href="{% url 'attendance:check' %}?reset=1">처음 화면으로</a>
-            {% if show_full_nav %}
-                <a class="link-chip" href="{% url 'attendance:dashboard' %}">출석 대시보드</a>
-            {% endif %}
+
             {% if logout_url %}
                 <a class="link-chip" href="{{ logout_url }}">로그아웃</a>
             {% endif %}
