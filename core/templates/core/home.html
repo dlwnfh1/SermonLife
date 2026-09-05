@@ -82,6 +82,29 @@
             letter-spacing: 0.02em !important;
             width: fit-content !important;
         }
+        @media (min-width: 801px) {
+            .page-shell > .top-actions {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: flex-end;
+                gap: 10px;
+            }
+
+            .page-shell > .top-actions > .auth-chip,
+            .page-shell > .top-actions > .text-link,
+            .page-shell > .top-actions > .church-context-badge {
+                flex: 0 0 auto;
+                min-width: max-content;
+                white-space: nowrap;
+                word-break: keep-all;
+            }
+
+            .page-shell > .top-actions > .auth-chip,
+            .page-shell > .top-actions > .text-link {
+                padding: 9px 13px;
+                font-size: 0.92rem;
+            }
+        }
 
         #home-tab-sermon:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-sermon"],
         #home-tab-overview:checked ~ .home-tab-sticky .home-tab-bar label[for="home-tab-overview"],
