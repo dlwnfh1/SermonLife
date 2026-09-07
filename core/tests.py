@@ -16,7 +16,7 @@ from django.urls import reverse
 from .models import DailyEngagement, DailyQuizAttempt, MediaStorageSetting, PointLedger, PointSource, Sermon, SermonStatus, SermonSummary, SourceMediaAsset, UserProfile, WeeklyChallenge, get_source_media_subdir
 from .services.ai_generation import GeneratedSermonContent, apply_generated_content
 from .services.engagement import DAILY_COMPLETION_POINTS, MISSION_POINTS, QUIZ_POINTS, REFLECTION_POINTS, WEEKLY_COMPLETION_POINTS
-from .services.transcript_service import extract_video_id
+from .services.transcript_service import _merge_chunk_transcripts, extract_video_id
 from reports.services import (
     sync_content_quality_report,
     sync_daily_action_report,
@@ -27,6 +27,34 @@ from reports.services import (
 
 
 User = get_user_model()
+
+
+class TranscriptChunkMergeTests(TestCase):
+    def test_removes_long_overlap_that_starts_before_previous_tail(self):
+        opening = [f"앞부분{i}" for i in range(60)]
+        overlap = [f"겹침{i}" for i in range(80)]
+        ending = [f"뒷부분{i}" for i in range(20)]
+
+        merged = _merge_chunk_transcripts([
+            " ".join(opening + overlap),
+            " ".join(overlap + ending),
+        ])
+
+        self.assertEqual(merged.split(), opening + overlap + ending)
+
+    def test_removes_overlap_despite_a_small_transcription_difference(self):
+        opening = [f"앞부분{i}" for i in range(60)]
+        overlap = [f"겹침{i}" for i in range(80)]
+        next_overlap = overlap.copy()
+        next_overlap[30] = "겹침다르게인식"
+        ending = [f"뒷부분{i}" for i in range(20)]
+
+        merged = _merge_chunk_transcripts([
+            " ".join(opening + overlap),
+            " ".join(next_overlap + ending),
+        ])
+
+        self.assertEqual(merged.split(), opening + overlap + ending)
 
 
 class HomeViewTests(TestCase):

@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from difflib import SequenceMatcher
 import shutil
 import subprocess
 import tempfile
@@ -392,21 +393,46 @@ def _split_audio_file(audio_path: Path):
 
 
 def _remove_overlap_from_next_chunk(previous_text: str, next_text: str) -> str:
-    """Remove a repeated word sequence introduced by overlapping audio chunks."""
+    """Remove repeated speech where adjacent audio chunks overlap.
+
+    The overlap is longer than the tail used for comparison, so its matching text can
+    begin partway through the next chunk rather than at its first word.
+    """
     previous_words = list(re.finditer(r"\S+", previous_text))
     next_words = list(re.finditer(r"\S+", next_text))
     if not previous_words or not next_words:
         return next_text.strip()
 
-    def normalized_words(matches, text):
+    previous_window = previous_words[-360:]
+    next_window = next_words[:480]
+
+    def normalized_words(matches):
         return [re.sub(r"[^\w가-힣]", "", match.group()).lower() for match in matches]
 
-    previous_normalized = normalized_words(previous_words[-100:], previous_text)
-    next_normalized = normalized_words(next_words[:160], next_text)
-    maximum = min(len(previous_normalized), len(next_normalized), 40)
-    for size in range(maximum, 5, -1):
+    previous_normalized = normalized_words(previous_window)
+    next_normalized = normalized_words(next_window)
+
+    # Prefer an exact suffix/prefix match when transcription wording is unchanged.
+    maximum = min(len(previous_normalized), len(next_normalized), 80)
+    for size in range(maximum, 7, -1):
         if previous_normalized[-size:] == next_normalized[:size]:
-            return next_text[next_words[size - 1].end():].lstrip()
+            return next_text[next_window[size - 1].end():].lstrip()
+
+    # Small transcription differences can shift the matched text away from the
+    # boundary. Locate a sufficiently long common block that reaches the end of
+    # the previous chunk, then discard the next chunk through that block.
+    matcher = SequenceMatcher(None, previous_normalized, next_normalized, autojunk=False)
+    candidates = [
+        block
+        for block in matcher.get_matching_blocks()
+        if block.size >= 8
+        and len(previous_normalized) - (block.a + block.size) <= 12
+        and block.b <= 420
+    ]
+    if candidates:
+        match = max(candidates, key=lambda block: (block.size, block.b))
+        return next_text[next_window[match.b + match.size - 1].end():].lstrip()
+
     return next_text.strip()
 
 
