@@ -1,0 +1,31 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div id="content-main">
+    <h1>목회자 검토 이메일 예약</h1>
+    <p><strong>{{ sermon.title }}</strong> 설교의 검토 이메일 발송 시각을 지정합니다.</p>
+    <p>목회자 페이지는 지금부터 검토할 수 있고, 이메일만 예약 시각에 발송됩니다. 발송은 미국 동부 시간 기준 월요일 오전 8시부터 오후 3시까지 정각에만 예약할 수 있습니다.</p>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <fieldset class="module aligned">
+            <div class="form-row">
+                {{ form.scheduled_date.errors }}
+                <div>
+                    <label for="{{ form.scheduled_date.id_for_label }}">{{ form.scheduled_date.label }}</label>
+                    {{ form.scheduled_date }}
+                </div>
+                {{ form.scheduled_hour.errors }}
+                <div>
+                    <label for="{{ form.scheduled_hour.id_for_label }}">{{ form.scheduled_hour.label }}</label>
+                    {{ form.scheduled_hour }}
+                </div>
+            </div>
+        </fieldset>
+        <div class="submit-row">
+            <input type="submit" value="이메일 예약하기" class="default">
+            <a href="{{ change_url }}" class="button cancel-link">취소</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

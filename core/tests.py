@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 import os
 import tempfile
 import time
@@ -12,10 +12,12 @@ from django.db.models import Sum
 from django.test import TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from .models import DailyEngagement, DailyQuizAttempt, MediaStorageSetting, PointLedger, PointSource, Sermon, SermonStatus, SermonSummary, SourceMediaAsset, UserProfile, WeeklyChallenge, get_source_media_subdir
 from .services.ai_generation import GeneratedSermonContent, apply_generated_content
 from .services.engagement import DAILY_COMPLETION_POINTS, MISSION_POINTS, QUIZ_POINTS, REFLECTION_POINTS, WEEKLY_COMPLETION_POINTS
+from .admin import PastorReviewEmailScheduleForm
 from .services.transcript_service import _merge_chunk_transcripts, extract_video_id
 from reports.services import (
     sync_content_quality_report,
@@ -27,6 +29,59 @@ from reports.services import (
 
 
 User = get_user_model()
+
+
+class PastorReviewEmailScheduleFormTests(TestCase):
+    def test_accepts_a_future_monday_at_an_allowed_hour(self):
+        scheduled_date = timezone.localdate() + timedelta(days=(7 - timezone.localdate().weekday()) % 7 or 7)
+        form = PastorReviewEmailScheduleForm(
+            data={"scheduled_date": scheduled_date.isoformat(), "scheduled_hour": "8"}
+        )
+
+        self.assertTrue(form.is_valid())
+        scheduled_at = timezone.localtime(form.cleaned_data["scheduled_at"])
+        self.assertEqual(scheduled_at.date(), scheduled_date)
+        self.assertEqual(scheduled_at.hour, 8)
+        self.assertEqual(scheduled_at.minute, 0)
+
+    def test_rejects_a_non_monday(self):
+        scheduled_date = timezone.localdate() + timedelta(days=1)
+        while scheduled_date.weekday() == 0:
+            scheduled_date += timedelta(days=1)
+        form = PastorReviewEmailScheduleForm(
+            data={"scheduled_date": scheduled_date.isoformat(), "scheduled_hour": "8"}
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("scheduled_date", form.errors)
+
+
+class ScheduledPastorReviewEmailTests(TestCase):
+    def test_command_sends_due_email_once_and_records_sent_time(self):
+        sermon = Sermon.objects.create(
+            title="예약 검토 설교",
+            sermon_date=date(2026, 9, 6),
+            ai_generated=True,
+            pastor_review_requested=True,
+            pastor_review_email_scheduled_at=timezone.now() - timedelta(minutes=1),
+        )
+
+        with patch(
+            "core.management.commands.send_scheduled_pastor_review_notifications.send_pastor_review_notification",
+            return_value=["pastor@example.com"],
+        ) as send_notification:
+            call_command("send_scheduled_pastor_review_notifications")
+
+        sermon.refresh_from_db()
+        self.assertIsNotNone(sermon.pastor_review_email_sent_at)
+        send_notification.assert_called_once_with(sermon)
+
+        with patch(
+            "core.management.commands.send_scheduled_pastor_review_notifications.send_pastor_review_notification"
+        ) as send_notification:
+            call_command("send_scheduled_pastor_review_notifications")
+
+        send_notification.assert_not_called()
 
 
 class TranscriptChunkMergeTests(TestCase):

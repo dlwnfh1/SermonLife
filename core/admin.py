@@ -1,4 +1,4 @@
-﻿from datetime import timedelta
+﻿from datetime import datetime, time, timedelta
 import os
 from pathlib import Path
 import re
@@ -12,6 +12,7 @@ from django.contrib.messages import get_messages
 from django.db import models as dj_models
 from django.db.models import Q
 from django.http import HttpResponseRedirect
+from django.shortcuts import render
 from django.utils.cache import add_never_cache_headers
 from django.urls import path, reverse
 from django.utils import timezone
@@ -465,6 +466,40 @@ class MediaStorageSettingAdmin(admin.ModelAdmin):
     effective_source_media_root.short_description = "실제 저장 경로"
 
 
+class PastorReviewEmailScheduleForm(forms.Form):
+    scheduled_date = forms.DateField(
+        label="발송 날짜 (월요일)",
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    scheduled_hour = forms.ChoiceField(
+        label="발송 시각 (미국 동부 시간)",
+        choices=[
+            (str(hour), f"{'오전' if hour < 12 else '오후'} {hour if hour <= 12 else hour - 12}시")
+            for hour in range(8, 16)
+        ],
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        scheduled_date = cleaned_data.get("scheduled_date")
+        scheduled_hour = cleaned_data.get("scheduled_hour")
+        if scheduled_date is None or scheduled_hour is None:
+            return cleaned_data
+        if scheduled_date.weekday() != 0:
+            self.add_error("scheduled_date", "월요일만 선택할 수 있습니다.")
+            return cleaned_data
+
+        scheduled_at = timezone.make_aware(
+            datetime.combine(scheduled_date, time(hour=int(scheduled_hour))),
+            timezone.get_current_timezone(),
+        )
+        if scheduled_at <= timezone.now():
+            raise forms.ValidationError("현재 시각 이후의 월요일 정각을 선택해 주세요.")
+
+        cleaned_data["scheduled_at"] = scheduled_at
+        return cleaned_data
+
+
 @admin.register(Sermon)
 class SermonAdmin(admin.ModelAdmin):
     form = SermonAdminForm
@@ -635,6 +670,11 @@ class SermonAdmin(admin.ModelAdmin):
                 name="core_sermon_notify_pastor_review",
             ),
             path(
+                "<path:object_id>/schedule-pastor-review-email/",
+                self.admin_site.admin_view(self.schedule_pastor_review_email_view),
+                name="core_sermon_schedule_pastor_review_email",
+            ),
+            path(
                 "<path:object_id>/force-publish/",
                 self.admin_site.admin_view(self.force_publish_view),
                 name="core_sermon_force_publish",
@@ -683,6 +723,20 @@ class SermonAdmin(admin.ModelAdmin):
             extra_context["notify_pastor_review_url"] = reverse(
                 "admin:core_sermon_notify_pastor_review",
                 args=[object_id],
+            )
+            extra_context["schedule_pastor_review_email_url"] = reverse(
+                "admin:core_sermon_schedule_pastor_review_email",
+                args=[object_id],
+            )
+            extra_context["pastor_review_email_scheduled_at_display"] = (
+                timezone.localtime(sermon.pastor_review_email_scheduled_at).strftime("%Y-%m-%d %H:%M")
+                if sermon and sermon.pastor_review_email_scheduled_at and not sermon.pastor_review_email_sent_at
+                else ""
+            )
+            extra_context["pastor_review_email_sent_at_display"] = (
+                timezone.localtime(sermon.pastor_review_email_sent_at).strftime("%Y-%m-%d %H:%M")
+                if sermon and sermon.pastor_review_email_sent_at
+                else ""
             )
             extra_context["force_publish_url"] = reverse(
                 "admin:core_sermon_force_publish",
@@ -823,7 +877,9 @@ class SermonAdmin(admin.ModelAdmin):
         else:
             sermon.pastor_review_requested = False
             sermon.pastor_review_requested_at = None
-            sermon.save(update_fields=["pastor_review_requested", "pastor_review_requested_at", "updated_at"])
+            sermon.pastor_review_email_scheduled_at = None
+            sermon.pastor_review_email_sent_at = None
+            sermon.save(update_fields=["pastor_review_requested", "pastor_review_requested_at", "pastor_review_email_scheduled_at", "pastor_review_email_sent_at", "updated_at"])
             self.message_user(request, f"'{sermon.title}' 설교 내용을 AI로 다시 생성했습니다.", level=messages.SUCCESS)
         return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
 
@@ -933,6 +989,52 @@ class SermonAdmin(admin.ModelAdmin):
         )
         return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
 
+    def schedule_pastor_review_email_view(self, request, object_id):
+        sermon = self.get_object(request, object_id)
+        if sermon is None:
+            self.message_user(request, "설교를 찾을 수 없습니다.", level=messages.ERROR)
+            return HttpResponseRedirect(reverse("admin:core_sermon_changelist"))
+
+        if not sermon.ai_generated:
+            self.message_user(request, "먼저 AI 자동 정리를 완료한 뒤 검토 요청을 예약해 주세요.", level=messages.WARNING)
+            return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
+
+        if request.method == "POST":
+            form = PastorReviewEmailScheduleForm(request.POST)
+            if form.is_valid():
+                sermon.mark_ready_for_pastor_review()
+                sermon.pastor_review_email_scheduled_at = form.cleaned_data["scheduled_at"]
+                sermon.pastor_review_email_sent_at = None
+                sermon.save(
+                    update_fields=[
+                        "pastor_review_email_scheduled_at",
+                        "pastor_review_email_sent_at",
+                        "updated_at",
+                    ]
+                )
+                scheduled_display = timezone.localtime(form.cleaned_data["scheduled_at"]).strftime("%Y-%m-%d %H:%M")
+                self.message_user(request, f"목회자 검토 이메일을 {scheduled_display}에 발송하도록 예약했습니다.")
+                return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
+        else:
+            initial = {}
+            if sermon.pastor_review_email_scheduled_at and not sermon.pastor_review_email_sent_at:
+                scheduled_at = timezone.localtime(sermon.pastor_review_email_scheduled_at)
+                initial = {
+                    "scheduled_date": scheduled_at.date(),
+                    "scheduled_hour": str(scheduled_at.hour),
+                }
+            form = PastorReviewEmailScheduleForm(initial=initial)
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "목회자 검토 이메일 예약",
+            "opts": self.model._meta,
+            "sermon": sermon,
+            "form": form,
+            "change_url": reverse("admin:core_sermon_change", args=[sermon.pk]),
+        }
+        return render(request, "admin/core/sermon/schedule_pastor_review_email.html", context)
+
     def notify_pastor_review_view(self, request, object_id):
         sermon = self.get_object(request, object_id)
         if sermon is None:
@@ -948,6 +1050,16 @@ class SermonAdmin(admin.ModelAdmin):
             return HttpResponseRedirect(reverse("admin:core_sermon_change", args=[sermon.pk]))
 
         sermon.mark_ready_for_pastor_review()
+        # An immediate request replaces any outstanding scheduled email.
+        sermon.pastor_review_email_scheduled_at = None
+        sermon.pastor_review_email_sent_at = None
+        sermon.save(
+            update_fields=[
+                "pastor_review_email_scheduled_at",
+                "pastor_review_email_sent_at",
+                "updated_at",
+            ]
+        )
 
         try:
             recipient_emails = send_pastor_review_notification(sermon)
@@ -958,6 +1070,8 @@ class SermonAdmin(admin.ModelAdmin):
                 level=messages.WARNING,
             )
         else:
+            sermon.pastor_review_email_sent_at = timezone.now()
+            sermon.save(update_fields=["pastor_review_email_sent_at", "updated_at"])
             self.message_user(
                 request,
                 f"목회자 검토 요청을 보냈습니다. 수신자: {', '.join(recipient_emails)}",

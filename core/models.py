@@ -211,6 +211,8 @@ class Sermon(models.Model):
     audio_error = models.TextField(blank=True)
     pastor_review_requested = models.BooleanField(default=False)
     pastor_review_requested_at = models.DateTimeField(null=True, blank=True)
+    pastor_review_email_scheduled_at = models.DateTimeField(null=True, blank=True)
+    pastor_review_email_sent_at = models.DateTimeField(null=True, blank=True)
     pastor_publication_requested_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
